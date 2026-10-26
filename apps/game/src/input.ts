@@ -1,4 +1,4 @@
-import { FORMATIONS, SOLDIER_STRIDE, STRUCTURE_KINDS, SoldierField, type Stance, type StructureKind } from '@vazante/shared';
+import { FORMATIONS, SOLDIER_STRIDE, STRUCTURE_KINDS, SoldierField, type RiskPolicy, type Stance, type StructureKind } from '@vazante/shared';
 import { BuildTool } from './build.ts';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
@@ -170,6 +170,14 @@ export class InputController {
     if (Math.abs(end.x - s.x) + Math.abs(end.y - s.y) < 6) {
       const id = this.view.pickSquad(end.x, end.y, w, h);
       ids = id === null ? [] : [id];
+      if (id === null && !e.shiftKey) {
+        const v = this.view.pickVehicle(end.x, end.y, w, h);
+        if (v !== null) {
+          this.selectVehicle(v);
+          this.changed();
+          return;
+        }
+      }
     } else {
       ids = this.view.pickSquadsInRect(s.x, s.y, end.x, end.y, w, h);
     }
@@ -188,14 +196,69 @@ export class InputController {
   select(ids: number[]): void {
     this.client.select(ids);
     this.view.selectedSquads = new Set(ids);
-    if (ids.length) this.feedback('select');
+    if (ids.length) {
+      this.view.vehicles.selected = null;
+      this.feedback('select');
+    }
+  }
+
+  selectVehicle(id: number | null): void {
+    this.client.selectVehicle(id);
+    this.view.vehicles.selected = id;
+    if (id !== null) {
+      this.view.selectedSquads = new Set();
+      this.feedback('select');
+    }
+    this.changed();
+  }
+
+  setVehiclePolicy(policy: RiskPolicy): void {
+    const v = this.client.state.vehicle;
+    if (v === null) return;
+    this.client.send({ type: 'set_policy', vehicle: v, policy });
+    this.feedback('stance');
+  }
+
+  stopVehicle(): void {
+    const v = this.client.state.vehicle;
+    if (v === null) return;
+    this.client.send({ type: 'stop_vehicle', vehicle: v });
+    this.feedback('stance');
+  }
+
+  loadVehicle(ammo: number, materials: number): void {
+    const v = this.client.state.vehicle;
+    if (v === null) return;
+    this.client.send({ type: 'load', vehicle: v, ammo, materials });
+    this.feedback('order');
+  }
+
+  /** Send the selected truck to a base or depot. */
+  sendConvoy(to: number, policy: RiskPolicy): void {
+    const v = this.client.state.vehicle;
+    if (v === null) return;
+    this.client.send({ type: 'convoy', vehicle: v, to, policy });
+    this.feedback('order');
   }
 
   private orderMove(x: number, y: number): void {
     const sel = this.client.state.selected;
-    if (sel.length === 0) return;
     const { w, h } = this.size();
     const p = this.view.screenToGround(x, y, w, h);
+    const veh = this.client.state.vehicle;
+    if (sel.length === 0 && veh !== null && p) {
+      // Right click on a base or depot sends the selected truck there with its current policy.
+      const f = this.client.state.frame;
+      const cs = this.view.map.cellSize;
+      const site = f?.bases.find((b) => p.x >= b.x0 * cs && p.x < (b.x1 + 1) * cs && p.y >= b.y0 * cs && p.y < (b.y1 + 1) * cs);
+      const v = f?.vehicles.find((x) => x.id === veh);
+      if (site && v) {
+        this.sendConvoy(site.id, v.policy);
+        this.view.markOrder(p.x, p.y);
+      } else this.feedback('deny');
+      return;
+    }
+    if (sel.length === 0) return;
     if (!p) return;
     this.client.send({ type: 'move', squads: sel, to: p });
     this.view.markOrder(p.x, p.y);

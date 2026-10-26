@@ -5,16 +5,38 @@ export interface Alert {
   tick: number;
   type: SimEvent['type'];
   reason?: string;
+  value?: number;
   x?: number;
   y?: number;
 }
 
-const ALERT_TYPES = new Set<SimEvent['type']>(['soldier_bitten', 'soldier_died', 'soldier_turned', 'zombie_risen', 'out_of_ammo', 'squad_arrived', 'command_rejected', 'structure_built', 'structure_destroyed']);
+const ALERT_TYPES = new Set<SimEvent['type']>([
+  'soldier_bitten',
+  'soldier_died',
+  'soldier_turned',
+  'zombie_risen',
+  'out_of_ammo',
+  'squad_arrived',
+  'command_rejected',
+  'structure_built',
+  'structure_destroyed',
+  'convoy_blocked',
+  'cargo_delivered',
+  'vehicle_destroyed',
+  'wave_warning',
+  'wave_started',
+  'district_lost',
+  'district_held',
+  'mission_won',
+  'mission_lost',
+]);
 
 export interface ClientState {
   map: MapInfo | null;
   frame: Frame | null;
   selected: number[];
+  /** Selected vehicle id (exclusive with squad selection). */
+  vehicle: number | null;
   alerts: Alert[];
   limited: boolean;
   version: number;
@@ -27,7 +49,7 @@ export class GameClient {
   private frameListeners = new Set<(f: Frame) => void>();
   private alertSeq = 0;
   private lastFrameAt = 0;
-  state: ClientState = { map: null, frame: null, selected: [], alerts: [], limited: false, version: 0 };
+  state: ClientState = { map: null, frame: null, selected: [], vehicle: null, alerts: [], limited: false, version: 0 };
 
   constructor(seed: number) {
     this.worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
@@ -55,7 +77,7 @@ export class GameClient {
       let alerts = this.state.alerts;
       const fresh = f.events.filter((e) => ALERT_TYPES.has(e.type));
       if (fresh.length > 0) {
-        alerts = [...fresh.map((e) => ({ id: ++this.alertSeq, tick: e.tick, type: e.type, reason: e.reason, x: e.x, y: e.y })).reverse(), ...alerts].slice(0, 30);
+        alerts = [...fresh.map((e) => ({ id: ++this.alertSeq, tick: e.tick, type: e.type, reason: e.reason, value: e.value, x: e.x, y: e.y })).reverse(), ...alerts].slice(0, 30);
       }
       for (const fn of this.frameListeners) fn(f);
       this.update({ frame: f, alerts, limited });
@@ -63,7 +85,11 @@ export class GameClient {
   }
 
   select(ids: number[]): void {
-    this.update({ selected: ids });
+    this.update({ selected: ids, vehicle: ids.length ? null : this.state.vehicle });
+  }
+
+  selectVehicle(id: number | null): void {
+    this.update({ vehicle: id, selected: id === null ? this.state.selected : [] });
   }
 
   onFrame(fn: (f: Frame) => void): () => void {

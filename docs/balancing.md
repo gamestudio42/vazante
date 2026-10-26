@@ -84,6 +84,30 @@ Planned (not implemented yet):
 | Fuel point | 3 × 3 | 2.0 | 400 | 2.0 | 30 | refuels vehicles, 20,000 L |
 | Light tower | 1 × 1 | 8.0 | 150 | 0.3 | 8 | lights 40 m at night |
 
+## Logistics (`balance/logistics.ts`)
+
+| Value | Slice |
+| --- | --- |
+| Resupply radius | 30 m from a base or depot |
+| Resupply rate | 10 rounds per soldier per second |
+| Cargo truck | 400 HP, 7 m/s, 6,000 rounds or 400 materials |
+| Blocked when | 4 zombies within 3 m ahead |
+| Push through | 35% speed, 12 damage per tick to zombies at the bumper |
+| Reroute | zombie cells cost +120; gives up after 6 s blocked |
+| Truck noise | 45 within 25 m |
+
+## Mission "O Último Comboio" (`balance/mission.ts`)
+
+| Value | Slice |
+| --- | --- |
+| Civilians | 40 (scale with command post HP: 800) |
+| Base stock at start | 300 rounds, 160 materials |
+| Truck cargo | 4,000 rounds, 240 materials |
+| Waves | 60, 100, 150 zombies |
+| Warning | 20 to 40 s; 20 s calm between waves |
+| Wave spawn | at least 200 m from the base |
+| District lost | control 0; drops 1/s at 5:1 zombies to soldiers (15+ zombies) |
+
 ## World and AI (`balance/world.ts`)
 
 | Constant | Value |
@@ -106,3 +130,4 @@ Planned (not implemented yet):
 | 2026-10-26 | structure HP | thousands → 250..600 zombie attacks | HP is counted in attacks; old values made walls immortal |
 | 2026-10-26 | structure footprint | 2×2 nest, 2×1 gate → 1×1 | one cell per piece for the slice; multi-cell later |
 | 2026-10-26 | flow penalty for structures | — → 200 (20 cells) | horde detours around short walls and besieges long ones |
+| 2026-10-26 | cargo truck | 500 HP, 15 m/s, 8 t → 400 HP, 7 m/s | the truck has to be escorted; at 15 m/s it outran every threat |

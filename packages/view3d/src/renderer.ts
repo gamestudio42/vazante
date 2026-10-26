@@ -19,6 +19,7 @@ import { toon } from './materials.ts';
 import { PALETTE } from './palette.ts';
 import { PixelPost } from './post.ts';
 import { StructureLayer } from './structures.ts';
+import { VehicleLayer } from './vehicles.ts';
 
 const INTERNAL_HEIGHT = 270;
 const MAX_SOLDIER_ID = 1024;
@@ -73,6 +74,7 @@ export class GameRenderer {
   private readonly particles = new Particles(1200);
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   readonly structures: StructureLayer;
+  readonly vehicles = new VehicleLayer();
   private readonly corpses: Corpse[] = [];
   private corpseNext = 0;
   private corpsesDirty = false;
@@ -137,7 +139,7 @@ export class GameRenderer {
 
     this.scene.add(buildCity(map));
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
-    this.scene.add(this.structures.group);
+    this.scene.add(this.structures.group, this.vehicles.group);
     this.districts = buildDistrictOverlay(map);
     this.scene.add(this.districts);
 
@@ -218,6 +220,7 @@ export class GameRenderer {
       this.zSeenTick[slot] = f.tick;
     }
     this.structures.update(f.structures);
+    this.vehicles.push(f.vehicles);
     this.prev = this.curr;
     this.curr = f;
     this.currAt = nowMs;
@@ -265,6 +268,16 @@ export class GameRenderer {
         this.particles.emit(e.x, e.y!, 1.5, 30, { speed: 4, up: 4, life: 1.2, size: 0.45, color: PALETTE.dust });
         this.particles.emit(e.x, e.y!, 1.5, 12, { speed: 3, up: 5, life: 1.0, size: 0.3, color: PALETTE.concrete });
         return;
+      case 'vehicle_hit':
+        if (e.x === undefined) return;
+        this.particles.emit(e.x, e.y!, 1.2, 2, { speed: 2, up: 1.5, life: 0.3, size: 0.15, color: PALETTE.spark, gravity: 6 });
+        return;
+      case 'vehicle_destroyed':
+        if (e.x === undefined) return;
+        this.particles.emit(e.x, e.y!, 1.5, 40, { speed: 6, up: 6, life: 1.0, size: 0.5, color: PALETTE.muzzle, gravity: 4 });
+        this.particles.emit(e.x, e.y!, 2, 30, { speed: 2, up: 3, life: 2.5, size: 0.9, color: PALETTE.wreck, gravity: -0.5 });
+        this.blood.add(e.x, e.y!, 6, Math.random() * Math.PI, 1.3);
+        return;
       case 'structure_built':
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 0.3, 14, { speed: 2, up: 1, life: 0.6, size: 0.3, color: PALETTE.dust });
@@ -311,6 +324,7 @@ export class GameRenderer {
       this.drawMarkers(f);
       this.drawPaths(f);
     }
+    this.vehicles.draw(this.alpha(nowMs), Math.min(3, this.unitScale()), t);
     this.drawCorpses(nowMs);
     this.drawTracers(dtS);
     this.particles.update(dtS);
@@ -682,6 +696,22 @@ export class GameRenderer {
           bd = d / 4;
           best = q.id;
         }
+      }
+    }
+    return best;
+  }
+
+  /** Vehicle nearest to a screen point within `radiusPx`, or null. */
+  pickVehicle(cssX: number, cssY: number, cssW: number, cssH: number, radiusPx = 22): number | null {
+    let best: number | null = null;
+    let bd = radiusPx * radiusPx;
+    for (const v of this.vehicles.list) {
+      if (v.state === 'destroyed') continue;
+      const p = this.worldToScreen(v.x, v.y, cssW, cssH, 1.5);
+      const d = (p.x - cssX) ** 2 + (p.y - cssY) ** 2;
+      if (d < bd) {
+        bd = d;
+        best = v.id;
       }
     }
     return best;

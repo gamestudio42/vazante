@@ -51,3 +51,14 @@ The Urbe Oasis repository was not reachable from the build environment, so `pack
 - **One cell per structure.** Multi-cell gates and nests come later.
 - **Idle squads help build.** A squad holding in or near a base walks to the nearest blueprint. A player "hold" opts that squad out, a move opts it back in. Without this, every blueprint needed manual micro.
 - **HP in zombie attacks.** Structure HP counts attacks (one per zombie per second), not abstract damage.
+
+## D11. Logistics and mission simplifications for the slice
+
+- **Inventories are per soldier and per site.** Soldiers carry their own rounds; bases and depots hold stock. A soldier within 30 m of a site with stock refills at 10 rounds per second. There are no separate squad or vehicle inventories beyond the truck's cargo.
+- **One vehicle type.** Only the cargo truck exists in the slice. It drives on street cells, plus the inside of bases and depots, and never through buildings or structures.
+- **Four risk policies.** When 4 or more zombies block the road ahead the truck follows its policy: push through (slow, rams), reroute (one new route that avoids zombie cells, then halt), halt, or return to its origin. The player can change the policy while it drives.
+- **The truck is noisy.** It stamps noise and is a flow source, so a convoy pulls the horde along its route. That is the cost of moving cargo.
+- **The city has already fallen.** Only the district holding the command post starts under control (100). Control drops by 1 per second where zombies outnumber soldiers 5 to 1 (with at least 15 zombies) and recovers where soldiers hold.
+- **Waves are one entry point each.** A wave spawns around one street cell at least 200 m from the base, after a 20 to 40 s warning. Wave zombies never give up the chase.
+- **Civilians are an abstraction of command post HP.** They are not simulated as people yet.
+- **Restart reloads the page** with the seed in the URL. "New city" uses the next seed. A proper menu flow comes with M8.

@@ -8,10 +8,10 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started.
 
 ### Status (2026-10-26)
 
-Done with automated tests: M0.1 to M0.4, M1.1, M1.2, M1.5 (engine side: reading frames never changes the hash), M2.1, M2.3, M3.1 to M3.5, M4.1, M5.1 (engine side), M5.2, M5.3, M5.4.
-Done and checked by hand in Chromium (no automated test yet): M1.3 worker host and speed control, M1.4 pixel render, M1.5 camera bands, M2.2 selection and orders, M4.2 direct HUD, M5.1 build menu and ghost.
+Done with automated tests: M0.1 to M0.4, M1.1, M1.2, M1.5 (engine side: reading frames never changes the hash), M2.1, M2.3, M3.1 to M3.5, M4.1, M5.1 (engine side), M5.2, M5.3, M5.4, M6.1, M6.2, M7.1, M7.2, M7.3 (engine side).
+Done and checked by hand in Chromium (no automated test yet): M1.3 worker host and speed control, M1.4 pixel render, M1.5 camera bands, M2.2 selection and orders, M4.2 direct HUD, M5.1 build menu and ghost, M6.3 convoy planner (scripted Chromium run: truck delivers, first wave warns and arrives), M7.3 summary and restart.
 Quality pass (see `AUDIT.md`): toon/outline/posterize render, shadows, animated procedural characters, corpses, blood, particles, order markers, path preview, procedural audio.
-Next: Playwright e2e (M2.2, M4.2, M5.1), then M6 (inventories and logistics) and M7 (director, objectives).
+The slice is playable end to end. Next: Playwright e2e for the hand-checked items, then M8 (save/load, menus and settings, Electron).
 
 ### M0. Foundation 🟡 (M0.5 waits for a remote repository)
 
@@ -67,7 +67,7 @@ Next: Playwright e2e (M2.2, M4.2, M5.1), then M6 (inventories and logistics) and
 | M5.3 | Structures update `blocked`, flow field and paths locally | a new wall reroutes zombies |
 | M5.4 | Wall stacking | 200 zombies vs undefended 3.5 m wall cross within 60 s; with active nest they don't within 120 s |
 
-### M6. Inventories and logistics
+### M6. Inventories and logistics ✅ (M6.3 e2e pending)
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -75,7 +75,7 @@ Next: Playwright e2e (M2.2, M4.2, M5.1), then M6 (inventories and logistics) and
 | M6.2 | Cargo truck with street-only routing, cargo held in transit, risk policy | stock moves only on arrival; destroyed truck delivers nothing |
 | M6.3 | Convoy planner UI | e2e: plan and send a convoy |
 
-### M7. Director, districts and the scenario
+### M7. Director, districts and the scenario ✅
 
 | ID | Task | Acceptance |
 | --- | --- | --- |

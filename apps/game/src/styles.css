@@ -215,3 +215,111 @@ canvas.game {
 .build .hint {
   margin-top: 6px;
 }
+.leftcol {
+  position: absolute;
+  top: 52px;
+  left: 8px;
+  width: 270px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+.leftcol .panel {
+  position: static;
+  width: auto;
+}
+.mission .obj {
+  margin-top: 4px;
+}
+.mission .obj.done {
+  color: #8fe08a;
+}
+.bar {
+  height: 4px;
+  background: #2a3036;
+  margin-top: 4px;
+}
+.bar > div {
+  height: 100%;
+  background: var(--accent);
+}
+.district {
+  margin-top: 3px;
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.dot.held {
+  background: #6fbf5a;
+}
+.dot.contested {
+  background: #d8b23a;
+}
+.dot.lost {
+  background: var(--danger);
+}
+.summary {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 12, 0.6);
+  pointer-events: auto;
+}
+.summary .card {
+  position: static;
+  min-width: 340px;
+  padding: 18px 22px;
+}
+.summary h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+.summary h1.won {
+  color: #8fe08a;
+}
+.summary h1.lost {
+  color: var(--danger);
+}
+.summary table {
+  width: 100%;
+  margin: 10px 0;
+  border-collapse: collapse;
+}
+.summary td {
+  padding: 3px 0;
+}
+.summary td:last-child {
+  text-align: right;
+}
+.summary button {
+  font: inherit;
+  color: var(--text);
+  background: #232a31;
+  border: 1px solid var(--line);
+  padding: 5px 12px;
+  margin: 6px 8px 0 0;
+  cursor: pointer;
+}
+.bottomcol {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  max-width: calc(100vw - 450px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+.bottomcol .panel {
+  position: static;
+  max-width: none;
+}

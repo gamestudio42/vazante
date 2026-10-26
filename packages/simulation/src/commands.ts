@@ -114,6 +114,13 @@ export function applyCommand(w: World, cmd: Command): string | null {
     case 'stop_vehicle':
       return stopVehicle(w, cmd.vehicle);
 
+    case 'set_policy': {
+      const v = w.vehicle(cmd.vehicle);
+      if (!v || v.state === 'destroyed') return 'no_vehicle';
+      v.policy = cmd.policy;
+      return null;
+    }
+
     case 'debug_spawn': {
       const n = Math.max(1, Math.min(500, Math.floor(cmd.count)));
       let placed = 0;

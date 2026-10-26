@@ -157,8 +157,7 @@ export interface Frame {
 export type ToWorker =
   | { type: 'init'; seed: number; scenario: string }
   | { type: 'command'; cmd: Command }
-  | { type: 'request_hash' }
-  | { type: 'restart'; seed: number };
+  | { type: 'request_hash' };
 
 export type FromWorker =
   | { type: 'ready'; map: MapInfo }

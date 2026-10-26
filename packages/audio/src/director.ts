@@ -267,6 +267,29 @@ export class AudioDirector {
         this.crash(e.x!, e.y!);
         this.radio(false);
         return;
+      case 'wave_warning':
+        this.siren();
+        return;
+      case 'wave_started':
+        this.roar(e.x, e.y);
+        return;
+      case 'convoy_blocked':
+      case 'vehicle_destroyed':
+      case 'district_lost':
+        this.radio(false);
+        if (e.type === 'vehicle_destroyed') this.crash(e.x!, e.y!);
+        return;
+      case 'cargo_delivered':
+      case 'district_held':
+        this.radio(true);
+        return;
+      case 'vehicle_hit':
+        if (this.throttle('vhit', 0.12)) this.thud(e.x!, e.y!);
+        return;
+      case 'mission_won':
+      case 'mission_lost':
+        this.stinger(e.type === 'mission_won');
+        return;
       case 'gate_toggled':
         this.clank(e.x!, e.y!);
         return;
@@ -475,6 +498,59 @@ export class AudioDirector {
     this.tone(out, t, 'square', 220, 210, 0.15, 0.003, 0.5);
     this.tone(out, t, 'sine', 587, 580, 0.12, 0.003, 0.7);
     this.noiseBurst(out, t + 0.05, 'bandpass', 900, 1, 0.3, 0.05, 0.6); // sliding leaf
+  }
+
+  /** Air-raid style siren: a slow rising and falling tone, not positioned. */
+  private siren(): void {
+    const out = this.voice(Pri.Alert, 4.2, undefined, undefined, 0.3);
+    if (!out) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(300, t);
+    o.frequency.linearRampToValueAtTime(700, t + 1.5);
+    o.frequency.linearRampToValueAtTime(420, t + 2.4);
+    o.frequency.linearRampToValueAtTime(700, t + 3.2);
+    o.frequency.linearRampToValueAtTime(250, t + 4);
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 1400;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.4, t + 0.4);
+    g.gain.setValueAtTime(0.4, t + 3.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 4);
+    o.connect(f).connect(g).connect(out);
+    o.start(t);
+    o.stop(t + 4.1);
+  }
+
+  /** Distant mass of voices for a wave arriving. */
+  private roar(x?: number, y?: number): void {
+    const out = this.voice(Pri.Alert, 3, undefined, undefined, 0.5);
+    if (!out) return;
+    const t = this.ctx!.currentTime;
+    this.noiseBurst(out, t, 'bandpass', 260, 1.2, 0.6, 0.6, 2.2);
+    for (let i = 0; i < 5; i++) this.tone(out, t + i * 0.15, 'sawtooth', 70 + i * 13, 55 + i * 9, 0.08, 0.5, 1.8);
+    if (x !== undefined && y !== undefined) for (let i = 0; i < 3; i++) this.groan(x + i, y, true);
+  }
+
+  private thud(x: number, y: number): void {
+    const out = this.voice(Pri.Impact, 0.3, x, y, 0.6);
+    if (!out) return;
+    const t = this.ctx!.currentTime;
+    this.tone(out, t, 'sine', 120, 60, 0.6, 0.002, 0.12);
+    this.noiseBurst(out, t, 'bandpass', 600, 2, 0.3, 0.002, 0.08);
+  }
+
+  /** End-of-mission chord: major for victory, minor for defeat. */
+  private stinger(won: boolean): void {
+    const out = this.voice(Pri.Ui, 3, undefined, undefined, 0.5);
+    if (!out) return;
+    const t = this.ctx!.currentTime;
+    const notes = won ? [261.6, 329.6, 392, 523.3] : [220, 261.6, 311.1, 207.7];
+    notes.forEach((f, i) => this.tone(out, t + i * 0.18, 'triangle', f, f, 0.18, 0.02, 2.2 - i * 0.2));
   }
 
   /** Radio squelch and beeps: good news rises, bad news falls. */
