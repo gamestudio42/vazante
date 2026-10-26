@@ -1,5 +1,6 @@
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
+import { probe } from './probe.ts';
 
 export interface FrameBenchResult {
   gpu: string;
@@ -15,6 +16,20 @@ export interface FrameBenchResult {
   zombies: number;
   soldiers: number;
   meanTickMs: number;
+  /** Frames over 40 ms with what the loop was doing, to tell CPU stalls from GPU or compositor ones. */
+  hitches: Hitch[];
+  /** Main-thread tasks over 50 ms (Chromium long-task API). */
+  longTasks: { atS: number; ms: number }[];
+  /** Shader programs compiled while recording (should be 0). */
+  newPrograms: number;
+}
+
+export interface Hitch {
+  atS: number;
+  ms: number;
+  renderMs: number;
+  otherMs: number;
+  programs: number;
 }
 
 /**
@@ -31,6 +46,19 @@ export async function runFrameBench(client: GameClient, view: GameRenderer, atta
   client.send({ type: 'debug_spawn', at: { x: bx, y: by - 70 }, count: attackers });
   await wait(3000);
   const frames: number[] = [];
+  const hitches: Hitch[] = [];
+  const longTasks: { atS: number; ms: number }[] = [];
+  const t0 = performance.now();
+  const programs0 = probe.programs;
+  let obs: PerformanceObserver | null = null;
+  try {
+    obs = new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) longTasks.push({ atS: (e.startTime - t0) / 1000, ms: e.duration });
+    });
+    obs.observe({ type: 'longtask', buffered: false });
+  } catch {
+    // Not every browser has the long-task API.
+  }
   let tickMs = 0;
   let tickN = 0;
   const off = client.onFrame((f) => {
@@ -41,7 +69,10 @@ export async function runFrameBench(client: GameClient, view: GameRenderer, atta
     let last = performance.now();
     const end = last + seconds * 1000;
     const step = (now: number) => {
-      frames.push(now - last);
+      const ms = now - last;
+      frames.push(ms);
+      // probe holds the loop that ran just before this callback, i.e. the work of the slow frame.
+      if (ms > 40 && frames.length > 1) hitches.push({ atS: (now - t0) / 1000, ms, renderMs: probe.renderMs, otherMs: probe.shellMs + probe.inputMs + probe.audioMs, programs: probe.programs });
       last = now;
       if (now < end) requestAnimationFrame(step);
       else resolve();
@@ -49,6 +80,7 @@ export async function runFrameBench(client: GameClient, view: GameRenderer, atta
     requestAnimationFrame(step);
   });
   off();
+  obs?.disconnect();
   const sorted = frames.slice(1).sort((a, b) => a - b);
   const total = sorted.reduce((s, x) => s + x, 0);
   const f = client.state.frame!;
@@ -68,6 +100,9 @@ export async function runFrameBench(client: GameClient, view: GameRenderer, atta
     zombies: f.stats.zombiesAlive,
     soldiers: f.stats.soldiersAlive,
     meanTickMs: tickN ? tickMs / tickN : 0,
+    hitches,
+    longTasks,
+    newPrograms: probe.programs - programs0,
   };
 }
 
