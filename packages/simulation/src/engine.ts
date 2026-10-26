@@ -147,6 +147,7 @@ export class SimulationEngine {
         formation: q.formation,
         anchorX: q.ax,
         anchorY: q.ay,
+        path: q.path.slice(q.pathIdx * 2),
       };
     });
     const events = w.events;

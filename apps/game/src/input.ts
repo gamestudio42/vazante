@@ -168,7 +168,9 @@ export class InputController {
     if (sel.length === 0) return;
     const { w, h } = this.size();
     const p = this.view.screenToGround(x, y, w, h);
-    if (p) this.client.send({ type: 'move', squads: sel, to: p });
+    if (!p) return;
+    this.client.send({ type: 'move', squads: sel, to: p });
+    this.view.markOrder(p.x, p.y);
   }
 
   setStance(stance: Stance): void {

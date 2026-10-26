@@ -41,6 +41,8 @@ export interface SquadView {
   formation: Formation;
   anchorX: number;
   anchorY: number;
+  /** Remaining waypoints of the current move, flattened x, y pairs (for path preview). */
+  path: number[];
 }
 
 export interface FrameStats {
