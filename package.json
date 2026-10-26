@@ -1,0 +1,28 @@
+{
+  "name": "vazante",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev": "pnpm --filter @vazante/game dev",
+    "build": "pnpm --filter @vazante/game build",
+    "typecheck": "tsc -p tsconfig.sim.json && tsc -p tsconfig.web.json && tsc -p tsconfig.tools.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "sim": "tsx tools/headless-sim.ts",
+    "bench": "tsx tools/bench.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.20.5",
+    "@vazante/kernel": "workspace:*",
+    "@vazante/shared": "workspace:*",
+    "@vazante/simulation": "workspace:*",
+    "eslint": "^9.39.5",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^3.2.7"
+  }
+}

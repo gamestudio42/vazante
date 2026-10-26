@@ -1,0 +1,16 @@
+{
+  "name": "@vazante/view3d",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@vazante/shared": "workspace:*",
+    "three": "~0.180.0"
+  },
+  "devDependencies": {
+    "@types/three": "~0.180.0"
+  }
+}
