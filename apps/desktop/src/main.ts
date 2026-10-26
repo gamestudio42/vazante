@@ -10,6 +10,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const GAME_DIR = path.join(here, '..', 'game');
 const ORIGIN = 'app://game';
 const smoke = process.argv.includes('--smoke');
+const bench = process.argv.includes('--bench');
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -91,8 +92,24 @@ function createWindow(): BrowserWindow {
       e.preventDefault();
     }
   });
-  void win.loadURL(`${ORIGIN}/index.html`);
+  void win.loadURL(`${ORIGIN}/index.html${bench ? '?bench=1' : ''}`);
   return win;
+}
+
+/** `--bench`: run the frame benchmark in a visible window (real GPU, no throttling), print and exit. */
+async function runBench(win: BrowserWindow): Promise<void> {
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    const r = await win.webContents.executeJavaScript('window.vazanteBench ?? null').catch(() => null);
+    if (r) {
+      console.log(`BENCH ${JSON.stringify(r)}`);
+      app.exit(0);
+      return;
+    }
+    await new Promise((res) => setTimeout(res, 500));
+  }
+  console.log('BENCH timeout');
+  app.exit(1);
 }
 
 /** `--smoke`: open the game hidden, check it boots isolated, print the result and exit. */
@@ -120,6 +137,7 @@ app.whenReady().then(async () => {
   await initSteam();
   const win = createWindow();
   if (smoke) await runSmoke(win);
+  else if (bench) await runBench(win);
 });
 
 app.on('window-all-closed', () => app.quit());

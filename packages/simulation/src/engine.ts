@@ -35,12 +35,32 @@ import { decayNoise } from './systems/noise.ts';
 import { stepUnits } from './systems/units.ts';
 import { isActiveSoldier, type World } from './world.ts';
 
+/** System order within a tick. */
+const STEPS: readonly (readonly [string, (w: World) => void])[] = [
+  ['flow', stepFlow],
+  ['hash', (w) => w.rebuildZombieHash()],
+  ['horde', stepHorde],
+  ['units', stepUnits],
+  ['vehicles', stepVehicles],
+  ['hash', (w) => w.rebuildZombieHash()],
+  ['combat', stepCombat],
+  ['emplacements', stepEmplacements],
+  ['infection', stepInfection],
+  ['construction', stepConstruction],
+  ['resupply', stepResupply],
+  ['districts', stepDistricts],
+  ['mission', stepMission],
+  ['noise', decayNoise],
+];
+
 /** The authoritative simulation. Runs in the worker in the game and directly in tests. */
 export class SimulationEngine {
   readonly world: World;
   private queue: CommandEnvelope[] = [];
   private seq = 0;
   private scenario: ScenarioId = 'last_convoy';
+  /** Optional timing hook for benchmarks; the host supplies the clock. Never changes the state. */
+  profiler: ((name: string, run: () => void) => void) | null = null;
   /** Wall time spent in the last tick (set by the host, not part of the state). */
   lastTickMs = 0;
 
@@ -105,20 +125,10 @@ export class SimulationEngine {
       const reason = applyCommand(w, env.cmd);
       if (reason) w.emit({ type: 'command_rejected', reason, value: env.seq });
     }
-    stepFlow(w);
-    w.rebuildZombieHash();
-    stepHorde(w);
-    stepUnits(w);
-    stepVehicles(w);
-    w.rebuildZombieHash();
-    stepCombat(w);
-    stepEmplacements(w);
-    stepInfection(w);
-    stepConstruction(w);
-    stepResupply(w);
-    stepDistricts(w);
-    stepMission(w);
-    decayNoise(w);
+    const p = this.profiler;
+    if (p) {
+      for (const [name, fn] of STEPS) p(name, () => fn(w));
+    } else for (const [, fn] of STEPS) fn(w);
     w.tick++;
   }
 

@@ -26,6 +26,9 @@ importers:
       '@vazante/simulation':
         specifier: workspace:*
         version: link:packages/simulation
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       eslint:
         specifier: ^9.39.5
         version: 9.39.5(jiti@2.7.0)

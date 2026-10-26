@@ -10,7 +10,7 @@ export default tseslint.config(
     languageOptions: { sourceType: 'commonjs', globals: { require: 'readonly' } },
   },
   {
-    files: ['apps/desktop/scripts/**/*.mjs'],
+    files: ['apps/desktop/scripts/**/*.mjs', 'tools/**/*.mjs'],
     languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
   },
   js.configs.recommended,

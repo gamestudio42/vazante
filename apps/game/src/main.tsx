@@ -8,6 +8,7 @@ import { InputController } from './input.ts';
 import { loadSettings } from './settings.ts';
 import { Shell, type Screen } from './shell.ts';
 import { getSave } from './storage.ts';
+import { runFrameBench } from './bench.ts';
 import { App } from './ui/App.tsx';
 import './styles.css';
 
@@ -35,7 +36,7 @@ async function boot(): Promise<void> {
     }
   }
   const seed = (save?.seed ?? Number(params.get('seed') ?? 1)) >>> 0;
-  const initial: Screen = save ? 'paused' : params.has('play') ? 'briefing' : 'menu';
+  const initial: Screen = params.has('bench') ? 'playing' : save ? 'paused' : params.has('play') ? 'briefing' : 'menu';
   const client = new GameClient(seed, save ?? undefined);
   const unsubscribe = client.subscribe(() => {
     const map = client.state.map;
@@ -90,6 +91,13 @@ function start(client: GameClient, map: NonNullable<GameClient['state']['map']>,
   requestAnimationFrame(loop);
 
   reactRoot.render(<App client={client} input={input} view={view} shell={shell} />);
+  if (params.has('bench')) {
+    void runFrameBench(client, view, Number(params.get('attackers') ?? 300), Number(params.get('seconds') ?? 20)).then((r) => {
+      console.log(`BENCH ${JSON.stringify(r)}`);
+      (window as unknown as { vazanteBench: unknown }).vazanteBench = r;
+      shell.notify(`${r.fps.toFixed(1)} fps · p95 ${r.p95Ms.toFixed(1)} ms · ${r.gpu}`);
+    });
+  }
   // Exposed for e2e tests and debugging; read-only access to the mirror.
   (window as unknown as { vazante: unknown }).vazante = { client, view, input, audio, shell };
 }

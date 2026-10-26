@@ -118,34 +118,96 @@ export function zombieCanStep(grid: Grid, cx: number, cy: number, dx: number, dy
   return true;
 }
 
+// Scratch buffers for the flow field, grown on demand and reused across calls.
+let costBuf = new Int16Array(0);
+let openBuf = new Uint8Array(0);
+const BUCKETS = 256; // > largest step cost (14 + structure penalty), so the ring never laps itself
+const bucketCells: Int32Array[] = Array.from({ length: BUCKETS }, () => new Int32Array(64));
+const bucketLen = new Int32Array(BUCKETS);
+
+let pending = 0;
+let flowRef: Uint16Array = new Uint16Array(0);
+
+function relax(n: number, nd: number): void {
+  const c = costBuf[n];
+  if (c < 0) return;
+  nd += c;
+  if (nd < flowRef[n] && nd < FLOW_UNREACHABLE) {
+    flowRef[n] = nd;
+    pushBucket(nd, n);
+    pending++;
+  }
+}
+
+function pushBucket(d: number, cell: number): void {
+  const b = d & (BUCKETS - 1);
+  let arr = bucketCells[b];
+  if (bucketLen[b] === arr.length) {
+    const grown = new Int32Array(arr.length * 2);
+    grown.set(arr);
+    bucketCells[b] = arr = grown;
+  }
+  arr[bucketLen[b]++] = cell;
+}
+
 /**
- * Dijkstra distance field from all source cells into `grid.flow`. Unclimbed structures cost
- * `structurePenalty` extra, so the horde detours around short walls and piles up at long ones.
+ * Distance field from all source cells into `grid.flow` (Dial's bucket queue: costs are small
+ * integers). Unclimbed structures cost `structurePenalty` extra, so the horde detours around short
+ * walls and piles up at long ones. Diagonals need both orthogonal cells open (no corner cutting).
+ * Distances are unique, so the result is identical to any other exact shortest-path search.
  */
 export function computeFlowField(grid: Grid, sources: readonly number[], structurePenalty = 0): void {
+  if (structurePenalty + 14 >= BUCKETS) throw new Error('structure penalty too large for the bucket ring');
   const flow = grid.flow;
   const w = grid.width;
+  const h = grid.height;
+  const size = grid.size;
+  if (costBuf.length < size) {
+    costBuf = new Int16Array(size);
+    openBuf = new Uint8Array(size);
+  }
+  const cost = costBuf;
+  const open = openBuf;
+  for (let c = 0; c < size; c++) {
+    const k = grid.zombieCost(c, 1);
+    cost[c] = k < 0 ? -1 : k === 0 ? 0 : structurePenalty;
+    open[c] = k === 0 ? 1 : 0;
+  }
   flow.fill(FLOW_UNREACHABLE);
-  heap.clear();
+  flowRef = flow;
+  bucketLen.fill(0);
+  pending = 0;
   for (const s of sources) {
     if (s < 0 || flow[s] === 0) continue;
     flow[s] = 0;
-    heap.push(0, s);
+    pushBucket(0, s);
+    pending++;
   }
-  while (heap.size > 0) {
-    const d = heap.topKey();
-    const cur = heap.pop();
-    if (d > flow[cur]) continue;
-    const cx = cur % w;
-    const cy = Math.floor(cur / w);
-    for (const [dx, dy, cost] of NEIGHBOURS) {
-      if (!zombieCanStep(grid, cx, cy, dx, dy)) continue;
-      const n = cur + dy * w + dx;
-      const nd = d + cost + grid.zombieCost(n, structurePenalty);
-      if (nd < flow[n] && nd < FLOW_UNREACHABLE) {
-        flow[n] = nd;
-        heap.push(nd, n);
-      }
+  for (let d = 0; pending > 0; d++) {
+    const b = d & (BUCKETS - 1);
+    // Steps cost 10..(14 + penalty) < BUCKETS, so nothing is pushed into the bucket being drained.
+    const cells = bucketCells[b];
+    while (bucketLen[b] > 0) {
+      const cur = cells[--bucketLen[b]];
+      pending--;
+      if (flow[cur] !== d) continue; // stale: a shorter distance was found after it was queued
+      const cx = cur % w;
+      const cy = (cur - cx) / w;
+      const xl = cx > 0;
+      const xr = cx < w - 1;
+      const yu = cy > 0;
+      const yd = cy < h - 1;
+      // Orthogonal steps.
+      if (xr) relax(cur + 1, d + 10);
+      if (xl) relax(cur - 1, d + 10);
+      if (yd) relax(cur + w, d + 10);
+      if (yu) relax(cur - w, d + 10);
+      // Diagonal steps.
+      if (xr && yd && open[cur + 1] && open[cur + w]) relax(cur + w + 1, d + 14);
+      if (xl && yd && open[cur - 1] && open[cur + w]) relax(cur + w - 1, d + 14);
+      if (xr && yu && open[cur + 1] && open[cur - w]) relax(cur - w + 1, d + 14);
+      if (xl && yu && open[cur - 1] && open[cur - w]) relax(cur - w - 1, d + 14);
     }
   }
+
 }

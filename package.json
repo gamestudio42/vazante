@@ -11,7 +11,7 @@
     "test": "vitest run",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "sim": "tsx tools/headless-sim.ts",
-    "bench": "tsx tools/bench.ts",
+    "bench": "node tools/run-bundled.mjs tools/bench.ts",
     "e2e": "playwright test",
     "desktop": "pnpm --filter @vazante/desktop start"
   },
@@ -22,6 +22,7 @@
     "@vazante/kernel": "workspace:*",
     "@vazante/shared": "workspace:*",
     "@vazante/simulation": "workspace:*",
+    "esbuild": "0.28.2",
     "eslint": "^9.39.5",
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",
