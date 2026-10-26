@@ -6,7 +6,13 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started.
 
 ## v0.1 Vertical slice: "O Último Comboio"
 
-### M0. Foundation ✅/🟡
+### Status (2026-10-26)
+
+Done with automated tests: M0.1 to M0.4, M1.1, M1.2, M1.5 (engine side: reading frames never changes the hash), M2.1, M2.3, M3.1 to M3.5, M4.1.
+Done and checked by hand in Chromium (no automated test yet): M1.3 worker host and speed control, M1.4 pixel render, M1.5 camera bands, M2.2 selection and orders, M4.2 direct HUD.
+Next: Playwright e2e for M2.2 and M4.2, then M5 (construction).
+
+### M0. Foundation 🟡 (M0.5 waits for a remote repository)
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -16,7 +22,7 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started.
 | M0.4 | Docs and `AGENTS.md` | files exist and are linked from README |
 | M0.5 | CI on GitHub Actions + Pages deploy | needs a remote repository; ask Marcel first |
 
-### M1. World core, map and cameras
+### M1. World core, map and cameras 🟡
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -26,7 +32,7 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started.
 | M1.4 | `view3d`: low-res pixel render, buildings merged per sector | page shows the city at 270 px internal height |
 | M1.5 | Continuous camera: strategic ↔ tactical by height, plus direct rig | changing camera mode never changes `hashState` |
 
-### M2. Units, selection, orders
+### M2. Units, selection, orders 🟡
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -34,7 +40,7 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started.
 | M2.2 | Selection (click, box) and right-click orders in strategic and tactical views | e2e: box-select and move |
 | M2.3 | Stances hold / aggressive / defensive / withdraw | hold fires only in the 90° front arc |
 
-### M3. Zombies and combat
+### M3. Zombies and combat 🟡
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -44,7 +50,7 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started.
 | M3.4 | Infection: bitten soldiers turn after 60 to 180 s; killed-by-zombie rise after 20 s | test for both, explosion kills do not rise |
 | M3.5 | Noise and perception | gunfire 40 m away makes wandering zombies chase |
 
-### M4. Direct control
+### M4. Direct control 🟡
 
 | ID | Task | Acceptance |
 | --- | --- | --- |

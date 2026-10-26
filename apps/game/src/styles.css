@@ -1,0 +1,191 @@
+:root {
+  --bg: #12161a;
+  --panel: rgba(18, 22, 26, 0.86);
+  --line: #3a4148;
+  --text: #e6e1d3;
+  --muted: #8f958f;
+  --accent: #4fa3ff;
+  --warn: #ff8a4c;
+  --danger: #ff5a3c;
+  font-family: ui-monospace, 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+canvas.game {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  image-rendering: pixelated;
+  display: block;
+}
+#root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.panel {
+  position: absolute;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  pointer-events: auto;
+}
+.boot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+.topbar {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 14px;
+  white-space: nowrap;
+}
+.topbar .title {
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+.topbar .band {
+  color: var(--accent);
+}
+.paused,
+.warn {
+  color: var(--warn);
+}
+.muted {
+  color: var(--muted);
+}
+.squads {
+  top: 52px;
+  left: 8px;
+  width: 260px;
+}
+.squad {
+  padding: 4px;
+  margin-top: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.squad.sel {
+  border-color: var(--text);
+}
+.squad.dead {
+  opacity: 0.4;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+}
+.c0 {
+  background: #4fa3ff;
+}
+.c1 {
+  background: #ffc94f;
+}
+.c2 {
+  background: #8cff6b;
+}
+.c3 {
+  background: #ff8cf1;
+}
+.alerts {
+  top: 52px;
+  right: 8px;
+  width: 300px;
+}
+.alert {
+  cursor: pointer;
+  margin-top: 3px;
+}
+.a-soldier_died,
+.a-soldier_turned,
+.a-zombie_risen {
+  color: var(--danger);
+}
+.a-soldier_bitten,
+.a-out_of_ammo,
+.a-command_rejected {
+  color: var(--warn);
+}
+.selection {
+  bottom: 8px;
+  left: 8px;
+  max-width: calc(100vw - 450px);
+}
+.selection button {
+  font: inherit;
+  color: var(--text);
+  background: #232a31;
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  margin-top: 6px;
+  cursor: pointer;
+}
+.selection button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.help {
+  bottom: 8px;
+  right: 8px;
+  max-width: 420px;
+}
+.help pre {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  font: inherit;
+  color: var(--muted);
+}
+.box {
+  position: absolute;
+  border: 1px dashed #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+.crosshair {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+  color: #fff;
+  text-shadow: 0 0 2px #000;
+}
+.direct {
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 16px;
+}
+@media (max-width: 900px) {
+  .squads,
+  .alerts {
+    width: 200px;
+  }
+  .topbar {
+    gap: 8px;
+    font-size: 11px;
+  }
+}

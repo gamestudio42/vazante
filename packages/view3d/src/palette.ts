@@ -1,0 +1,23 @@
+/** Theme palette for the procedural placeholder art. All game colours come from here. */
+export const PALETTE = {
+  sky: 0x1b1f24,
+  fog: 0x1b1f24,
+  street: 0x3a3d42,
+  sidewalk: 0x5b5d60,
+  lot: 0x4a4f3e,
+  park: 0x3f5c37,
+  water: 0x23465c,
+  buildingLow: 0x8a8273,
+  buildingHigh: 0xb7ae9c,
+  roof: 0x6d665a,
+  base: 0x2f6f8f,
+  depot: 0xb07d2a,
+  district: 0xd8d2c0,
+  squads: [0x4fa3ff, 0xffc94f, 0x8cff6b, 0xff8cf1],
+  soldierDead: 0x4a3030,
+  soldierBitten: 0xc9e05a,
+  zombie: [0x7d9a5a, 0xb5c46a, 0x5a6b3e],
+  tracer: 0xfff1a8,
+  selection: 0xffffff,
+  directRing: 0xff5a3c,
+} as const;

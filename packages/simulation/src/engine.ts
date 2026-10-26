@@ -39,6 +39,17 @@ export class SimulationEngine {
     return this.world.tick;
   }
 
+  /** Change speed immediately (works while paused). Speed is not part of the simulated state. */
+  setSpeed(speed: 0 | 1 | 2 | 4): string | null {
+    const w = this.world;
+    if (w.directSoldier !== null && speed !== 1) {
+      w.emit({ type: 'command_rejected', reason: 'direct_control_active' });
+      return 'direct_control_active';
+    }
+    w.speed = speed;
+    return null;
+  }
+
   enqueue(cmd: Command): void {
     this.queue.push({ seq: this.seq++, cmd });
   }
