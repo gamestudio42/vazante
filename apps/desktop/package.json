@@ -1,0 +1,92 @@
+{
+  "name": "@vazante/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vazante desktop shell (Electron) for Steam, Flatpak, Snap, Windows and macOS",
+  "author": "Marcel Savegnago",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "pnpm --filter @vazante/game build && tsc -p tsconfig.json && node scripts/copy-game.mjs",
+    "start": "pnpm build && electron .",
+    "smoke": "pnpm build && electron . --smoke",
+    "dist:linux": "pnpm build && electron-builder --linux AppImage snap flatpak --publish never",
+    "dist:appimage": "pnpm build && electron-builder --linux AppImage --publish never",
+    "dist:win": "pnpm build && electron-builder --win nsis --publish never",
+    "dist:mac": "pnpm build && electron-builder --mac dmg --publish never"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "typescript": "~5.9.3"
+  },
+  "build": {
+    "appId": "io.github.vazante.Vazante",
+    "productName": "Vazante",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "game/**",
+      "preload.cjs",
+      "package.json"
+    ],
+    "asar": true,
+    "linux": {
+      "target": [
+        "AppImage",
+        "snap",
+        "flatpak"
+      ],
+      "category": "Game",
+      "icon": "build/icon.png",
+      "synopsis": "Real-time tactics against the horde",
+      "description": "Command squads, run convoys and hold the last block of a fallen city.",
+      "executableName": "vazante",
+      "syncDesktopName": true
+    },
+    "snap": {
+      "grade": "devel",
+      "confinement": "strict",
+      "plugs": [
+        "default",
+        "opengl",
+        "audio-playback"
+      ]
+    },
+    "flatpak": {
+      "runtimeVersion": "24.08",
+      "baseVersion": "24.08",
+      "finishArgs": [
+        "--socket=wayland",
+        "--socket=fallback-x11",
+        "--share=ipc",
+        "--device=dri",
+        "--socket=pulseaudio"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.strategy-games",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "executableName": "vazante",
+    "publish": []
+  },
+  "desktopName": "io.github.vazante.Vazante.desktop"
+}

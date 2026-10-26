@@ -11,6 +11,10 @@ pnpm install
 pnpm dev      # open http://localhost:5173
 pnpm check    # typecheck + lint + tests
 pnpm sim      # headless run of the vertical slice with a state hash
+pnpm e2e      # browser tests (first time: pnpm exec playwright install chromium)
+pnpm desktop  # build and open the Electron desktop app
+pnpm --filter @vazante/desktop dist:appimage   # Linux AppImage in apps/desktop/release
+pnpm --filter @vazante/desktop dist:linux      # AppImage + Snap + Flatpak (needs snapcraft and flatpak-builder)
 ```
 
 Requires Node 22+ and pnpm 10.
@@ -42,5 +46,8 @@ Requires Node 22+ and pnpm 10.
 | Build | B toggles build mode, 1-4 picks HESCO / wall / gate / MG nest, drag for a line, Shift keeps building, right click or Esc cancels |
 | Gate / demolish | G opens or closes the gate under the cursor, Del demolishes |
 | Truck | click it (or pick it in Vehicles), right click a base or depot to send it, choose what it does when blocked |
+| Menu / pause | Esc |
+| Quick save / load | F5 / F9 |
+| Full screen (desktop) | F11 |
 | Sound | N toggles |
 | Spawn test horde (dev) | K at the cursor |

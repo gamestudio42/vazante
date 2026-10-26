@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "pnpm --filter @vazante/game dev",
     "build": "pnpm --filter @vazante/game build",
-    "typecheck": "tsc -p tsconfig.sim.json && tsc -p tsconfig.web.json && tsc -p tsconfig.tools.json",
+    "typecheck": "tsc -p tsconfig.sim.json && tsc -p tsconfig.web.json && tsc -p tsconfig.tools.json && tsc -p apps/desktop/tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "sim": "tsx tools/headless-sim.ts",
     "bench": "tsx tools/bench.ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "desktop": "pnpm --filter @vazante/desktop start"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -26,5 +27,11 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.72.1",
     "vitest": "^3.2.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
   }
 }

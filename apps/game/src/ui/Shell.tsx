@@ -50,7 +50,7 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
           <button onClick={() => shell.restart(seed + 1, false)}>{t('menu.newCity')}</button>
         </div>
       </nav>
-      <div className="menu-version muted">{t('menu.version')}</div>
+      <div className="menu-version muted">{t(shell.desktop ? 'menu.versionDesktop' : 'menu.version')}</div>
     </div>
   );
 }

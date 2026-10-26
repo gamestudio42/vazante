@@ -8,10 +8,11 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started.
 
 ### Status (2026-10-26)
 
-Done with automated tests: M0.1 to M0.4, M1.1, M1.2, M1.5 (engine side: reading frames never changes the hash), M2.1, M2.3, M3.1 to M3.5, M4.1, M5.1 (engine side), M5.2, M5.3, M5.4, M6.1, M6.2, M7.1, M7.2, M7.3 (engine side).
-Done and checked by hand in Chromium (no automated test yet): M1.3 worker host and speed control, M1.4 pixel render, M1.5 camera bands, M2.2 selection and orders, M4.2 direct HUD, M5.1 build menu and ghost, M6.3 convoy planner (scripted Chromium run: truck delivers, first wave warns and arrives), M7.3 summary and restart.
+Done with automated tests: M0.1 to M0.4, M1.1, M1.2, M1.5 (engine side: reading frames never changes the hash), M2.1, M2.3, M3.1 to M3.5, M4.1, M5.1 (engine side), M5.2, M5.3, M5.4, M6.1, M6.2, M7.1, M7.2, M7.3 (engine side), M8.1 (save/load hash test, in Node and in Chromium), M8.4 (Electron smoke test: offline, `crossOriginIsolated === true`).
+Playwright e2e (`pnpm e2e`, 8 tests): menu → briefing → pause flow, settings, save/load and quick save with hash checks, squad selection and move (M2.2), build placement (M5.1), convoy planner (M6.3), soak at 4x.
+Done and checked by hand in Chromium (no automated test yet): M1.4 pixel render, M1.5 camera bands, M4.2 direct HUD, M7.3 summary screen.
 Quality pass (see `AUDIT.md`): toon/outline/posterize render, shadows, animated procedural characters, corpses, blood, particles, order markers, path preview, procedural audio.
-The slice is playable end to end. Next: Playwright e2e for the hand-checked items, then M8 (save/load, menus and settings, Electron).
+The slice is playable end to end, in the browser and as a desktop app. Next: M8.2 benchmarks on a named machine, Snap and Flatpak builds on a machine with snapcraft and flatpak-builder, CI (needs a remote repository), then v0.5.
 
 ### M0. Foundation 🟡 (M0.5 waits for a remote repository)
 
@@ -83,7 +84,7 @@ The slice is playable end to end. Next: Playwright e2e for the hand-checked item
 | M7.2 | Wave director with warnings (Choir-lite) | every attack has a 20 to 40 s warning |
 | M7.3 | "O Último Comboio" objectives, victory, defeat, restart | scripted runs reach both victory and defeat |
 
-### M8. Persistence, performance, polish, desktop
+### M8. Persistence, performance, polish, desktop 🟡 (M8.1 ✅, M8.3 ✅, M8.4 ✅, M8.5 AppImage ✅; benchmarks and Snap/Flatpak/CI pending)
 
 | ID | Task | Acceptance |
 | --- | --- | --- |

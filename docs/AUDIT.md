@@ -20,11 +20,11 @@ AAA is mostly content and polish: art direction, animated characters, audio, VFX
 | Animation | 0 → 4 | procedural limbs: walk by distance, aim, recoil, reload, zombie reach/attack/stack, death fall | blended skeletal animation, run, hit reactions |
 | VFX | 1 → 5 | tracers, muzzle flash, blood spray, decals, persistent corpses, dust, structure debris | explosions, fire, smoke, screen shake |
 | Audio | 0 → 5 | procedural weapons, impacts, groans, screams, reload, radio, UI, horde bed, tension drone, limiter, 24-voice cap | music, real recordings, reverb zones |
-| UX / UI | 3 → 4 | HUD, squads, alerts, selection, help, order markers, path preview, build menu with ghost and reasons | menus, briefing, pause screen, settings, minimap, tooltips, accessibility |
+| UX / UI | 3 → 6 | main menu, briefing, pause, settings (volume, language, interface size, autosave, edge pan), save/load with export, summary, HUD, alerts, build ghost | minimap, tooltips, key rebinding, colour-blind palette, controller |
 | Camera | 5 | continuous zoom, rotate, direct rig | edge pan, smoothing on pan, collision in direct mode, recoil/shake |
 | Performance | 5 | 0.8 ms/tick at 200 zombies | flow field 5 ms per rebuild, no budgets or benchmarks in CI |
-| Engineering | 6 | monorepo, strict TS, 52 tests, lint | no CI, no e2e, no bundle split, no crash reporting |
-| Platform | 2 | browser | Electron, Steam, Flatpak, Snap |
+| Engineering | 6 → 7 | monorepo, strict TS, 56 unit tests, 8 Playwright e2e incl. soak, lint, vendor chunks | no CI (no remote yet), no crash reporting |
+| Platform | 2 → 6 | browser, Electron (offline, isolated, sandboxed), AppImage built and smoke-tested, Snap/Flatpak/Windows/macOS configured, optional Steam | Snap/Flatpak/Windows/macOS builds, Steam achievements and cloud saves, code signing |
 
 ## The AAA bar (measurable gates)
 

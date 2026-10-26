@@ -62,3 +62,20 @@ The Urbe Oasis repository was not reachable from the build environment, so `pack
 - **Waves are one entry point each.** A wave spawns around one street cell at least 200 m from the base, after a 20 to 40 s warning. Wave zombies never give up the chase.
 - **Civilians are an abstraction of command post HP.** They are not simulated as people yet.
 - **Restart reloads the page** with the seed in the URL. "New city" uses the next seed. A proper menu flow comes with M8.
+
+## D12. Saves are state snapshots, not command replays
+
+A save is a structured clone of the whole `World` plus its state hash. Loading restores the class prototypes, rebuilds the id indexes and rejects the save if the hash does not match.
+
+- **Replay was tried first and rejected.** Replaying the command log is the classic deterministic save, but it costs one simulation tick per saved tick: about 40 s to load a 20-minute game on the build machine.
+- **Snapshots survive balance changes.** The hash checks integrity of the copied state, not the rules, so a save keeps loading after values in `balance/` change. A change to the shape of the state needs a `SAVE_VERSION` bump.
+- **Where saves live.** IndexedDB in the browser and in Electron (slots: autosave, quick save, manual saves). Export and import as a gzipped JSON `.vazante` file, with typed arrays as base64 and non-finite numbers tagged.
+- **Loading reloads the page** with `?load=<slot>`, so no state from the previous game can leak into the loaded one. Every game opens paused.
+
+## D13. Desktop shell
+
+- **Electron serves the web build from `app://game/`**, a privileged standard scheme, with COOP/COEP (cross-origin isolation for SharedArrayBuffer in v0.5) and a strict CSP. No HTTP server, so it works offline.
+- **Sandboxed renderer**, context isolation, no Node in the page. The preload exposes only `vazanteDesktop.quit()`. Navigation outside `app://game` is blocked and external links open in the system browser. F11 toggles full screen.
+- **Steam is optional.** With `VAZANTE_STEAM_APP_ID` set and `steamworks.js` installed, Steam is initialised; otherwise the game opens without it.
+- **Packaging** uses electron-builder: AppImage, Snap and Flatpak on Linux, NSIS on Windows, DMG on macOS. The app id `io.github.vazante.Vazante` is a placeholder until the publisher identity is chosen.
+- **`--smoke`** opens the game hidden, checks it reached the first frame with `crossOriginIsolated === true` and exits with a status code, for CI.
