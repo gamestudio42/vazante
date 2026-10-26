@@ -20,8 +20,9 @@ export interface FrameBenchResult {
   hitches: Hitch[];
   /** Main-thread tasks over 50 ms (Chromium long-task API). */
   longTasks: { atS: number; ms: number }[];
-  /** Shader programs compiled while recording (should be 0). */
+  /** Shader programs compiled while recording (should be 0), with their cache keys. */
   newPrograms: number;
+  compiles: { atS: number; keys: string[] }[];
 }
 
 export interface Hitch {
@@ -50,6 +51,8 @@ export async function runFrameBench(client: GameClient, view: GameRenderer, atta
   const longTasks: { atS: number; ms: number }[] = [];
   const t0 = performance.now();
   const programs0 = probe.programs;
+  const compiles: { atS: number; keys: string[] }[] = [];
+  let seen = programs0;
   let obs: PerformanceObserver | null = null;
   try {
     obs = new PerformanceObserver((list) => {
@@ -71,6 +74,11 @@ export async function runFrameBench(client: GameClient, view: GameRenderer, atta
     const step = (now: number) => {
       const ms = now - last;
       frames.push(ms);
+      if (probe.programs > seen) {
+        const list = view.renderer.info.programs ?? [];
+        compiles.push({ atS: (now - t0) / 1000, keys: list.slice(seen).map((p) => `${p.name} ${p.cacheKey.replace(/\s+/g, ' ').slice(0, 400)}`) });
+        seen = probe.programs;
+      }
       // probe holds the loop that ran just before this callback, i.e. the work of the slow frame.
       if (ms > 40 && frames.length > 1) hitches.push({ atS: (now - t0) / 1000, ms, renderMs: probe.renderMs, otherMs: probe.shellMs + probe.inputMs + probe.audioMs, programs: probe.programs });
       last = now;
@@ -103,6 +111,7 @@ export async function runFrameBench(client: GameClient, view: GameRenderer, atta
     hitches,
     longTasks,
     newPrograms: probe.programs - programs0,
+    compiles,
   };
 }
 
