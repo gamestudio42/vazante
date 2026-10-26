@@ -7,4 +7,5 @@ export { findPath, computeFlowField, FLOW_UNREACHABLE } from './navigation.ts';
 export { spawnSquad, rollZombieKind } from './spawn.ts';
 export { createScenario, lastConvoy, openField, type ScenarioId, type ScenarioOptions } from './scenarios/index.ts';
 export { formationOffset, slotPosition } from './systems/units.ts';
-export type { Soldier, Squad, DirectInput } from './entities.ts';
+export type { Soldier, Squad, DirectInput, Structure, Base } from './entities.ts';
+export { placementContext, buildTicks } from './systems/construction.ts';

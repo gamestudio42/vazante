@@ -84,8 +84,25 @@ function h(x: number, y: number, gx: number, gy: number): number {
   return 10 * (dx + dy) - 6 * Math.min(dx, dy);
 }
 
-/** Dijkstra distance field from all source cells into `grid.flow`. */
-export function computeFlowField(grid: Grid, sources: readonly number[]): void {
+/**
+ * Can a zombie flow step from (cx, cy) by (dx, dy)? Structures are allowed (at a cost);
+ * diagonals need both orthogonal cells free so the horde does not cut wall corners.
+ */
+export function zombieCanStep(grid: Grid, cx: number, cy: number, dx: number, dy: number): boolean {
+  const nx = cx + dx;
+  const ny = cy + dy;
+  if (!grid.inBounds(nx, ny) || grid.zombieCost(grid.idx(nx, ny), 1) < 0) return false;
+  if (dx !== 0 && dy !== 0) {
+    return grid.zombieCost(grid.idx(cx + dx, cy), 1) === 0 && grid.zombieCost(grid.idx(cx, cy + dy), 1) === 0;
+  }
+  return true;
+}
+
+/**
+ * Dijkstra distance field from all source cells into `grid.flow`. Unclimbed structures cost
+ * `structurePenalty` extra, so the horde detours around short walls and piles up at long ones.
+ */
+export function computeFlowField(grid: Grid, sources: readonly number[], structurePenalty = 0): void {
   const flow = grid.flow;
   const w = grid.width;
   flow.fill(FLOW_UNREACHABLE);
@@ -102,9 +119,9 @@ export function computeFlowField(grid: Grid, sources: readonly number[]): void {
     const cx = cur % w;
     const cy = Math.floor(cur / w);
     for (const [dx, dy, cost] of NEIGHBOURS) {
-      if (!canStep(grid, cx, cy, dx, dy)) continue;
+      if (!zombieCanStep(grid, cx, cy, dx, dy)) continue;
       const n = cur + dy * w + dx;
-      const nd = d + cost;
+      const nd = d + cost + grid.zombieCost(n, structurePenalty);
       if (nd < flow[n] && nd < FLOW_UNREACHABLE) {
         flow[n] = nd;
         heap.push(nd, n);

@@ -10,7 +10,11 @@ export type SimEventType =
   | 'out_of_ammo'
   | 'reloading'
   | 'squad_arrived'
-  | 'direct_control';
+  | 'direct_control'
+  | 'structure_placed'
+  | 'structure_built'
+  | 'structure_destroyed'
+  | 'gate_toggled';
 
 export interface SimEvent {
   tick: number;

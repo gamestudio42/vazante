@@ -16,12 +16,14 @@ import {
   ZOMBIE_MAX_PER_CELL,
   ZOMBIE_PERCEPTION_M,
   ZOMBIE_SEPARATION_M,
+  ZOMBIE_STRUCTURE_DAMAGE,
   ZOMBIE_WANDER_SPEED_FACTOR,
   ZombieState,
 } from '@vazante/shared';
 import type { Soldier } from '../entities.ts';
-import { canStep, FLOW_UNREACHABLE, NEIGHBOURS } from '../navigation.ts';
+import { FLOW_UNREACHABLE, NEIGHBOURS, zombieCanStep } from '../navigation.ts';
 import { isActiveSoldier, type World } from '../world.ts';
+import { computePiles, damageStructure } from './construction.ts';
 import { killSoldier } from './lifecycle.ts';
 import { moveWithCollision } from './movement.ts';
 
@@ -33,12 +35,15 @@ const IDLE_DIR = 255;
 const ATTACK_CD_TICKS = Math.round(ZOMBIE_ATTACK_INTERVAL_S * TICK_HZ);
 const PERCEPTION2 = ZOMBIE_PERCEPTION_M * ZOMBIE_PERCEPTION_M;
 const SEP2 = ZOMBIE_SEPARATION_M * ZOMBIE_SEPARATION_M;
+/** A zombie this close to a blocking structure it is heading into stops and stacks against it. */
+const STACK_CONTACT_M = 0.8;
 
 export function stepHorde(w: World): void {
   const z = w.zombies;
   const g = w.grid;
   const active: Soldier[] = [];
   for (const s of w.soldiers) if (isActiveSoldier(s)) active.push(s);
+  computePiles(w);
 
   for (let s = 0; s < z.highWater; s++) {
     if (!z.isAlive(s)) continue;
@@ -51,6 +56,8 @@ export function stepHorde(w: World): void {
 
     let dx = 0;
     let dy = 0;
+    /** Cell the zombie is trying to enter next (for stacking), -1 if none. */
+    let ahead = -1;
     let speed = stats.speed;
     if (z.state[s] === ZombieState.Wandering) {
       if (z.wanderT[s] === 0) {
@@ -73,6 +80,7 @@ export function stepHorde(w: World): void {
       const here = c < 0 ? FLOW_UNREACHABLE : g.flow[c];
       if (target && dist2(x, y, target.x, target.y) < DIRECT_STEER_M * DIRECT_STEER_M) {
         [dx, dy] = unit(target.x - x, target.y - y);
+        ahead = g.cellAt(x + dx * STACK_CONTACT_M * 1.25, y + dy * STACK_CONTACT_M * 1.25);
       } else if (here === FLOW_UNREACHABLE || (here > CHASE_GIVE_UP && g.noise[c] < NOISE_CHASE_THRESHOLD && !target)) {
         z.state[s] = ZombieState.Wandering;
         z.target[s] = 0;
@@ -87,7 +95,7 @@ export function stepHorde(w: World): void {
         let bx = 0;
         let by = 0;
         for (const [ox, oy] of NEIGHBOURS) {
-          if (!canStep(g, cx, cy, ox, oy)) continue;
+          if (!zombieCanStep(g, cx, cy, ox, oy)) continue;
           const f = g.flow[c + oy * g.width + ox];
           if (f < best) {
             best = f;
@@ -95,20 +103,42 @@ export function stepHorde(w: World): void {
             by = oy;
           }
         }
-        if (bx !== 0 || by !== 0) [dx, dy] = unit((cx + bx + 0.5) * CELL_SIZE - x, (cy + by + 0.5) * CELL_SIZE - y);
+        if (bx !== 0 || by !== 0) {
+          [dx, dy] = unit((cx + bx + 0.5) * CELL_SIZE - x, (cy + by + 0.5) * CELL_SIZE - y);
+          ahead = c + by * g.width + bx;
+        }
       }
+    }
+
+    // Stacking: heading into an unclimbed structure and touching it.
+    const hereCell = g.cellAt(x, y);
+    if (ahead >= 0 && ahead !== hereCell && g.isStructureBlocking(ahead) && !g.isClimbable(ahead) && distToCell(g.width, x, y, ahead) <= STACK_CONTACT_M) {
+      z.state[s] = ZombieState.Stacked;
+      z.stack[s] = ahead;
+      dx = 0;
+      dy = 0;
+    } else if (z.state[s] === ZombieState.Stacked) {
+      z.state[s] = ZombieState.Chasing;
+      z.stack[s] = -1;
     }
 
     // Attack whoever is in reach.
     const victim = nearestWithin(active, x, y, ZOMBIE_ATTACK_RANGE_M);
     if (victim) {
       z.state[s] = ZombieState.Attacking;
+      z.stack[s] = -1;
       z.target[s] = victim.id;
       dx = 0;
       dy = 0;
       if (z.attackCd[s] === 0) attack(w, s, victim);
     } else if (z.state[s] === ZombieState.Attacking) {
       z.state[s] = ZombieState.Chasing;
+    } else if (z.state[s] === ZombieState.Stacked && z.attackCd[s] === 0) {
+      const st = w.structure(g.structure[z.stack[s]]);
+      if (st) {
+        z.attackCd[s] = ATTACK_CD_TICKS;
+        damageStructure(w, st, ZOMBIE_STRUCTURE_DAMAGE);
+      }
     }
 
     // Velocity with limited acceleration.
@@ -142,7 +172,7 @@ export function stepHorde(w: World): void {
       return ++seen >= ZOMBIE_MAX_NEIGHBOURS;
     });
 
-    const moved = moveWithCollision(g, px, py, vx * TICK_DT, vy * TICK_DT);
+    const moved = moveWithCollision(g, px, py, vx * TICK_DT, vy * TICK_DT, hereCell);
     if (!moved.okX) vx = 0;
     if (!moved.okY) vy = 0;
     const from = g.cellAt(x, y);
@@ -219,6 +249,15 @@ function nearest(list: readonly Soldier[], x: number, y: number): Soldier | unde
 function nearestWithin(list: readonly Soldier[], x: number, y: number, r: number): Soldier | undefined {
   const n = nearest(list, x, y);
   return n && dist2(x, y, n.x, n.y) <= r * r ? n : undefined;
+}
+
+/** Distance from a point to the nearest edge of a cell's square (0 inside). */
+function distToCell(width: number, x: number, y: number, cell: number): number {
+  const cx = (cell % width) * CELL_SIZE;
+  const cy = Math.floor(cell / width) * CELL_SIZE;
+  const dx = x < cx ? cx - x : x > cx + CELL_SIZE ? x - cx - CELL_SIZE : 0;
+  const dy = y < cy ? cy - y : y > cy + CELL_SIZE ? y - cy - CELL_SIZE : 0;
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
 function dist2(ax: number, ay: number, bx: number, by: number): number {

@@ -1,6 +1,6 @@
 import { Rng } from '@vazante/kernel';
-import { CELL_SIZE, SoldierCondition, type BuildingRect, type DistrictInfo, type SimEvent, type SimSpeed, type SiteInfo } from '@vazante/shared';
-import type { Soldier, Squad } from './entities.ts';
+import { BASE_START, Blocked, CELL_SIZE, SoldierCondition, type BuildingRect, type DistrictInfo, type SimEvent, type SimSpeed, type SiteInfo } from '@vazante/shared';
+import type { Base, Soldier, Squad, Structure } from './entities.ts';
 import type { Grid } from './grid.ts';
 import { ZombiePool } from './zombies.ts';
 
@@ -22,6 +22,10 @@ export class World {
   readonly zombies: ZombiePool;
   readonly soldiers: Soldier[] = [];
   readonly squads: Squad[] = [];
+  readonly structures: Structure[] = [];
+  readonly bases: Base[] = [];
+  /** Set when navigation changed (structure built, destroyed or toggled); forces a flow rebuild. */
+  flowDirty = false;
   readonly stats: WorldStats = { zombiesKilled: 0, shotsFired: 0 };
   directSoldier: number | null = null;
   nextId = 1;
@@ -37,6 +41,7 @@ export class World {
 
   private readonly soldierIndex = new Map<number, Soldier>();
   private readonly squadIndex = new Map<number, Squad>();
+  private readonly structureIndex = new Map<number, Structure>();
 
   constructor(seed: number, grid: Grid, buildings: BuildingRect[], districts: DistrictInfo[], sites: SiteInfo[], zombieCapacity: number) {
     this.seed = seed;
@@ -49,6 +54,34 @@ export class World {
     this.cellHead = new Int32Array(grid.size).fill(-1);
     this.cellNext = new Int32Array(zombieCapacity).fill(-1);
     this.cellCount = new Uint16Array(grid.size);
+    for (const site of sites) if (site.kind === 'base') this.addBase(site.name, site.x0, site.y0, site.x1, site.y1);
+  }
+
+  addBase(name: string, x0: number, y0: number, x1: number, y1: number, materials: number = BASE_START.materials, ammo: number = BASE_START.ammo): Base {
+    const b: Base = { id: this.bases.length + 1, name, x0, y0, x1, y1, materials, ammo };
+    this.bases.push(b);
+    return b;
+  }
+
+  structure(id: number): Structure | undefined {
+    return this.structureIndex.get(id);
+  }
+
+  addStructure(st: Structure): void {
+    this.structures.push(st);
+    this.structureIndex.set(st.id, st);
+    this.grid.structure[st.cell] = st.id;
+  }
+
+  removeStructure(st: Structure): void {
+    const i = this.structures.indexOf(st);
+    if (i >= 0) this.structures.splice(i, 1);
+    this.structureIndex.delete(st.id);
+    const g = this.grid;
+    g.structure[st.cell] = 0;
+    g.structHeight[st.cell] = 0;
+    g.blocked[st.cell] &= ~(Blocked.StructureWall | Blocked.GateClosed | Blocked.Barrier);
+    this.flowDirty = true;
   }
 
   allocId(): number {

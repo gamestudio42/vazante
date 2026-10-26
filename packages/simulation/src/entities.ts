@@ -1,4 +1,4 @@
-import type { Formation, SoldierActivity, SoldierCondition, SquadKind, SquadOrder, Stance, WeaponId } from '@vazante/shared';
+import type { Formation, SoldierActivity, SoldierCondition, SquadKind, SquadOrder, Stance, StructureKind, WeaponId } from '@vazante/shared';
 
 export interface DirectInput {
   mx: number;
@@ -57,4 +57,31 @@ export interface Squad {
   path: number[];
   /** Index of the next waypoint pair. */
   pathIdx: number;
+}
+
+export interface Structure {
+  id: number;
+  kind: StructureKind;
+  cell: number;
+  /** Base that paid for it (index into world.bases). */
+  base: number;
+  hp: number;
+  /** Ticks of construction work done. */
+  work: number;
+  built: boolean;
+  open: boolean;
+  /** MG nest: zombie slot being engaged (-1 none) and fractional shots owed. */
+  target: number;
+  fireAcc: number;
+}
+
+export interface Base {
+  id: number;
+  name: string;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  materials: number;
+  ammo: number;
 }

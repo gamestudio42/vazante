@@ -1,4 +1,4 @@
-import { Blocked, CELL_SIZE, Ground } from '@vazante/shared';
+import { Blocked, CELL_SIZE, Ground, PILE_UNIT_M } from '@vazante/shared';
 
 /** Cell grid stored as a structure of arrays. Index = y * width + x. */
 export class Grid {
@@ -13,6 +13,12 @@ export class Grid {
   readonly noise: Uint8Array;
   /** Flow-field distance to the nearest human, 10 per orthogonal cell; 65535 = unreachable. */
   readonly flow: Uint16Array;
+  /** Structure id occupying the cell (finished or blueprint), 0 = none. */
+  readonly structure: Int32Array;
+  /** Height of the finished structure in decimetres (0 = none). */
+  readonly structHeight: Uint8Array;
+  /** Zombies stacked against or climbing the structure in this cell (derived each tick). */
+  readonly pile: Uint8Array;
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -25,6 +31,9 @@ export class Grid {
     this.district = new Uint8Array(this.size);
     this.noise = new Uint8Array(this.size);
     this.flow = new Uint16Array(this.size).fill(65535);
+    this.structure = new Int32Array(this.size);
+    this.structHeight = new Uint8Array(this.size);
+    this.pile = new Uint8Array(this.size);
   }
 
   get widthM(): number {
@@ -56,6 +65,43 @@ export class Grid {
     return g !== Ground.Building && g !== Ground.Water && this.blocked[cell] === Blocked.None;
   }
 
+  /** True if the cell holds a finished structure that blocks movement. */
+  isStructureBlocking(cell: number): boolean {
+    return (this.blocked[cell] & (Blocked.StructureWall | Blocked.GateClosed | Blocked.Barrier)) !== 0;
+  }
+
+  /** True once enough zombies are piled against the structure in this cell to climb it. */
+  isClimbable(cell: number): boolean {
+    return this.pile[cell] * PILE_UNIT_M * 10 >= this.structHeight[cell];
+  }
+
+  /**
+   * Zombie movement: like isWalkable, but finished structures can be crossed once the pile reaches
+   * their height, and a zombie already inside a structure cell (climbing) may keep moving.
+   */
+  zombieCanEnter(cell: number, fromCell: number): boolean {
+    if (cell < 0) return false;
+    const g = this.ground[cell];
+    if (g === Ground.Building || g === Ground.Water) return false;
+    const b = this.blocked[cell];
+    if (b === Blocked.None || cell === fromCell) return true;
+    if ((b & (Blocked.Rubble | Blocked.Wreck)) !== 0) return false;
+    return this.isClimbable(cell);
+  }
+
+  /**
+   * Extra flow-field cost to enter a cell for the horde: -1 impassable, 0 normal, `penalty`
+   * for a structure that still needs stacking to cross.
+   */
+  zombieCost(cell: number, penalty: number): number {
+    const g = this.ground[cell];
+    if (g === Ground.Building || g === Ground.Water) return -1;
+    const b = this.blocked[cell];
+    if (b === Blocked.None) return 0;
+    if ((b & (Blocked.Rubble | Blocked.Wreck)) !== 0) return -1;
+    return this.isClimbable(cell) ? 0 : penalty;
+  }
+
   isWalkableAt(x: number, y: number): boolean {
     return this.isWalkable(this.cellAt(x, y));
   }
@@ -65,8 +111,8 @@ export class Grid {
     return this.ground[cell] === Ground.Building || (this.blocked[cell] & (Blocked.StructureWall | Blocked.GateClosed)) !== 0;
   }
 
-  /** Line of sight between two points (metres), sampled every half cell. */
-  lineOfSight(x0: number, y0: number, x1: number, y1: number): boolean {
+  /** Line of sight between two points (metres), sampled every half cell. Elevated shooters can ignore structures. */
+  lineOfSight(x0: number, y0: number, x1: number, y1: number, overStructures = false): boolean {
     const dx = x1 - x0;
     const dy = y1 - y0;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -80,7 +126,8 @@ export class Grid {
       px += sx;
       py += sy;
       const c = this.cellAt(px, py);
-      if (c < 0 || this.blocksSight(c)) return false;
+      if (c < 0) return false;
+      if (overStructures ? this.ground[c] === Ground.Building : this.blocksSight(c)) return false;
     }
     return true;
   }

@@ -7,11 +7,14 @@ import {
   type CommandEnvelope,
   type Frame,
   type MapInfo,
+  STRUCTURES,
   type SquadView,
+  type StructureView,
 } from '@vazante/shared';
 import { applyCommand } from './commands.ts';
 import { createScenario, type ScenarioId, type ScenarioOptions } from './scenarios/index.ts';
 import { stepCombat } from './systems/combat.ts';
+import { buildTicks, stepConstruction, stepEmplacements } from './systems/construction.ts';
 import { stepFlow } from './systems/flow.ts';
 import { stepHorde } from './systems/horde.ts';
 import { stepInfection } from './systems/infection.ts';
@@ -68,7 +71,9 @@ export class SimulationEngine {
     stepUnits(w);
     w.rebuildZombieHash();
     stepCombat(w);
+    stepEmplacements(w);
     stepInfection(w);
+    stepConstruction(w);
     decayNoise(w);
     w.tick++;
   }
@@ -150,6 +155,19 @@ export class SimulationEngine {
         path: q.path.slice(q.pathIdx * 2),
       };
     });
+    const structures: StructureView[] = w.structures.map((st) => ({
+      id: st.id,
+      kind: st.kind,
+      cx: st.cell % w.grid.width,
+      cy: Math.floor(st.cell / w.grid.width),
+      hp: st.hp,
+      maxHp: STRUCTURES[st.kind].hp,
+      progress: Math.min(1, st.work / buildTicks(st.kind)),
+      built: st.built,
+      open: st.open,
+      pile: w.grid.pile[st.cell],
+    }));
+    const bases = w.bases.map((b) => ({ ...b }));
     const events = w.events;
     w.events = [];
     return {
@@ -159,6 +177,8 @@ export class SimulationEngine {
       soldiers,
       zombies,
       squads,
+      structures,
+      bases,
       directSoldier: w.directSoldier,
       events,
       stats: {
@@ -179,7 +199,13 @@ export class SimulationEngine {
     h.u32(w.tick).u32(w.nextId).u32(w.stats.zombiesKilled).u32(w.stats.shotsFired);
     for (const v of w.rng.getState()) h.u32(v);
     h.u32(w.directSoldier ?? 0);
-    h.bytes(w.grid.blocked).bytes(w.grid.noise).bytes(w.grid.flow);
+    h.bytes(w.grid.blocked).bytes(w.grid.noise).bytes(w.grid.flow).bytes(w.grid.structHeight).bytes(w.grid.pile);
+    h.byte(w.flowDirty ? 1 : 0);
+    for (const b of w.bases) h.u32(b.id).u32(b.materials).u32(b.ammo);
+    for (const st of w.structures) {
+      h.u32(st.id).str(st.kind).u32(st.cell).u32(st.base).f64Value(st.hp).u32(st.work).byte(st.built ? 1 : 0).byte(st.open ? 1 : 0);
+      h.u32(st.target + 1).f64Value(st.fireAcc);
+    }
     const z = w.zombies;
     h.u32(z.alive).u32(z.highWater);
     for (let s = 0; s < z.highWater; s++) {
@@ -188,7 +214,7 @@ export class SimulationEngine {
         continue;
       }
       h.byte(1).u32(s).f64Value(z.x[s]).f64Value(z.y[s]).f64Value(z.vx[s]).f64Value(z.vy[s]);
-      h.u32(z.hp[s] & 0xffff).byte(z.state[s]).byte(z.kind[s]).u32(z.attackCd[s]).u32(z.wanderT[s]).byte(z.wanderDir[s]).u32(z.target[s]);
+      h.u32(z.hp[s] & 0xffff).byte(z.state[s]).byte(z.kind[s]).u32(z.attackCd[s]).u32(z.wanderT[s]).byte(z.wanderDir[s]).u32(z.target[s]).u32(z.stack[s] + 1);
     }
     for (const v of z.serializeFree()) h.u32(v);
     for (const s of w.soldiers) {

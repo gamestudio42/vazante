@@ -1,3 +1,4 @@
+import type { StructureKind } from './balance/structures.ts';
 import type { Formation, SimSpeed, Stance, Vec2 } from './types.ts';
 
 export type Command =
@@ -8,6 +9,9 @@ export type Command =
   | { type: 'formation'; squads: number[]; formation: Formation }
   | { type: 'set_direct_control'; soldier: number | null }
   | { type: 'direct_input'; soldier: number; move: Vec2; aim: Vec2; fire: boolean; reload: boolean }
+  | { type: 'build'; kind: StructureKind; at: Vec2 }
+  | { type: 'demolish'; structure: number }
+  | { type: 'toggle_gate'; structure: number }
   /** Development helper: spawn a group of zombies around a point. */
   | { type: 'debug_spawn'; at: Vec2; count: number };
 

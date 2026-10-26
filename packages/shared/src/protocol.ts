@@ -1,3 +1,4 @@
+import type { StructureKind } from './balance/structures.ts';
 import type { Command } from './commands.ts';
 import type { SimEvent } from './events.ts';
 import type { Formation, MapInfo, SimSpeed, SquadOrder, Stance } from './types.ts';
@@ -45,6 +46,33 @@ export interface SquadView {
   path: number[];
 }
 
+export interface StructureView {
+  id: number;
+  kind: StructureKind;
+  cx: number;
+  cy: number;
+  hp: number;
+  maxHp: number;
+  /** Construction progress 0..1. */
+  progress: number;
+  built: boolean;
+  /** Gates only. */
+  open: boolean;
+  /** Zombies stacked against or climbing this structure. */
+  pile: number;
+}
+
+export interface BaseView {
+  id: number;
+  name: string;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  materials: number;
+  ammo: number;
+}
+
 export interface FrameStats {
   zombiesAlive: number;
   zombiesKilled: number;
@@ -62,6 +90,8 @@ export interface Frame {
   soldiers: Float32Array;
   zombies: Float32Array;
   squads: SquadView[];
+  structures: StructureView[];
+  bases: BaseView[];
   directSoldier: number | null;
   events: SimEvent[];
   stats: FrameStats;

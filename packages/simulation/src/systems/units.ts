@@ -1,5 +1,6 @@
 import { DIR16_X, DIR16_Y, FORMATION_SPACING_M, SoldierActivity, TICK_DT, type Formation } from '@vazante/shared';
 import type { Soldier, Squad } from '../entities.ts';
+import { findPath } from '../navigation.ts';
 import { isActiveSoldier, type World } from '../world.ts';
 import { moveWithCollision } from './movement.ts';
 
@@ -15,6 +16,19 @@ export function stepUnits(w: World): void {
   }
 }
 
+function replan(w: World, q: Squad): void {
+  if (q.order.kind !== 'move') return;
+  const to = q.order.to;
+  const cells = findPath(w.grid, w.grid.cellAt(q.ax, q.ay), w.grid.cellAt(to.x, to.y));
+  q.path = [];
+  q.pathIdx = 0;
+  if (!cells) {
+    q.order = { kind: 'hold', at: { x: q.ax, y: q.ay } };
+    return;
+  }
+  for (const c of cells) q.path.push(w.grid.cellCenterX(c), w.grid.cellCenterY(c));
+}
+
 function aiMembers(w: World, q: Squad): Soldier[] {
   const out: Soldier[] = [];
   for (const id of q.members) {
@@ -27,6 +41,12 @@ function aiMembers(w: World, q: Squad): Soldier[] {
 function stepSquad(w: World, q: Squad): void {
   const members = aiMembers(w, q);
   if (members.length === 0) return;
+
+  if (q.order.kind === 'move' && q.pathIdx * 2 < q.path.length) {
+    // A structure finished on the route: plan again from where the squad is.
+    const next = w.grid.cellAt(q.path[q.pathIdx * 2], q.path[q.pathIdx * 2 + 1]);
+    if (!w.grid.isWalkable(next)) replan(w, q);
+  }
 
   if (q.order.kind === 'move') {
     let lag = 0;

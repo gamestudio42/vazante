@@ -1,5 +1,6 @@
 import { CELL_SIZE, SoldierActivity, ZombieKind, ZombieState, type Command } from '@vazante/shared';
 import { findPath } from './navigation.ts';
+import { demolishStructure, placeStructure, toggleGate } from './systems/construction.ts';
 import { releaseDirect } from './systems/lifecycle.ts';
 import { isActiveSoldier, type World } from './world.ts';
 
@@ -102,6 +103,15 @@ export function applyCommand(w: World, cmd: Command): string | null {
       s.direct = { mx, my, ax, ay, fire: cmd.fire, reload: cmd.reload };
       return null;
     }
+
+    case 'build':
+      return placeStructure(w, cmd.kind, cmd.at.x, cmd.at.y);
+
+    case 'demolish':
+      return demolishStructure(w, cmd.structure);
+
+    case 'toggle_gate':
+      return toggleGate(w, cmd.structure);
 
     case 'debug_spawn': {
       const n = Math.max(1, Math.min(500, Math.floor(cmd.count)));
