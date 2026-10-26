@@ -79,6 +79,23 @@ describe('construction', () => {
     expect(w.grid.isWalkable(st.cell)).toBe(false);
   });
 
+  it('idle squads in the base walk to blueprints and build them', () => {
+    const e = withBase(48);
+    const w = e.world;
+    const q = addSquad(e, 'slice', c(10), c(10));
+    for (let x = 20; x <= 24; x++) build(e, 'hesco', x, 30);
+    e.runTicks(5 * buildTicks('hesco') + 1200);
+    expect(w.structures.every((st) => st.built)).toBe(true);
+    expect(q.buildTask).toBe(0);
+    // A player order cancels the task.
+    build(e, 'wall', 40, 40);
+    e.runTicks(30);
+    expect(q.buildTask).not.toBe(0);
+    e.enqueue({ type: 'hold', squads: [q.id] });
+    e.runTicks(50);
+    expect(q.buildTask).toBe(0);
+  });
+
   it('a new wall reroutes the horde around it', () => {
     const e = withBase(32);
     const w = e.world;

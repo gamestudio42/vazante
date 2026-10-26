@@ -16,6 +16,23 @@ export function stepUnits(w: World): void {
   }
 }
 
+/** Give a squad a move order with an A* path. Returns false (order unchanged) if there is no path. */
+export function planMove(w: World, q: Squad, toX: number, toY: number): boolean {
+  const goal = w.grid.cellAt(toX, toY);
+  const cells = findPath(w.grid, w.grid.cellAt(q.ax, q.ay), goal);
+  if (!cells) return false;
+  const path: number[] = [];
+  for (const c of cells) path.push(w.grid.cellCenterX(c), w.grid.cellCenterY(c));
+  if (cells.length > 0 && cells[cells.length - 1] === goal) {
+    path[path.length - 2] = toX;
+    path[path.length - 1] = toY;
+  }
+  q.order = { kind: 'move', to: { x: toX, y: toY } };
+  q.path = path;
+  q.pathIdx = 0;
+  return true;
+}
+
 function replan(w: World, q: Squad): void {
   if (q.order.kind !== 'move') return;
   const to = q.order.to;

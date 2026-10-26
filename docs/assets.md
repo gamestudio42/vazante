@@ -4,4 +4,4 @@ Every third-party asset must be listed here with its license before it is commit
 
 | Asset | Path | Author / source | License | Notes |
 | --- | --- | --- | --- | --- |
-| (none yet; all visuals are procedural) | | | | |
+| (none yet; all visuals and all audio are procedural: `packages/view3d`, `packages/audio`) | | | | |

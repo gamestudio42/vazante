@@ -189,3 +189,29 @@ canvas.game {
     font-size: 11px;
   }
 }
+.build {
+  bottom: 84px;
+  left: 8px;
+  max-width: calc(100vw - 450px);
+}
+.build button,
+.selection button {
+  font: inherit;
+  color: var(--text);
+  background: #232a31;
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  margin: 6px 6px 0 0;
+  cursor: pointer;
+}
+.build button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.build button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.build .hint {
+  margin-top: 6px;
+}

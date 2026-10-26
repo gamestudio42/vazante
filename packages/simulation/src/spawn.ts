@@ -21,6 +21,8 @@ export function spawnSquad(w: World, kind: SquadKind, name: string, x: number, y
     hy: -1,
     path: [],
     pathIdx: 0,
+    buildTask: 0,
+    autoBuild: true,
   };
   const n = t.weapons.length;
   for (let i = 0; i < n; i++) {

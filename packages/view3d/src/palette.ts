@@ -40,4 +40,11 @@ export const PALETTE = {
   orderMarker: 0x8fe08a,
   path: 0xd8f0c8,
   directRing: 0xff5a3c,
+  hesco: 0xb59a6a,
+  concrete: 0x9a9890,
+  gate: 0x4f5a60,
+  sandbag: 0x9c8a62,
+  blueprint: 0x6fc3ff,
+  ghostOk: 0x7fe07a,
+  ghostBad: 0xff5a4a,
 } as const;

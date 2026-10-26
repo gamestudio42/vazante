@@ -64,13 +64,20 @@ The vertical slice uses two squads of 6 (5 rifles + 1 LMG).
 
 ## Structures (`balance/structures.ts`)
 
+Implemented in v0.1 (values in code). HP counts zombie attacks (1 per attack, 1 attack/s per zombie). Materials are base stock units (base starts with 400).
+
+| Structure | Cells | Height (m) | HP | Materials | Build time (s) | Effect |
+| --- | --- | --- | --- | --- | --- | --- |
+| HESCO barrier | 1 × 1 | 2.2 | 300 | 20 | 15 | blocks movement, not sight; climbable with pile 5 |
+| Concrete wall | 1 × 1 | 3.5 | 600 | 40 | 30 | blocks movement and sight; climbable with pile 7 |
+| Gate | 1 × 1 | 3.0 | 450 | 30 | 25 | open/close (G); closed blocks movement and sight |
+| MG nest | 1 × 1 | 1.2 | 250 | 35 | 20 | crewed: 9 shots/s, 45 m, 60% base accuracy, 35 dmg, fires over walls, uses base ammo |
+
+Planned (not implemented yet):
+
 | Structure | Cells | Height (m) | HP | Materials (t) | Build time (s) | Effect |
 | --- | --- | --- | --- | --- | --- | --- |
-| HESCO barrier | 1 × 1 | 2.0 | 800 | 0.5 | 10 | blocks; climbable with pile 4 |
-| Concrete wall | 1 × 1 | 3.5 | 2,000 | 1.5 | 20 | blocks; climbable with pile 7 |
-| Gate | 2 × 1 | 3.5 | 1,200 | 1.0 | 20 | open/close by command |
 | Scaffold | 1 × 1 | 3.0 | 200 | 0.3 | 8 | soldiers fire from the wall top |
-| MG nest | 2 × 2 | 1.5 | 600 | 1.0 | 15 | fixed LMG, +20% range |
 | CIWS | 2 × 2 | 3.0 | 800 | 3.0 | 60 | auto cannon, 50 shots/s, 100 m, 3,000 rounds |
 | Mortar pit | 2 × 2 | 0 | 400 | 1.0 | 20 | indirect fire 50 to 1,500 m, radius 10 m |
 | Ammo depot | 3 × 3 | 2.5 | 600 | 2.0 | 30 | resupply point, 50,000 rounds |
@@ -96,3 +103,6 @@ The vertical slice uses two squads of 6 (5 rifles + 1 LMG).
 | Date | Value | Old → new | Reason |
 | --- | --- | --- | --- |
 | 2026-10-26 | — | — | initial tables from the Vazante spec |
+| 2026-10-26 | structure HP | thousands → 250..600 zombie attacks | HP is counted in attacks; old values made walls immortal |
+| 2026-10-26 | structure footprint | 2×2 nest, 2×1 gate → 1×1 | one cell per piece for the slice; multi-cell later |
+| 2026-10-26 | flow penalty for structures | — → 200 (20 cells) | horde detours around short walls and besieges long ones |

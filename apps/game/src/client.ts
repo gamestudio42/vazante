@@ -9,7 +9,7 @@ export interface Alert {
   y?: number;
 }
 
-const ALERT_TYPES = new Set<SimEvent['type']>(['soldier_bitten', 'soldier_died', 'soldier_turned', 'zombie_risen', 'out_of_ammo', 'squad_arrived', 'command_rejected']);
+const ALERT_TYPES = new Set<SimEvent['type']>(['soldier_bitten', 'soldier_died', 'soldier_turned', 'zombie_risen', 'out_of_ammo', 'squad_arrived', 'command_rejected', 'structure_built', 'structure_destroyed']);
 
 export interface ClientState {
   map: MapInfo | null;

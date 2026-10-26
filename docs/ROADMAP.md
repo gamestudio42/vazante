@@ -8,9 +8,10 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started.
 
 ### Status (2026-10-26)
 
-Done with automated tests: M0.1 to M0.4, M1.1, M1.2, M1.5 (engine side: reading frames never changes the hash), M2.1, M2.3, M3.1 to M3.5, M4.1.
-Done and checked by hand in Chromium (no automated test yet): M1.3 worker host and speed control, M1.4 pixel render, M1.5 camera bands, M2.2 selection and orders, M4.2 direct HUD.
-Next: Playwright e2e for M2.2 and M4.2, then M5 (construction).
+Done with automated tests: M0.1 to M0.4, M1.1, M1.2, M1.5 (engine side: reading frames never changes the hash), M2.1, M2.3, M3.1 to M3.5, M4.1, M5.1 (engine side), M5.2, M5.3, M5.4.
+Done and checked by hand in Chromium (no automated test yet): M1.3 worker host and speed control, M1.4 pixel render, M1.5 camera bands, M2.2 selection and orders, M4.2 direct HUD, M5.1 build menu and ghost.
+Quality pass (see `AUDIT.md`): toon/outline/posterize render, shadows, animated procedural characters, corpses, blood, particles, order markers, path preview, procedural audio.
+Next: Playwright e2e (M2.2, M4.2, M5.1), then M6 (inventories and logistics) and M7 (director, objectives).
 
 ### M0. Foundation 🟡 (M0.5 waits for a remote repository)
 
@@ -57,7 +58,7 @@ Next: Playwright e2e for M2.2 and M4.2, then M5 (construction).
 | M4.1 | TAB takes a soldier; WASD + mouse aim + fire + reload; speed forced to 1x | entering and leaving changes nothing but the issued commands (hash test) |
 | M4.2 | Direct HUD (crosshair, ammo, health) | e2e: TAB, shoot, TAB back |
 
-### M5. Construction and dynamic navigation
+### M5. Construction and dynamic navigation ✅
 
 | ID | Task | Acceptance |
 | --- | --- | --- |

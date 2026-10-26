@@ -57,6 +57,10 @@ export interface Squad {
   path: number[];
   /** Index of the next waypoint pair. */
   pathIdx: number;
+  /** Structure this squad was sent to build automatically (0 = none). Cleared by player orders. */
+  buildTask: number;
+  /** Idle in a base, this squad helps build. A player "hold" turns it off, a move turns it back on. */
+  autoBuild: boolean;
 }
 
 export interface Structure {

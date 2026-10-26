@@ -39,4 +39,7 @@ Requires Node 22+ and pnpm 10.
 | Formation | F cycles line, column, wedge, circle |
 | Pause / speed | Space, F1 1x, F2 2x, F3 4x |
 | Direct control | TAB on a selected squad (WASD move, mouse aim, click fire, R reload, TAB exit) |
+| Build | B toggles build mode, 1-4 picks HESCO / wall / gate / MG nest, drag for a line, Shift keeps building, right click or Esc cancels |
+| Gate / demolish | G opens or closes the gate under the cursor, Del demolishes |
+| Sound | N toggles |
 | Spawn test horde (dev) | K at the cursor |

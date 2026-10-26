@@ -18,6 +18,7 @@ import { DecalLayer, OrderMarkers, Particles } from './fx.ts';
 import { toon } from './materials.ts';
 import { PALETTE } from './palette.ts';
 import { PixelPost } from './post.ts';
+import { StructureLayer } from './structures.ts';
 
 const INTERNAL_HEIGHT = 270;
 const MAX_SOLDIER_ID = 1024;
@@ -71,6 +72,7 @@ export class GameRenderer {
   private readonly blood: DecalLayer;
   private readonly particles = new Particles(1200);
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
+  readonly structures: StructureLayer;
   private readonly corpses: Corpse[] = [];
   private corpseNext = 0;
   private corpsesDirty = false;
@@ -134,6 +136,8 @@ export class GameRenderer {
     this.scene.add(this.sun, this.sun.target);
 
     this.scene.add(buildCity(map));
+    this.structures = new StructureLayer(map.cellSize, map.width, map.height);
+    this.scene.add(this.structures.group);
     this.districts = buildDistrictOverlay(map);
     this.scene.add(this.districts);
 
@@ -213,6 +217,7 @@ export class GameRenderer {
       this.zPrevY[slot] = this.zPrevSlotY[slot];
       this.zSeenTick[slot] = f.tick;
     }
+    this.structures.update(f.structures);
     this.prev = this.curr;
     this.curr = f;
     this.currAt = nowMs;
@@ -254,6 +259,15 @@ export class GameRenderer {
         if (e.x === undefined) return;
         this.blood.add(e.x, e.y!, 0.6 + Math.random() * 0.5, Math.random() * Math.PI);
         this.particles.emit(e.x, e.y!, 1.3, 5, { speed: 2, up: 1.5, life: 0.4, size: 0.16, color: PALETTE.bloodFresh });
+        return;
+      case 'structure_destroyed':
+        if (e.x === undefined) return;
+        this.particles.emit(e.x, e.y!, 1.5, 30, { speed: 4, up: 4, life: 1.2, size: 0.45, color: PALETTE.dust });
+        this.particles.emit(e.x, e.y!, 1.5, 12, { speed: 3, up: 5, life: 1.0, size: 0.3, color: PALETTE.concrete });
+        return;
+      case 'structure_built':
+        if (e.x === undefined) return;
+        this.particles.emit(e.x, e.y!, 0.3, 14, { speed: 2, up: 1, life: 0.6, size: 0.3, color: PALETTE.dust });
         return;
       case 'soldier_died':
         if (e.x === undefined) return;
@@ -522,7 +536,10 @@ export class GameRenderer {
       w.armR = p.armR + (w.armR - p.armR) * 0.3;
       // A limp: one leg drags.
       w.legSwing *= 0.75 + ((slot & 1) === 0 ? 0.25 : 0);
-      this.zombies.add(x, y, this.zYaw[slot] + shamble * 0.08, boost * kindScale(kind), w, this.zombieColors(slot));
+      const cell = Math.floor(y / this.map.cellSize) * this.map.width + Math.floor(x / this.map.cellSize);
+      const climb = this.structures.heightAt[cell] ?? 0;
+      if (state === ZombieState.Stacked) w.lean = 0.5; // pressed against the wall, clawing upward
+      this.zombies.add(x, y, this.zYaw[slot] + shamble * 0.08, boost * kindScale(kind), w, this.zombieColors(slot), climb);
     }
     this.zombies.end();
   }
@@ -619,7 +636,7 @@ export class GameRenderer {
   /** Units are drawn larger when zoomed out so they remain visible at low resolution. */
   private unitScale(): number {
     if (this.rig.direct) return 1;
-    return Math.max(1, this.rig.span / 90);
+    return Math.max(1, this.rig.span / 60);
   }
 
   // ----- Picking (CSS pixel coordinates) -----

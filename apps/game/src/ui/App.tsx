@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { SOLDIER_STRIDE, SoldierField, STANCES, TICK_HZ, type Frame, type SquadView } from '@vazante/shared';
+import { SOLDIER_STRIDE, SoldierField, STANCES, STRUCTURES, STRUCTURE_KINDS, TICK_HZ, type Frame, type SquadView } from '@vazante/shared';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from '../client.ts';
 import type { InputController } from '../input.ts';
@@ -31,6 +31,7 @@ export function App({ client, input, view }: Props) {
       {!input.inDirect && <SquadList frame={f} selected={state.selected} onSelect={(id) => input.select([id])} onCenter={(q) => view.rig.centerOn(q.anchorX, q.anchorY)} />}
       {!input.inDirect && <Alerts alerts={state.alerts} onJump={(x, y) => view.rig.centerOn(x, y)} />}
       {!input.inDirect && <SelectionPanel squads={selected} frame={f} input={input} />}
+      {!input.inDirect && <BuildPanel frame={f} input={input} />}
       {input.inDirect && <DirectHud frame={f} />}
       {input.box && <div className="box" style={boxStyle(input.box)} />}
       {input.helpVisible && !input.inDirect && (
@@ -122,7 +123,7 @@ function Alerts({ alerts, onJump }: { alerts: GameClient['state']['alerts']; onJ
       {alerts.slice(0, 8).map((a) => (
         <div key={a.id} className={`alert a-${a.type}`} onClick={() => a.x !== undefined && onJump(a.x, a.y!)}>
           <span className="muted">{fmt(a.tick)}</span> {t(`alert.${a.type}`)}
-          {a.reason ? ` (${t(`reason.${a.reason}`)})` : ''}
+          {a.reason ? ` (${t(a.type.startsWith('structure_') ? `structure.${a.reason}` : `reason.${a.reason}`)})` : ''}
         </div>
       ))}
     </div>
@@ -150,6 +151,31 @@ function SelectionPanel({ squads, frame, input }: { squads: SquadView[]; frame: 
         <button onClick={() => input.cycleFormation()}>F · {t(`formation.${q.formation}`)}</button>
         <button onClick={() => input.toggleDirect()}>{t('sel.direct')}</button>
       </div>
+    </div>
+  );
+}
+
+function BuildPanel({ frame, input }: { frame: Frame; input: InputController }) {
+  const base = frame.bases[0];
+  const tool = input.build;
+  return (
+    <div className="build panel">
+      <div className="row">
+        <b>{t('build.title')}</b>
+        {base && (
+          <span className="muted">
+            {base.name} · {t('build.stock')} {base.materials} · {t('build.ammo')} {base.ammo}
+          </span>
+        )}
+      </div>
+      <div className="row">
+        {STRUCTURE_KINDS.map((k, i) => (
+          <button key={k} className={tool.kind === k ? 'on' : ''} onClick={() => input.setBuild(tool.kind === k ? null : k)} disabled={!base || base.materials < STRUCTURES[k].materials}>
+            {i + 1} · {t(`structure.${k}`)} <span className="muted">{STRUCTURES[k].materials}</span>
+          </button>
+        ))}
+      </div>
+      <div className={`row hint ${tool.reason ? 'warn' : 'muted'}`}>{tool.active ? (tool.reason ? t(`reason.${tool.reason}`) : t('build.hint')) : t('build.edit')}</div>
     </div>
   );
 }

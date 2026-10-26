@@ -15,7 +15,8 @@ import {
   type PlacementContext,
   type StructureKind,
 } from '@vazante/shared';
-import type { Structure } from '../entities.ts';
+import type { Squad, Structure } from '../entities.ts';
+import { planMove } from './units.ts';
 import { isActiveSoldier, type World } from '../world.ts';
 
 export function placementContext(w: World): PlacementContext {
@@ -78,8 +79,87 @@ function cellOccupied(w: World, cell: number): boolean {
   return false;
 }
 
+/** Squads may be pulled to blueprints from this far outside their base (cells). */
+const TASK_BASE_MARGIN = 10;
+const TASK_INTERVAL_TICKS = 10;
+
+/**
+ * Idle squads in a base go and build its blueprints, nearest first. Player orders cancel the task.
+ * A squad keeps its task until that structure is finished or removed.
+ */
+function assignBuilders(w: World): void {
+  for (const q of w.squads) {
+    if (q.buildTask !== 0 && !w.structures.some((st) => st.id === q.buildTask && !st.built)) {
+      q.buildTask = 0;
+      if (q.order.kind === 'move') q.order = { kind: 'hold', at: { x: q.ax, y: q.ay } };
+    }
+  }
+  for (const st of w.structures) {
+    if (st.built || st.work >= buildTicks(st.kind)) continue;
+    if (w.squads.some((q) => q.buildTask === st.id)) continue;
+    const base = w.bases[st.base];
+    let best: Squad | undefined;
+    let bd = Infinity;
+    const sx = w.grid.cellCenterX(st.cell);
+    const sy = w.grid.cellCenterY(st.cell);
+    for (const q of w.squads) {
+      if (!q.autoBuild || q.buildTask !== 0 || q.order.kind === 'move' || !squadCanBuild(w, q)) continue;
+      const qcx = Math.floor(q.ax / CELL_SIZE);
+      const qcy = Math.floor(q.ay / CELL_SIZE);
+      if (!base || qcx < base.x0 - TASK_BASE_MARGIN || qcx > base.x1 + TASK_BASE_MARGIN || qcy < base.y0 - TASK_BASE_MARGIN || qcy > base.y1 + TASK_BASE_MARGIN) continue;
+      const d = (q.ax - sx) * (q.ax - sx) + (q.ay - sy) * (q.ay - sy);
+      if (d < bd) {
+        bd = d;
+        best = q;
+      }
+    }
+    if (!best) continue;
+    const spot = workSpot(w, st.cell, best.ax, best.ay);
+    if (spot >= 0 && planMove(w, best, w.grid.cellCenterX(spot), w.grid.cellCenterY(spot))) best.buildTask = st.id;
+  }
+}
+
+function squadCanBuild(w: World, q: Squad): boolean {
+  let n = 0;
+  for (const id of q.members) {
+    const s = w.soldier(id);
+    if (s && isActiveSoldier(s) && !s.direct) n++;
+  }
+  return n >= BUILDERS_REQUIRED;
+}
+
+/** Free walkable cell next to a blueprint, on the side nearest to (x, y). */
+function workSpot(w: World, cell: number, x: number, y: number): number {
+  const g = w.grid;
+  const cx = cell % g.width;
+  const cy = (cell - cx) / g.width;
+  let best = -1;
+  let bd = Infinity;
+  for (const [dx, dy] of [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0],
+    [1, 1],
+    [-1, 1],
+    [1, -1],
+    [-1, -1],
+  ]) {
+    if (!g.inBounds(cx + dx, cy + dy)) continue;
+    const n = g.idx(cx + dx, cy + dy);
+    if (!g.isWalkable(n) || g.structure[n] !== 0) continue;
+    const d = (g.cellCenterX(n) - x) ** 2 + (g.cellCenterY(n) - y) ** 2;
+    if (d < bd) {
+      bd = d;
+      best = n;
+    }
+  }
+  return best;
+}
+
 /** Builders advance blueprints; a finished blueprint waits until its cell is clear, then blocks. */
 export function stepConstruction(w: World): void {
+  if (w.tick % TASK_INTERVAL_TICKS === 0) assignBuilders(w);
   const r2 = BUILD_RADIUS_M * BUILD_RADIUS_M;
   for (const st of w.structures) {
     if (st.built) continue;

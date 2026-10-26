@@ -83,11 +83,11 @@ export class CharacterBatch {
   }
 
   /** Write one character at (x, y) on the simulation plane. `yaw` rotates around +y; the character faces its local -z. */
-  add(x: number, y: number, yaw: number, scale: number, pose: Pose, colors: CharacterColors): void {
+  add(x: number, y: number, yaw: number, scale: number, pose: Pose, colors: CharacterColors, elevation = 0): void {
     const i = this.count++;
     this.q.setFromAxisAngle(Y_AXIS, yaw);
     this.s.set(scale, scale, scale);
-    this.v.set(x, pose.bob * scale, y);
+    this.v.set(x, elevation + pose.bob * scale, y);
     this.root.compose(this.v, this.q, this.s);
     if (pose.lie > 0) {
       // Fall backwards around the feet.

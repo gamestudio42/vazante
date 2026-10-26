@@ -42,3 +42,12 @@ Code, comments, technical docs, commits: English. Player-facing text through i18
 ## D9. Own deterministic kernel instead of copying Urbe Oasis
 
 The Urbe Oasis repository was not reachable from the build environment, so `packages/kernel` (xoshiro128**, FNV-1a) was written from scratch with the same API shape. It can be swapped for the Urbe Oasis version later if desired.
+
+## D10. Construction simplifications for the slice
+
+- **Pile is derived, not stored with decay.** Each tick the pile at a structure is the number of zombies stacked against it plus those climbing inside it. Dead or departed zombies leave the pile at once (the GDD's "decay by 1 every 20 ticks" is dropped). Simpler, deterministic, and it reads well on screen.
+- **Structures cost flow, they are not walls of infinity.** An unclimbed structure adds 200 (20 cells) to the flow field. A short wall is bypassed; a sealed perimeter is besieged instead of making the horde give up.
+- **MG nest crew is abstracted.** The nest fires on its own from the base ammo stock. Manning by a squad comes with M6 inventories.
+- **One cell per structure.** Multi-cell gates and nests come later.
+- **Idle squads help build.** A squad holding in or near a base walks to the nearest blueprint. A player "hold" opts that squad out, a move opts it back in. Without this, every blueprint needed manual micro.
+- **HP in zombie attacks.** Structure HP counts attacks (one per zombie per second), not abstract damage.

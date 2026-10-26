@@ -1,7 +1,7 @@
 import { CELL_SIZE, SoldierActivity, ZombieKind, ZombieState, type Command } from '@vazante/shared';
-import { findPath } from './navigation.ts';
 import { demolishStructure, placeStructure, toggleGate } from './systems/construction.ts';
 import { releaseDirect } from './systems/lifecycle.ts';
+import { planMove } from './systems/units.ts';
 import { isActiveSoldier, type World } from './world.ts';
 
 /** Apply one command at the start of a tick. Returns a rejection reason, or null on success. */
@@ -16,20 +16,9 @@ export function applyCommand(w: World, cmd: Command): string | null {
       let ok = 0;
       for (const id of cmd.squads) {
         const q = w.squad(id);
-        if (!q) continue;
-        const start = w.grid.cellAt(q.ax, q.ay);
-        const goal = w.grid.cellAt(cmd.to.x, cmd.to.y);
-        const cells = findPath(w.grid, start, goal);
-        if (!cells) continue;
-        const path: number[] = [];
-        for (const c of cells) path.push(w.grid.cellCenterX(c), w.grid.cellCenterY(c));
-        if (cells.length > 0 && cells[cells.length - 1] === goal) {
-          path[path.length - 2] = cmd.to.x;
-          path[path.length - 1] = cmd.to.y;
-        }
-        q.order = { kind: 'move', to: { x: cmd.to.x, y: cmd.to.y } };
-        q.path = path;
-        q.pathIdx = 0;
+        if (!q || !planMove(w, q, cmd.to.x, cmd.to.y)) continue;
+        q.buildTask = 0;
+        q.autoBuild = true;
         ok++;
       }
       return ok > 0 ? null : 'no_path';
@@ -40,6 +29,8 @@ export function applyCommand(w: World, cmd: Command): string | null {
         const q = w.squad(id);
         if (!q) continue;
         q.order = { kind: 'hold', at: { x: q.ax, y: q.ay } };
+        q.buildTask = 0;
+        q.autoBuild = false;
         q.path = [];
         q.pathIdx = 0;
       }

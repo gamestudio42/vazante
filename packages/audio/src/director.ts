@@ -260,6 +260,16 @@ export class AudioDirector {
       case 'command_rejected':
         this.playUi('deny');
         return;
+      case 'structure_built':
+        if (this.throttle('built', 0.4)) this.radio(true);
+        return;
+      case 'structure_destroyed':
+        this.crash(e.x!, e.y!);
+        this.radio(false);
+        return;
+      case 'gate_toggled':
+        this.clank(e.x!, e.y!);
+        return;
       default:
     }
   }
@@ -447,6 +457,24 @@ export class AudioDirector {
     const t = this.ctx!.currentTime;
     this.noiseBurst(out, t, 'highpass', 4000, 1, 0.5, 0.001, 0.02);
     this.noiseBurst(out, t + 0.18, 'highpass', 4000, 1, 0.5, 0.001, 0.02);
+  }
+
+  private crash(x: number, y: number): void {
+    const out = this.voice(Pri.Alert, 1.4, x, y, 1);
+    if (!out) return;
+    const t = this.ctx!.currentTime;
+    this.noiseBurst(out, t, 'lowpass', 500, 0.7, 0.9, 0.005, 0.9);
+    this.tone(out, t, 'sine', 70, 30, 0.8, 0.005, 0.6);
+    for (let i = 0; i < 4; i++) this.noiseBurst(out, t + 0.15 + i * 0.12 + Math.random() * 0.05, 'bandpass', 1500 + Math.random() * 1500, 2, 0.2, 0.002, 0.08);
+  }
+
+  private clank(x: number, y: number): void {
+    const out = this.voice(Pri.Unit, 1.2, x, y, 0.7);
+    if (!out) return;
+    const t = this.ctx!.currentTime;
+    this.tone(out, t, 'square', 220, 210, 0.15, 0.003, 0.5);
+    this.tone(out, t, 'sine', 587, 580, 0.12, 0.003, 0.7);
+    this.noiseBurst(out, t + 0.05, 'bandpass', 900, 1, 0.3, 0.05, 0.6); // sliding leaf
   }
 
   /** Radio squelch and beeps: good news rises, bad news falls. */

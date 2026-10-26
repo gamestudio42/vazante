@@ -1,6 +1,6 @@
 # Quality audit against an AAA bar
 
-2026-10-26 · build `8069844` (two commits, 28 tests)
+2026-10-26 · first audit at build `8069844` (28 tests); progress column updated after the quality pass and M5 (40 tests)
 
 ## Verdict
 
@@ -10,17 +10,17 @@ AAA is mostly content and polish: art direction, animated characters, audio, VFX
 
 ## Scorecard (0 = absent, 10 = AAA)
 
-| Area | Score | What exists | Biggest gaps |
+| Area | Before → now | What exists | Biggest gaps |
 | --- | --- | --- | --- |
-| Simulation architecture | 8 | deterministic kernel, worker authority, hash oracle, lint guard | save/load, sector LOD, profiling harness |
-| Horde AI | 5 | flow field, sight and noise, separation, cell cap | wall stacking, director/waves, attack variety, perf at 8k |
-| Squad AI and combat | 4 | A*, formations, stances, hit model, reload, infection | cover, suppression, morale, path smoothing, body collision with zombies |
-| Game loop | 1 | sandbox | objectives, victory/defeat, waves, logistics, construction |
-| Rendering | 2 | low-res pixel upscale, instancing | no shadows, no toon/outline/palette pass, boxes for units, no LOD, no day/night |
-| Animation | 0 | — | walk/run/shoot/die/attack for soldiers and zombies |
-| VFX | 1 | tracers | muzzle flash, impacts, blood, corpses, explosions, decals, dust |
-| Audio | 0 | — | weapons, horde bed, UI, positional mix, music |
-| UX / UI | 3 | HUD, squads, alerts, selection, help | menus, briefing, pause, settings, path preview, order markers, minimap, tooltips, accessibility |
+| Simulation architecture | 8 → 8 | deterministic kernel, worker authority, hash oracle, lint guard | save/load, sector LOD, profiling harness |
+| Horde AI | 5 → 6 | flow field with structure costs, sight and noise, separation, cell cap, wall stacking and climbing | director/waves, attack variety, perf at 8k |
+| Squad AI and combat | 4 → 4 | A*, formations, stances, hit model, reload, infection, re-plan around new walls | cover, suppression, morale, path smoothing |
+| Game loop | 1 → 3 | construction (4 structures, base stock, builders) | objectives, victory/defeat, waves, logistics |
+| Rendering | 2 → 6 | toon ramp, depth outline, gamma posterize + dither, shadows following the view, building facades, props, fog | LOD, day/night, real textures, art direction |
+| Animation | 0 → 4 | procedural limbs: walk by distance, aim, recoil, reload, zombie reach/attack/stack, death fall | blended skeletal animation, run, hit reactions |
+| VFX | 1 → 5 | tracers, muzzle flash, blood spray, decals, persistent corpses, dust, structure debris | explosions, fire, smoke, screen shake |
+| Audio | 0 → 5 | procedural weapons, impacts, groans, screams, reload, radio, UI, horde bed, tension drone, limiter, 24-voice cap | music, real recordings, reverb zones |
+| UX / UI | 3 → 4 | HUD, squads, alerts, selection, help, order markers, path preview, build menu with ghost and reasons | menus, briefing, pause screen, settings, minimap, tooltips, accessibility |
 | Camera | 5 | continuous zoom, rotate, direct rig | edge pan, smoothing on pan, collision in direct mode, recoil/shake |
 | Performance | 5 | 0.8 ms/tick at 200 zombies | flow field 5 ms per rebuild, no budgets or benchmarks in CI |
 | Engineering | 6 | monorepo, strict TS, 28 tests, lint | no CI, no e2e, no bundle split, no crash reporting |

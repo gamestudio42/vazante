@@ -229,7 +229,7 @@ export class SimulationEngine {
     }
     for (const q of w.squads) {
       h.u32(q.id).str(q.order.kind).str(q.stance).str(q.formation);
-      h.f64Value(q.ax).f64Value(q.ay).f64Value(q.hx).f64Value(q.hy).u32(q.pathIdx).u32(q.path.length);
+      h.f64Value(q.ax).f64Value(q.ay).f64Value(q.hx).f64Value(q.hy).u32(q.pathIdx).u32(q.path.length).u32(q.buildTask).byte(q.autoBuild ? 1 : 0);
       for (const v of q.path) h.f64Value(v);
       if (q.order.kind !== 'idle') {
         const p = q.order.kind === 'move' ? q.order.to : q.order.at;

@@ -1,4 +1,5 @@
-import { FORMATIONS, SOLDIER_STRIDE, SoldierField, type Stance } from '@vazante/shared';
+import { FORMATIONS, SOLDIER_STRIDE, STRUCTURE_KINDS, SoldierField, type Stance, type StructureKind } from '@vazante/shared';
+import { BuildTool } from './build.ts';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
 
@@ -30,6 +31,7 @@ export class InputController {
   private lastDirectKey = '';
   box: BoxRect | null = null;
   helpVisible = true;
+  readonly build: BuildTool;
   /** Immediate audio feedback for player actions (wired to the audio director in main). */
   feedback: (kind: 'select' | 'order' | 'stance' | 'deny' | 'toggle') => void = () => {};
   /** Mute toggle hook (N key). */
@@ -41,6 +43,7 @@ export class InputController {
     private readonly client: GameClient,
     private readonly view: GameRenderer,
   ) {
+    this.build = new BuildTool(view.map);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     canvas.addEventListener('mousedown', this.onMouseDown);
     window.addEventListener('mousemove', this.onMouseMove);
@@ -82,6 +85,7 @@ export class InputController {
       return;
     }
     rig.direct = null;
+    if (this.build.active) this.refreshGhost();
     let dx = 0;
     let dy = 0;
     if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) dy -= 1;
@@ -109,6 +113,15 @@ export class InputController {
       if (e.button === 0) this.fire = true;
       return;
     }
+    if (this.build.active && e.button !== 1) {
+      if (e.button === 2) this.setBuild(null);
+      else {
+        const p = this.groundAt(x, y);
+        if (p) this.build.press(p.x, p.y);
+        this.refreshGhost();
+      }
+      return;
+    }
     if (e.button === 0) this.dragStart = { x, y };
     else if (e.button === 1) {
       e.preventDefault();
@@ -128,6 +141,7 @@ export class InputController {
       this.view.rig.pan(-(e.clientX - this.panning.x) * mpp, -(e.clientY - this.panning.y) * mpp);
       this.panning = { x: e.clientX, y: e.clientY };
     }
+    if (this.build.active) this.refreshGhost();
     if (this.dragStart) {
       this.box = { x0: this.dragStart.x, y0: this.dragStart.y, x1: this.mouse.x, y1: this.mouse.y };
       this.changed();
@@ -137,6 +151,15 @@ export class InputController {
   private onMouseUp = (e: MouseEvent): void => {
     if (e.button === 0) this.fire = false;
     if (e.button === 1) this.panning = null;
+    if (e.button === 0 && this.build.active) {
+      const cells = this.build.release();
+      const kind = this.build.kind!;
+      for (const c of cells) this.client.send({ type: 'build', kind, at: { x: (c.cx + 0.5) * this.view.map.cellSize, y: (c.cy + 0.5) * this.view.map.cellSize } });
+      this.feedback(cells.length ? 'order' : 'deny');
+      if (!e.shiftKey && cells.length) this.setBuild(null);
+      else this.refreshGhost();
+      return;
+    }
     if (e.button !== 0 || !this.dragStart || this.directId !== null) return;
     const { w, h } = this.size();
     const s = this.dragStart;
@@ -245,6 +268,29 @@ export class InputController {
       case 'KeyF':
         this.cycleFormation();
         break;
+      case 'KeyB':
+        this.setBuild(this.build.active ? null : (this.build.kind ?? 'wall'));
+        break;
+      case 'Digit1':
+      case 'Digit2':
+      case 'Digit3':
+      case 'Digit4':
+        this.setBuild(STRUCTURE_KINDS[Number(e.code.slice(5)) - 1]);
+        break;
+      case 'Escape':
+        if (this.build.active) this.setBuild(null);
+        break;
+      case 'KeyG':
+      case 'Delete':
+      case 'Backspace': {
+        const st = this.structureUnderCursor();
+        if (!st) break;
+        if (e.code === 'KeyG') {
+          if (st.kind === 'gate') this.client.send({ type: 'toggle_gate', structure: st.id });
+        } else this.client.send({ type: 'demolish', structure: st.id });
+        this.feedback('stance');
+        break;
+      }
       case 'KeyN':
         this.onToggleMute();
         this.changed();
@@ -266,6 +312,42 @@ export class InputController {
       }
     }
   };
+
+  // ----- Construction -----
+
+  setBuild(kind: StructureKind | null): void {
+    if (kind === null) this.build.cancel();
+    else this.build.begin(kind);
+    this.feedback('toggle');
+    this.refreshGhost();
+    this.changed();
+  }
+
+  private groundAt(x: number, y: number): { x: number; y: number } | null {
+    const { w, h } = this.size();
+    return this.view.screenToGround(x, y, w, h);
+  }
+
+  private refreshGhost(): void {
+    if (!this.build.active) {
+      this.view.structures.setGhosts(null, []);
+      return;
+    }
+    const p = this.groundAt(this.mouse.x, this.mouse.y);
+    if (!p) return;
+    const before = `${this.build.reason}:${this.build.cells.length}`;
+    this.build.hover(p.x, p.y, this.client.state.frame);
+    this.view.structures.setGhosts(this.build.kind, this.build.cells);
+    if (`${this.build.reason}:${this.build.cells.length}` !== before) this.changed();
+  }
+
+  private structureUnderCursor() {
+    const f = this.client.state.frame;
+    const p = this.groundAt(this.mouse.x, this.mouse.y);
+    if (!f || !p) return undefined;
+    const { cx, cy } = this.build.cellOf(p.x, p.y);
+    return f.structures.find((s) => s.cx === cx && s.cy === cy);
+  }
 
   // ----- Direct control -----
 
