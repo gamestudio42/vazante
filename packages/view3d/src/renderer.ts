@@ -57,6 +57,8 @@ interface Corpse {
  * Three.js view of the world. Reads frames, interpolates between the last two, animates, draws.
  * It never writes to the simulation; everything here is cosmetic and may use wall-clock time and Math.random.
  */
+const WHITE = new THREE.Color(1, 1, 1);
+
 export class GameRenderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -350,15 +352,38 @@ export class GameRenderer {
    * flashes, ghosts). Otherwise each compiles on first use and the frame where combat starts stalls.
    */
   warmUp(): void {
+    // compile() alone misses the shadow-map depth programs and skips empty instanced batches, so
+    // draw one real frame, shadow pass and post included, with everything visible and non-empty.
     const hidden: THREE.Object3D[] = [];
+    const empty: (THREE.InstancedMesh | THREE.InstancedBufferGeometry)[] = [];
     this.scene.traverse((o) => {
       if (!o.visible) {
         hidden.push(o);
         o.visible = true;
       }
+      if (o instanceof THREE.InstancedMesh) {
+        // setColorAt creates the colour buffer on first use, which switches the mesh to another
+        // shader variant mid-game (that was the 124 ms stall). Allocate it now; white is neutral.
+        if (!o.instanceColor) for (let i = 0; i < o.instanceMatrix.count; i++) o.setColorAt(i, WHITE);
+        if (o.count === 0) {
+          empty.push(o);
+          o.count = 1;
+        }
+      }
+      const g = (o as THREE.Mesh).geometry;
+      if (g instanceof THREE.InstancedBufferGeometry && g.instanceCount === 0) {
+        empty.push(g);
+        g.instanceCount = 1;
+      }
     });
     this.renderer.compile(this.scene, this.rig.active);
+    this.renderer.shadowMap.needsUpdate = true;
+    this.post.render(this.renderer, this.scene, this.rig.active);
     for (const o of hidden) o.visible = false;
+    for (const e of empty) {
+      if (e instanceof THREE.InstancedMesh) e.count = 0;
+      else e.instanceCount = 0;
+    }
   }
 
   render(nowMs: number, dtS: number): void {
