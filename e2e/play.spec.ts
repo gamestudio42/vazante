@@ -70,3 +70,14 @@ test('soak: the game runs at 4x without errors', async ({ page }) => {
   expect(await tick(page)).toBeGreaterThan(start + 50);
   expect(errors).toEqual([]);
 });
+
+test('clicking the minimap moves the camera', async ({ page }) => {
+  const errors = watchErrors(page);
+  await startGame(page);
+  const focus = () => page.evaluate(() => (window as unknown as { vazante: { view: { rig: { focusX: number; focusY: number } } } }).vazante.view.rig.focusX);
+  const before = await focus();
+  const box = (await page.locator('.minimap canvas').boundingBox())!;
+  await page.mouse.click(box.x + box.width - 20, box.y + 20);
+  await expect.poll(focus).not.toBeCloseTo(before, 0);
+  expect(errors).toEqual([]);
+});

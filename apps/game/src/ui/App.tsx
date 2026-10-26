@@ -6,6 +6,7 @@ import type { InputController } from '../input.ts';
 import { t } from '../i18n.ts';
 import type { Shell } from '../shell.ts';
 import { ShellOverlay } from './Shell.tsx';
+import { Minimap } from './Minimap.tsx';
 
 interface Props {
   client: GameClient;
@@ -52,6 +53,7 @@ export function App({ client, input, view, shell }: Props) {
         </div>
       )}
       {input.inDirect && <DirectHud frame={f} />}
+      {!input.inDirect && <Minimap client={client} view={view} />}
       {input.helpVisible && !input.inDirect && (
         <div className="help panel">
           <b>{t('help.title')}</b>
@@ -338,12 +340,12 @@ function SelectionPanel({ squads, frame, input }: { squads: SquadView[]; frame: 
       </div>
       <div className="row">
         {STANCES.map((st, i) => (
-          <button key={st} className={q.stance === st ? 'on' : ''} onClick={() => input.setStance(st)}>
+          <button key={st} className={q.stance === st ? 'on' : ''} title={t(`tip.stance.${st}`)} onClick={() => input.setStance(st)}>
             {'ZXCV'[i]} · {t(`stance.${st}`)}
           </button>
         ))}
-        <button onClick={() => input.cycleFormation()}>F · {t(`formation.${q.formation}`)}</button>
-        <button onClick={() => input.toggleDirect()}>{t('sel.direct')}</button>
+        <button title={t('tip.formation')} onClick={() => input.cycleFormation()}>F · {t(`formation.${q.formation}`)}</button>
+        <button title={t('tip.direct')} onClick={() => input.toggleDirect()}>{t('sel.direct')}</button>
       </div>
     </div>
   );
@@ -364,7 +366,11 @@ function BuildPanel({ frame, input }: { frame: Frame; input: InputController }) 
       </div>
       <div className="row">
         {STRUCTURE_KINDS.map((k, i) => (
-          <button key={k} className={tool.kind === k ? 'on' : ''} onClick={() => input.setBuild(tool.kind === k ? null : k)} disabled={!base || base.materials < STRUCTURES[k].materials}>
+          <button
+            key={k}
+            className={tool.kind === k ? 'on' : ''}
+            title={`${t(`tip.${k}`)}\n${t('tip.stats').replace('{hp}', String(STRUCTURES[k].hp)).replace('{h}', String(STRUCTURES[k].height)).replace('{m}', String(STRUCTURES[k].materials))}`}
+            onClick={() => input.setBuild(tool.kind === k ? null : k)} disabled={!base || base.materials < STRUCTURES[k].materials}>
             {i + 1} · {t(`structure.${k}`)} <span className="muted">{STRUCTURES[k].materials}</span>
           </button>
         ))}

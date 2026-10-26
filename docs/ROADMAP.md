@@ -12,7 +12,7 @@ Done with automated tests: M0.1 to M0.4, M1.1, M1.2, M1.5 (engine side: reading 
 Playwright e2e (`pnpm e2e`, 8 tests): menu → briefing → pause flow, settings, save/load and quick save with hash checks, squad selection and move (M2.2), build placement (M5.1), convoy planner (M6.3), soak at 4x.
 Done and checked by hand in Chromium (no automated test yet): M1.4 pixel render, M1.5 camera bands, M4.2 direct HUD, M7.3 summary screen.
 Quality pass (see `AUDIT.md`): toon/outline/posterize render, shadows, animated procedural characters, corpses, blood, particles, order markers, path preview, procedural audio.
-The slice is playable end to end, in the browser and as a desktop app. Next: M8.2 benchmarks on a named machine, Snap and Flatpak builds on a machine with snapcraft and flatpak-builder, CI (needs a remote repository), then v0.5.
+The slice is playable end to end, in the browser and as a desktop app. Benchmarks on Marcel's laptop are in `benchmarks.md`; the v0.5 simulation gate (8,000 agents under 12 ms) already passes. Next: find the occasional 80 to 130 ms frame hitch, Snap and Flatpak builds on a machine with snapcraft and flatpak-builder, CI (needs a remote repository), then v0.5.
 
 ### M0. Foundation 🟡 (M0.5 waits for a remote repository)
 
@@ -84,7 +84,7 @@ The slice is playable end to end, in the browser and as a desktop app. Next: M8.
 | M7.2 | Wave director with warnings (Choir-lite) | every attack has a 20 to 40 s warning |
 | M7.3 | "O Último Comboio" objectives, victory, defeat, restart | scripted runs reach both victory and defeat |
 
-### M8. Persistence, performance, polish, desktop 🟡 (M8.1 ✅, M8.3 ✅, M8.4 ✅, M8.5 AppImage ✅; benchmarks and Snap/Flatpak/CI pending)
+### M8. Persistence, performance, polish, desktop 🟡 (M8.1 ✅, M8.2 ✅ except the worst-frame hitch, M8.3 ✅, M8.4 ✅, M8.5 AppImage ✅; Snap/Flatpak/CI pending)
 
 | ID | Task | Acceptance |
 | --- | --- | --- |

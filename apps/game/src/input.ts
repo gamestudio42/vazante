@@ -30,7 +30,8 @@ export class InputController {
   private lastDirectSend = 0;
   private lastDirectKey = '';
   box: BoxRect | null = null;
-  helpVisible = true;
+  /** The briefing teaches the controls; H brings the full list back. */
+  helpVisible = false;
   readonly build: BuildTool;
   /** Immediate audio feedback for player actions (wired to the audio director in main). */
   feedback: (kind: 'select' | 'order' | 'stance' | 'deny' | 'toggle') => void = () => {};

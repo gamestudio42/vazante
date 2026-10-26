@@ -24,10 +24,17 @@ import {
 } from '@vazante/shared';
 import type { Soldier, Vehicle } from '../entities.ts';
 import { FLOW_UNREACHABLE, NEIGHBOURS, zombieCanStep } from '../navigation.ts';
+
+const NB_X = NEIGHBOURS.map((n) => n[0]);
+const NB_Y = NEIGHBOURS.map((n) => n[1]);
+const moved: MoveResult = { x: 0, y: 0, okX: true, okY: true };
+/** Output of `unit` (scratch, avoids a tuple allocation per call). */
+let ux = 0;
+let uy = 0;
 import { isActiveSoldier, type World } from '../world.ts';
 import { computePiles, damageStructure } from './construction.ts';
 import { killSoldier } from './lifecycle.ts';
-import { moveWithCollision } from './movement.ts';
+import { moveWithCollisionInto, type MoveResult } from './movement.ts';
 
 /** Chasing zombies give up when farther than this (flow units: 10 per cell = 4 m) and no noise. */
 const CHASE_GIVE_UP = 250;
@@ -81,7 +88,9 @@ export function stepHorde(w: World): void {
       const c = g.cellAt(x, y);
       const here = c < 0 ? FLOW_UNREACHABLE : g.flow[c];
       if (target && dist2(x, y, target.x, target.y) < DIRECT_STEER_M * DIRECT_STEER_M) {
-        [dx, dy] = unit(target.x - x, target.y - y);
+        unit(target.x - x, target.y - y);
+        dx = ux;
+        dy = uy;
         ahead = g.cellAt(x + dx * STACK_CONTACT_M * 1.25, y + dy * STACK_CONTACT_M * 1.25);
       } else if (here === FLOW_UNREACHABLE || (here > CHASE_GIVE_UP && g.noise[c] < NOISE_CHASE_THRESHOLD && !target && z.driven[s] === 0)) {
         z.state[s] = ZombieState.Wandering;
@@ -89,14 +98,20 @@ export function stepHorde(w: World): void {
         z.wanderT[s] = 0;
       } else if (here === 0) {
         const n = nearest(active, x, y);
-        if (n) [dx, dy] = unit(n.x - x, n.y - y);
+        if (n) {
+          unit(n.x - x, n.y - y);
+          dx = ux;
+          dy = uy;
+        }
       } else {
         const cx = c % g.width;
         const cy = (c - cx) / g.width;
         let best = here;
         let bx = 0;
         let by = 0;
-        for (const [ox, oy] of NEIGHBOURS) {
+        for (let k = 0; k < 8; k++) {
+          const ox = NB_X[k];
+          const oy = NB_Y[k];
           if (!zombieCanStep(g, cx, cy, ox, oy)) continue;
           const f = g.flow[c + oy * g.width + ox];
           if (f < best) {
@@ -106,7 +121,9 @@ export function stepHorde(w: World): void {
           }
         }
         if (bx !== 0 || by !== 0) {
-          [dx, dy] = unit((cx + bx + 0.5) * CELL_SIZE - x, (cy + by + 0.5) * CELL_SIZE - y);
+          unit((cx + bx + 0.5) * CELL_SIZE - x, (cy + by + 0.5) * CELL_SIZE - y);
+          dx = ux;
+          dy = uy;
           ahead = c + by * g.width + bx;
         }
       }
@@ -169,23 +186,42 @@ export function stepHorde(w: World): void {
     // Separation from neighbours (positional correction).
     let px = x;
     let py = y;
-    let seen = 0;
-    w.forZombiesNear(x, y, ZOMBIE_SEPARATION_M, (o, d2) => {
-      if (o === s) return;
-      if (d2 < SEP2) {
-        const d = Math.sqrt(d2);
-        if (d > 1e-4) {
-          const push = (ZOMBIE_SEPARATION_M - d) * 0.5;
-          px += ((x - z.x[o]) / d) * push;
-          py += ((y - z.y[o]) / d) * push;
-        } else {
-          px += s < o ? -0.05 : 0.05;
+    // Same visiting order and early exit as World.forZombiesNear, inlined to avoid a closure per zombie.
+    {
+      let seen = 0;
+      const r = Math.ceil(ZOMBIE_SEPARATION_M / CELL_SIZE);
+      const qx = Math.floor(x / CELL_SIZE);
+      const qy = Math.floor(y / CELL_SIZE);
+      const x0 = Math.max(0, qx - r);
+      const x1 = Math.min(g.width - 1, qx + r);
+      const y0 = Math.max(0, qy - r);
+      const y1 = Math.min(g.height - 1, qy + r);
+      const head = w.cellHead;
+      const next = w.cellNext;
+      scan: for (let yy = y0; yy <= y1; yy++) {
+        for (let xx = x0; xx <= x1; xx++) {
+          for (let o = head[yy * g.width + xx]; o !== -1; o = next[o]) {
+            const ddx = z.x[o] - x;
+            const ddy = z.y[o] - y;
+            const d2 = ddx * ddx + ddy * ddy;
+            if (d2 > SEP2 || o === s) continue;
+            if (d2 < SEP2) {
+              const d = Math.sqrt(d2);
+              if (d > 1e-4) {
+                const push = (ZOMBIE_SEPARATION_M - d) * 0.5;
+                px += ((x - z.x[o]) / d) * push;
+                py += ((y - z.y[o]) / d) * push;
+              } else {
+                px += s < o ? -0.05 : 0.05;
+              }
+            }
+            if (++seen >= ZOMBIE_MAX_NEIGHBOURS) break scan;
+          }
         }
       }
-      return ++seen >= ZOMBIE_MAX_NEIGHBOURS;
-    });
+    }
 
-    const moved = moveWithCollision(g, px, py, vx * TICK_DT, vy * TICK_DT, hereCell);
+    moveWithCollisionInto(moved, g, px, py, vx * TICK_DT, vy * TICK_DT, hereCell);
     if (!moved.okX) vx = 0;
     if (!moved.okY) vy = 0;
     const from = g.cellAt(x, y);
@@ -286,7 +322,13 @@ function dist2(ax: number, ay: number, bx: number, by: number): number {
   return dx * dx + dy * dy;
 }
 
-function unit(dx: number, dy: number): [number, number] {
+function unit(dx: number, dy: number): void {
   const d = Math.sqrt(dx * dx + dy * dy);
-  return d > 1e-6 ? [dx / d, dy / d] : [0, 0];
+  if (d > 1e-6) {
+    ux = dx / d;
+    uy = dy / d;
+  } else {
+    ux = 0;
+    uy = 0;
+  }
 }

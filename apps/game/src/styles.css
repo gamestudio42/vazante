@@ -149,7 +149,7 @@ canvas.game {
 }
 .help {
   bottom: 8px;
-  right: 8px;
+  right: 222px;
   max-width: 420px;
 }
 .help pre {
@@ -499,4 +499,18 @@ button.primary {
     opacity: 0;
     transform: translate(-50%, -6px);
   }
+}
+
+/* ----- Minimap ----- */
+.minimap {
+  bottom: 8px;
+  right: 8px;
+  padding: 4px;
+  line-height: 0;
+}
+.minimap canvas {
+  width: 200px;
+  height: 200px;
+  image-rendering: pixelated;
+  cursor: crosshair;
 }
