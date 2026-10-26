@@ -14,6 +14,7 @@ import {
   type MapInfo,
 } from '@vazante/shared';
 import { CameraRig } from './camera.ts';
+import { Crowd, clipRow, loadBakedModel } from './crowd.ts';
 import { CharacterBatch, IDLE_POSE, walkPose, type CharacterColors, type Pose } from './characters.ts';
 import { buildCity, buildDistrictOverlay, hash } from './city.ts';
 import { LightPools } from './lights.ts';
@@ -35,6 +36,14 @@ const CORPSE_FALL_S = 0.35;
 const PATH_VERTS = 4096;
 /** Metres of travel per full walk cycle (two steps). */
 const STRIDE_M = 1.6;
+/** Skinned models drawn at most (the nearest to the camera); the rest use the cheap block figures. */
+const MAX_SKINNED_ZOMBIES = 320;
+const MAX_SKINNED_CORPSES = 240;
+/** Metres covered by one loop of each walk or run clip, so feet don't slide. */
+const SOLDIER_WALK_M = 1.5;
+const SOLDIER_RUN_M = 2.6;
+const ZOMBIE_WALK_M = 1.2;
+const ZOMBIE_RUN_M = 2.2;
 
 interface Tracer {
   x0: number;
@@ -88,6 +97,12 @@ export class GameRenderer {
   readonly structures: StructureLayer;
   readonly vehicles = new VehicleLayer();
   private readonly corpses: Corpse[] = [];
+  private soldierCrowd: Crowd | null = null;
+  private zombieCrowd: Crowd | null = null;
+  private corpseCrowd: Crowd | null = null;
+  private readonly zDist = new Float32Array(ZOMBIE_POOL_CAPACITY);
+  private readonly zHist = new Uint32Array(256);
+  private readonly sDeadAt = new Float32Array(MAX_SOLDIER_ID).fill(-1);
   private corpseNext = 0;
   private corpsesDirty = false;
   private corpseScale = 0;
@@ -348,6 +363,36 @@ export class GameRenderer {
   }
 
   /**
+   * Swap the block figures for the animated CC0 models (see docs/assets.md). The game runs fine
+   * without them: if loading fails it keeps the block figures.
+   */
+  async loadModels(baseUrl: string): Promise<void> {
+    const [soldier, infected] = await Promise.all([
+      loadBakedModel(`${baseUrl}soldier.glb`, {
+        height: 1.8,
+        clips: ['Idle', 'Walk', 'Run_Gun', 'Idle_Shoot', 'Walk_Shoot', 'Run_Shoot', 'Death'],
+        once: ['Death'],
+        colors: { Pants: PALETTE.fatigues, Skin: 0xc8916b, Grey: 0x4a4f44 },
+        tint: { Character_Main: 0.65 },
+      }),
+      loadBakedModel(`${baseUrl}infected.glb`, {
+        height: 1.75,
+        clips: ['Idle', 'Walk', 'Run', 'Punch', 'Death'],
+        once: ['Death'],
+        reach: ['Idle', 'Walk', 'Run'],
+        colors: { Skin: PALETTE.zombieSkin[0], 'Character_Enemy_Head/Enemy_Red': 0x2b2119, Grey: 0x45464c },
+        tint: { Enemy_Red: 1 },
+      }),
+    ]);
+    this.soldierCrowd = new Crowd(soldier, MAX_SOLDIERS);
+    this.zombieCrowd = new Crowd(infected, MAX_SKINNED_ZOMBIES);
+    this.corpseCrowd = new Crowd(infected, MAX_SKINNED_CORPSES);
+    this.corpseCrowd.mesh.castShadow = false;
+    this.scene.add(this.soldierCrowd.mesh, this.zombieCrowd.mesh, this.corpseCrowd.mesh);
+    this.corpsesDirty = true;
+  }
+
+  /**
    * Compile every shader up front, including layers that start hidden or empty (blood, corpses,
    * flashes, ghosts). Otherwise each compiles on first use and the frame where combat starts stalls.
    */
@@ -582,6 +627,7 @@ export class GameRenderer {
     const p = this.pose;
     let rings = 0;
     this.soldiers.begin();
+    this.soldierCrowd?.begin();
     for (let i = 0; i < n; i++) {
       const o = i * SOLDIER_STRIDE;
       const cond = s[o + SoldierField.Condition];
@@ -638,7 +684,22 @@ export class GameRenderer {
       }
       const colors = this.soldierColors(sid, squad);
       if (cond === SoldierCondition.Bitten) colors.skin.setHex(PALETTE.soldierBitten);
-      this.soldiers.add(x, y, Math.atan2(-fx, -fy), boost, p, colors);
+      if (cond !== SoldierCondition.Dead) this.sDeadAt[sid] = -1;
+      else if (this.sDeadAt[sid] < 0) this.sDeadAt[sid] = t;
+      const crowd = this.soldierCrowd;
+      if (crowd) {
+        const dist = (this.sPhase[sid] * STRIDE_M) / (Math.PI * 2);
+        const aiming = act === SoldierActivity.Engaging || act === SoldierActivity.Direct;
+        const run = this.sSpeed[sid] > 2.6;
+        const moving = amount > 0.08;
+        let row: number;
+        if (cond === SoldierCondition.Dead) row = clipRow(crowd.clip('Death'), t - this.sDeadAt[sid]);
+        else if (moving) {
+          const c = crowd.clip(aiming ? (run ? 'Run_Shoot' : 'Walk_Shoot') : run ? 'Run_Gun' : 'Walk');
+          row = clipRow(c, (dist / (run ? SOLDIER_RUN_M : SOLDIER_WALK_M)) * c.duration);
+        } else row = clipRow(crowd.clip(aiming ? 'Idle_Shoot' : 'Idle'), t + id * 0.37);
+        crowd.add(x, y, 0, Math.atan2(-fx, -fy), boost, row, colors.torso);
+      } else this.soldiers.add(x, y, Math.atan2(-fx, -fy), boost, p, colors);
 
       const isDirect = f.directSoldier === id;
       if ((this.selectedSquads.has(squad) || isDirect) && cond !== SoldierCondition.Dead) {
@@ -652,6 +713,7 @@ export class GameRenderer {
       }
     }
     this.soldiers.end();
+    this.soldierCrowd?.end();
     this.ringMesh.count = rings;
     this.ringMesh.instanceMatrix.needsUpdate = true;
     if (this.ringMesh.instanceColor) this.ringMesh.instanceColor.needsUpdate = true;
@@ -664,6 +726,13 @@ export class GameRenderer {
     const p = this.pose;
     const turn = Math.min(1, dt * 6);
     this.zombies.begin();
+    const crowd = this.zombieCrowd;
+    // Animated models for the nearest zombies, block figures for the rest.
+    let cutoff = Infinity;
+    if (crowd) {
+      crowd.begin();
+      cutoff = this.skinnedCutoff(z, n, crowd.capacity);
+    }
     for (let i = 0; i < n; i++) {
       const o = i * ZOMBIE_STRIDE;
       const slot = z[o + ZombieField.Slot];
@@ -721,21 +790,77 @@ export class GameRenderer {
       const cell = Math.floor(y / this.map.cellSize) * this.map.width + Math.floor(x / this.map.cellSize);
       const climb = this.structures.heightAt[cell] ?? 0;
       if (state === ZombieState.Stacked) w.lean = 0.5; // pressed against the wall, clawing upward
-      this.zombies.add(x, y, this.zYaw[slot] + shamble * 0.08, boost * kindScale(kind), w, this.zombieColors(slot), climb);
+      const yaw = this.zYaw[slot] + shamble * 0.08;
+      if (crowd && this.zDist[i] < cutoff) {
+        let row: number;
+        const sp = this.zSpeed[slot];
+        if (state === ZombieState.Attacking || state === ZombieState.Stacked || state === ZombieState.Clinging) row = clipRow(crowd.clip('Punch'), t * (0.9 + (slot % 5) * 0.05) + slot * 0.13);
+        else if (sp > 0.15) {
+          const run = sp > 2.2;
+          const c = crowd.clip(run ? 'Run' : 'Walk');
+          row = clipRow(c, ((this.zPhase[slot] * STRIDE_M) / (Math.PI * 2) / (run ? ZOMBIE_RUN_M : ZOMBIE_WALK_M)) * c.duration);
+        } else row = clipRow(crowd.clip('Idle'), t * 0.7 + slot * 0.29);
+        if (crowd.add(x, y, climb, yaw, boost * kindScale(kind), row, this.zombieColors(slot).torso)) continue;
+      }
+      this.zombies.add(x, y, yaw, boost * kindScale(kind), w, this.zombieColors(slot), climb);
     }
     this.zombies.end();
+    crowd?.end();
+  }
+
+  /** Distance from the camera focus under which at most `cap` zombies fall (fills zDist). */
+  private skinnedCutoff(z: Float32Array, n: number, cap: number): number {
+    const d = this.rig.direct;
+    const fx = d ? d.x : this.rig.focusX;
+    const fy = d ? d.y : this.rig.focusY;
+    let max = 0;
+    for (let i = 0; i < n; i++) {
+      const o = i * ZOMBIE_STRIDE;
+      const dist = Math.hypot(z[o + ZombieField.X] - fx, z[o + ZombieField.Y] - fy);
+      this.zDist[i] = dist;
+      if (dist > max) max = dist;
+    }
+    if (n <= cap) return Infinity;
+    const h = this.zHist;
+    h.fill(0);
+    const k = (h.length - 1) / Math.max(1, max);
+    for (let i = 0; i < n; i++) h[Math.floor(this.zDist[i] * k)]++;
+    let sum = 0;
+    for (let b = 0; b < h.length; b++) {
+      if (sum + h[b] > cap) return b / k;
+      sum += h[b];
+    }
+    return Infinity;
   }
 
   private drawCorpses(nowMs: number): void {
     const boost = this.unitScale();
     let falling = false;
-    for (const c of this.corpses) if (nowMs - c.born < CORPSE_FALL_S * 1000) falling = true;
+    const fallMs = (this.corpseCrowd ? 1.2 : CORPSE_FALL_S) * 1000;
+    for (const c of this.corpses) if (nowMs - c.born < fallMs) falling = true;
     if (!this.corpsesDirty && !falling && Math.abs(boost - this.corpseScale) < 0.05) return;
     this.corpsesDirty = false;
     this.corpseScale = boost;
     const p = this.pose;
     this.corpseBatch.begin();
+    const crowd = this.corpseCrowd;
+    let newest = 0;
+    if (crowd) {
+      crowd.begin();
+      // The most recent deaths get the animated model; older ones stay as block figures.
+      if (this.corpses.length > crowd.capacity) {
+        const born = this.corpses.map((c) => c.born).sort((a, b) => b - a);
+        newest = born[crowd.capacity - 1];
+      }
+      const death = crowd.clip('Death');
+      for (const c of this.corpses) {
+        if (c.born < newest) continue;
+        crowd.add(c.x, c.y, 0, c.yaw + Math.PI, boost * c.scale, clipRow(death, (nowMs - c.born) / 1000), c.colors.torso);
+      }
+      crowd.end();
+    }
     for (const c of this.corpses) {
+      if (crowd && c.born >= newest) continue;
       const k = Math.min(1, (nowMs - c.born) / (CORPSE_FALL_S * 1000));
       Object.assign(p, IDLE_POSE);
       p.lie = k * k;

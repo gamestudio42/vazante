@@ -43,12 +43,17 @@ async function boot(): Promise<void> {
     const map = client.state.map;
     if (!map) return;
     unsubscribe();
-    start(client, map, initial);
+    void start(client, map, initial);
   });
 }
 
-function start(client: GameClient, map: NonNullable<GameClient['state']['map']>, initial: Screen): void {
+async function start(client: GameClient, map: NonNullable<GameClient['state']['map']>, initial: Screen): Promise<void> {
   const view = new GameRenderer(canvas, map);
+  try {
+    await view.loadModels(`${import.meta.env.BASE_URL}models/`);
+  } catch (err) {
+    console.warn('character models unavailable, using block figures', err);
+  }
   view.warmUp();
   const base = map.sites.find((s) => s.kind === 'base');
   if (base) view.rig.centerOn(((base.x0 + base.x1 + 1) / 2) * map.cellSize, ((base.y0 + base.y1 + 1) / 2) * map.cellSize);
