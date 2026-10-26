@@ -38,6 +38,16 @@ function geometryFor(kind: StructureKind, cs: number): THREE.BufferGeometry {
       leaf.translate(0, h / 2, 0);
       return merge([...posts, leaf]);
     }
+    case 'command_post': {
+      // Fortified block with a radio mast.
+      const body = new THREE.BoxGeometry(w, h * 0.55, w);
+      body.translate(0, (h * 0.55) / 2, 0);
+      const top = new THREE.BoxGeometry(w * 0.6, h * 0.2, w * 0.6);
+      top.translate(0, h * 0.65, 0);
+      const mast = new THREE.BoxGeometry(0.12, h * 0.6, 0.12);
+      mast.translate(w * 0.2, h * 0.75 + h * 0.3 - 0.4, w * 0.2);
+      return merge([body, top, mast]);
+    }
     case 'mg_nest': {
       const parts: THREE.BufferGeometry[] = [];
       // Ring of sandbags around a pit, with the gun on top.
@@ -91,6 +101,7 @@ const KIND_COLOUR: Record<StructureKind, number> = {
   wall: PALETTE.concrete,
   gate: PALETTE.gate,
   mg_nest: PALETTE.sandbag,
+  command_post: PALETTE.commandPost,
 };
 
 /**
@@ -115,7 +126,7 @@ export class StructureLayer {
   ) {
     this.heightAt = new Float32Array(width * height);
     const mat = toon();
-    for (const k of STRUCTURE_KINDS) this.built.set(k, this.instanced(geometryFor(k, cs), mat));
+    for (const k of Object.keys(STRUCTURES) as StructureKind[]) this.built.set(k, this.instanced(geometryFor(k, cs), mat));
     this.built.set('gate_open', this.instanced(openGateGeometry(cs), mat));
     const box = new THREE.BoxGeometry(cs - 0.2, 1, cs - 0.2);
     box.translate(0, 0.5, 0);

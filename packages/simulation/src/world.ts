@@ -1,6 +1,6 @@
 import { Rng } from '@vazante/kernel';
 import { BASE_START, Blocked, CELL_SIZE, SoldierCondition, type BuildingRect, type DistrictInfo, type SimEvent, type SimSpeed, type SiteInfo } from '@vazante/shared';
-import type { Base, Soldier, Squad, Structure } from './entities.ts';
+import type { Base, Mission, Soldier, Squad, Structure, Vehicle } from './entities.ts';
 import type { Grid } from './grid.ts';
 import { ZombiePool } from './zombies.ts';
 
@@ -24,6 +24,11 @@ export class World {
   readonly squads: Squad[] = [];
   readonly structures: Structure[] = [];
   readonly bases: Base[] = [];
+  readonly vehicles: Vehicle[] = [];
+  /** Scenario objectives; null in sandbox scenarios. */
+  mission: Mission | null = null;
+  /** Control 0..100 per district (index = district id). */
+  readonly districtControl: Uint8Array;
   /** Set when navigation changed (structure built, destroyed or toggled); forces a flow rebuild. */
   flowDirty = false;
   readonly stats: WorldStats = { zombiesKilled: 0, shotsFired: 0 };
@@ -54,13 +59,32 @@ export class World {
     this.cellHead = new Int32Array(grid.size).fill(-1);
     this.cellNext = new Int32Array(zombieCapacity).fill(-1);
     this.cellCount = new Uint16Array(grid.size);
-    for (const site of sites) if (site.kind === 'base') this.addBase(site.name, site.x0, site.y0, site.x1, site.y1);
+    this.districtControl = new Uint8Array(256).fill(100);
+    for (const site of sites) {
+      if (site.kind === 'base') this.addBase(site.name, site.x0, site.y0, site.x1, site.y1);
+      else this.addBase(site.name, site.x0, site.y0, site.x1, site.y1, 0, 0, 'depot');
+    }
   }
 
-  addBase(name: string, x0: number, y0: number, x1: number, y1: number, materials: number = BASE_START.materials, ammo: number = BASE_START.ammo): Base {
-    const b: Base = { id: this.bases.length + 1, name, x0, y0, x1, y1, materials, ammo };
+  addBase(name: string, x0: number, y0: number, x1: number, y1: number, materials: number = BASE_START.materials, ammo: number = BASE_START.ammo, kind: Base['kind'] = 'base'): Base {
+    const b: Base = { id: this.bases.length + 1, kind, buildable: kind === 'base', name, x0, y0, x1, y1, materials, ammo };
     this.bases.push(b);
     return b;
+  }
+
+  vehicle(id: number): Vehicle | undefined {
+    return this.vehicles.find((v) => v.id === id);
+  }
+
+  baseById(id: number): Base | undefined {
+    return this.bases.find((b) => b.id === id);
+  }
+
+  /** Base or depot whose cell rectangle contains the point, if any. */
+  siteAt(x: number, y: number): Base | undefined {
+    const cx = Math.floor(x / CELL_SIZE);
+    const cy = Math.floor(y / CELL_SIZE);
+    return this.bases.find((b) => cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1);
   }
 
   structure(id: number): Structure | undefined {

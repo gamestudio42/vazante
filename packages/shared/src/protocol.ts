@@ -1,3 +1,4 @@
+import type { RiskPolicy } from './balance/logistics.ts';
 import type { StructureKind } from './balance/structures.ts';
 import type { Command } from './commands.ts';
 import type { SimEvent } from './events.ts';
@@ -62,8 +63,61 @@ export interface StructureView {
   pile: number;
 }
 
+export type VehicleState = 'idle' | 'moving' | 'blocked' | 'destroyed';
+
+export interface VehicleView {
+  id: number;
+  kind: 'truck';
+  x: number;
+  y: number;
+  hx: number;
+  hy: number;
+  hp: number;
+  maxHp: number;
+  cargoAmmo: number;
+  cargoMaterials: number;
+  state: VehicleState;
+  policy: RiskPolicy;
+  /** Destination base id, 0 = none. */
+  dest: number;
+  /** Remaining route, flattened x, y pairs. */
+  path: number[];
+}
+
+export type MissionPhase = 'fetch' | 'defend' | 'won' | 'lost';
+
+export interface MissionView {
+  phase: MissionPhase;
+  /** Waves started so far and total. */
+  wave: number;
+  waves: number;
+  waveState: 'none' | 'warning' | 'active' | 'calm';
+  /** Seconds until the next wave hits (during a warning). */
+  secondsToWave: number;
+  waveZombies: number;
+  civilians: number;
+  civiliansMax: number;
+  commandPostHp: number;
+  commandPostMaxHp: number;
+  cargoDelivered: boolean;
+  /** Why the mission was lost. */
+  reason: string;
+}
+
+export type DistrictState = 'held' | 'contested' | 'lost';
+
+export interface DistrictView {
+  id: number;
+  name: string;
+  control: number;
+  state: DistrictState;
+  zombies: number;
+  soldiers: number;
+}
+
 export interface BaseView {
   id: number;
+  kind: 'base' | 'depot';
   name: string;
   x0: number;
   y0: number;
@@ -92,6 +146,9 @@ export interface Frame {
   squads: SquadView[];
   structures: StructureView[];
   bases: BaseView[];
+  vehicles: VehicleView[];
+  mission: MissionView | null;
+  districts: DistrictView[];
   directSoldier: number | null;
   events: SimEvent[];
   stats: FrameStats;
@@ -100,7 +157,8 @@ export interface Frame {
 export type ToWorker =
   | { type: 'init'; seed: number; scenario: string }
   | { type: 'command'; cmd: Command }
-  | { type: 'request_hash' };
+  | { type: 'request_hash' }
+  | { type: 'restart'; seed: number };
 
 export type FromWorker =
   | { type: 'ready'; map: MapInfo }

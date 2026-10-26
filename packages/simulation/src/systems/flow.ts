@@ -8,5 +8,8 @@ export function stepFlow(w: World, force = false): void {
   w.flowDirty = false;
   const sources: number[] = [];
   for (const s of w.soldiers) if (isActiveSoldier(s)) sources.push(w.grid.cellAt(s.x, s.y));
+  const cp = w.mission ? w.structure(w.mission.commandPost) : undefined;
+  if (cp) sources.push(cp.cell);
+  for (const v of w.vehicles) if (v.state !== 'destroyed') sources.push(w.grid.cellAt(v.x, v.y));
   computeFlowField(w.grid, sources, STRUCTURE_FLOW_PENALTY);
 }

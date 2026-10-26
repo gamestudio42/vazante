@@ -17,10 +17,12 @@ import {
   ZOMBIE_PERCEPTION_M,
   ZOMBIE_SEPARATION_M,
   ZOMBIE_STRUCTURE_DAMAGE,
+  ZOMBIE_VEHICLE_DAMAGE,
+  ZOMBIE_VEHICLE_REACH_M,
   ZOMBIE_WANDER_SPEED_FACTOR,
   ZombieState,
 } from '@vazante/shared';
-import type { Soldier } from '../entities.ts';
+import type { Soldier, Vehicle } from '../entities.ts';
 import { FLOW_UNREACHABLE, NEIGHBOURS, zombieCanStep } from '../navigation.ts';
 import { isActiveSoldier, type World } from '../world.ts';
 import { computePiles, damageStructure } from './construction.ts';
@@ -81,7 +83,7 @@ export function stepHorde(w: World): void {
       if (target && dist2(x, y, target.x, target.y) < DIRECT_STEER_M * DIRECT_STEER_M) {
         [dx, dy] = unit(target.x - x, target.y - y);
         ahead = g.cellAt(x + dx * STACK_CONTACT_M * 1.25, y + dy * STACK_CONTACT_M * 1.25);
-      } else if (here === FLOW_UNREACHABLE || (here > CHASE_GIVE_UP && g.noise[c] < NOISE_CHASE_THRESHOLD && !target)) {
+      } else if (here === FLOW_UNREACHABLE || (here > CHASE_GIVE_UP && g.noise[c] < NOISE_CHASE_THRESHOLD && !target && z.driven[s] === 0)) {
         z.state[s] = ZombieState.Wandering;
         z.target[s] = 0;
         z.wanderT[s] = 0;
@@ -122,7 +124,8 @@ export function stepHorde(w: World): void {
       z.stack[s] = -1;
     }
 
-    // Attack whoever is in reach.
+    // Attack whoever is in reach: soldiers first, then vehicles.
+    let truck: Vehicle | undefined;
     const victim = nearestWithin(active, x, y, ZOMBIE_ATTACK_RANGE_M);
     if (victim) {
       z.state[s] = ZombieState.Attacking;
@@ -131,6 +134,16 @@ export function stepHorde(w: World): void {
       dx = 0;
       dy = 0;
       if (z.attackCd[s] === 0) attack(w, s, victim);
+    } else if ((truck = vehicleInReach(w, x, y)) !== undefined) {
+      z.state[s] = ZombieState.Attacking;
+      z.stack[s] = -1;
+      dx = 0;
+      dy = 0;
+      if (z.attackCd[s] === 0) {
+        z.attackCd[s] = ATTACK_CD_TICKS;
+        truck.hp -= ZOMBIE_VEHICLE_DAMAGE;
+        w.emit({ type: 'vehicle_hit', source: s, target: truck.id, x: truck.x, y: truck.y });
+      }
     } else if (z.state[s] === ZombieState.Attacking) {
       z.state[s] = ZombieState.Chasing;
     } else if (z.state[s] === ZombieState.Stacked && z.attackCd[s] === 0) {
@@ -231,6 +244,13 @@ function attack(w: World, s: number, victim: Soldier): void {
     victim.turnAt = w.tick + w.rng.int(BITE_TURN_MIN_S * TICK_HZ, BITE_TURN_MAX_S * TICK_HZ);
     w.emit({ type: 'soldier_bitten', source: s, target: victim.id, x: victim.x, y: victim.y });
   }
+}
+
+const REACH2 = ZOMBIE_VEHICLE_REACH_M * ZOMBIE_VEHICLE_REACH_M;
+
+function vehicleInReach(w: World, x: number, y: number): Vehicle | undefined {
+  for (const v of w.vehicles) if (v.state !== 'destroyed' && dist2(x, y, v.x, v.y) <= REACH2) return v;
+  return undefined;
 }
 
 function nearest(list: readonly Soldier[], x: number, y: number): Soldier | undefined {

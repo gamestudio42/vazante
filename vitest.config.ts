@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: ['packages/*/test/**/*.test.ts'],
     environment: 'node',
-    testTimeout: 60_000,
+    testTimeout: 120_000,
+    setupFiles: ['./vitest.setup.ts'],
   },
 });

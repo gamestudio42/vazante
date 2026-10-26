@@ -45,6 +45,11 @@ export const PALETTE = {
   gate: 0x4f5a60,
   sandbag: 0x9c8a62,
   blueprint: 0x6fc3ff,
+  commandPost: 0x6f7a5a,
+  truck: 0x5b6b4a,
+  truckCab: 0x3d4732,
+  cargo: 0x8a7a52,
+  wreck: 0x2a2624,
   ghostOk: 0x7fe07a,
   ghostBad: 0xff5a4a,
 } as const;

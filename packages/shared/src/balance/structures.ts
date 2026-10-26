@@ -1,5 +1,6 @@
-export type StructureKind = 'hesco' | 'wall' | 'gate' | 'mg_nest';
+export type StructureKind = 'hesco' | 'wall' | 'gate' | 'mg_nest' | 'command_post';
 
+/** Structures the player can build (the command post is placed by the scenario). */
 export const STRUCTURE_KINDS: readonly StructureKind[] = ['hesco', 'wall', 'gate', 'mg_nest'];
 
 export interface StructureStats {
@@ -20,6 +21,7 @@ export const STRUCTURES: Readonly<Record<StructureKind, StructureStats>> = {
   wall: { hp: 600, height: 3.5, materials: 40, buildTimeS: 30, blocksSight: true },
   gate: { hp: 450, height: 3.0, materials: 30, buildTimeS: 25, blocksSight: true },
   mg_nest: { hp: 250, height: 1.2, materials: 35, buildTimeS: 20, blocksSight: false },
+  command_post: { hp: 800, height: 8, materials: 0, buildTimeS: 0, blocksSight: true },
 };
 
 /** Damage one zombie attack does to a structure. */

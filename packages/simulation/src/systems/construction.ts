@@ -194,6 +194,7 @@ export function damageStructure(w: World, st: Structure, dmg: number): void {
 export function demolishStructure(w: World, id: number): string | null {
   const st = w.structure(id);
   if (!st) return 'no_structure';
+  if (st.kind === 'command_post') return 'not_allowed';
   const base = w.bases[st.base];
   const cost = STRUCTURES[st.kind].materials;
   if (base) base.materials += st.built ? Math.floor(cost * DEMOLISH_REFUND) : cost;

@@ -4,3 +4,5 @@ export * from './weapons.ts';
 export * from './units.ts';
 export * from './trig.ts';
 export * from './structures.ts';
+export * from './logistics.ts';
+export * from './mission.ts';

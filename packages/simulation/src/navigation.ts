@@ -26,14 +26,34 @@ export function canStep(grid: Grid, cx: number, cy: number, dx: number, dy: numb
   return true;
 }
 
+/** canStep with a custom passability test (vehicles: streets and sites only). */
+export function canStepWith(grid: Grid, cx: number, cy: number, dx: number, dy: number, ok: (cell: number) => boolean): boolean {
+  const nx = cx + dx;
+  const ny = cy + dy;
+  if (!grid.inBounds(nx, ny) || !ok(grid.idx(nx, ny))) return false;
+  if (dx !== 0 && dy !== 0) return ok(grid.idx(cx + dx, cy)) && ok(grid.idx(cx, cy + dy));
+  return true;
+}
+
+export interface PathOptions {
+  maxExpanded?: number;
+  passable?: (cell: number) => boolean;
+  /** Extra cost to enter a cell (10 = one cell). */
+  extraCost?: (cell: number) => number;
+}
+
 const heap = new MinHeap();
 
 /**
  * A* on the cell grid with an octile heuristic. Returns the cell path from start (exclusive) to goal (inclusive),
  * or null. If the goal is not walkable, the nearest walkable cell to it found during search is used.
  */
-export function findPath(grid: Grid, start: number, goal: number, maxExpanded = 20000): number[] | null {
+export function findPath(grid: Grid, start: number, goal: number, opts: PathOptions | number = {}): number[] | null {
   if (start < 0 || goal < 0) return null;
+  const o = typeof opts === 'number' ? { maxExpanded: opts } : opts;
+  const maxExpanded = o.maxExpanded ?? 20000;
+  const passable = o.passable;
+  const extra = o.extraCost;
   const w = grid.width;
   const gx = goal % w;
   const gy = Math.floor(goal / w);
@@ -61,9 +81,9 @@ export function findPath(grid: Grid, start: number, goal: number, maxExpanded = 
       best = cur;
     }
     for (const [dx, dy, cost] of NEIGHBOURS) {
-      if (!canStep(grid, cx, cy, dx, dy)) continue;
+      if (passable ? !canStepWith(grid, cx, cy, dx, dy, passable) : !canStep(grid, cx, cy, dx, dy)) continue;
       const n = cur + dy * w + dx;
-      const ng = cg + cost;
+      const ng = cg + cost + (extra ? extra(n) : 0);
       const old = g.get(n);
       if (old !== undefined && old <= ng) continue;
       g.set(n, ng);

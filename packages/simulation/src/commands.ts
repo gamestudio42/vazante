@@ -1,6 +1,7 @@
 import { CELL_SIZE, SoldierActivity, ZombieKind, ZombieState, type Command } from '@vazante/shared';
 import { demolishStructure, placeStructure, toggleGate } from './systems/construction.ts';
 import { releaseDirect } from './systems/lifecycle.ts';
+import { loadCargo, orderConvoy, stopVehicle } from './systems/logistics.ts';
 import { planMove } from './systems/units.ts';
 import { isActiveSoldier, type World } from './world.ts';
 
@@ -103,6 +104,15 @@ export function applyCommand(w: World, cmd: Command): string | null {
 
     case 'toggle_gate':
       return toggleGate(w, cmd.structure);
+
+    case 'convoy':
+      return orderConvoy(w, cmd.vehicle, cmd.to, cmd.policy);
+
+    case 'load':
+      return loadCargo(w, cmd.vehicle, cmd.ammo, cmd.materials);
+
+    case 'stop_vehicle':
+      return stopVehicle(w, cmd.vehicle);
 
     case 'debug_spawn': {
       const n = Math.max(1, Math.min(500, Math.floor(cmd.count)));

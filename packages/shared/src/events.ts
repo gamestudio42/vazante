@@ -14,7 +14,17 @@ export type SimEventType =
   | 'structure_placed'
   | 'structure_built'
   | 'structure_destroyed'
-  | 'gate_toggled';
+  | 'gate_toggled'
+  | 'convoy_blocked'
+  | 'cargo_delivered'
+  | 'vehicle_destroyed'
+  | 'vehicle_hit'
+  | 'wave_warning'
+  | 'wave_started'
+  | 'district_lost'
+  | 'district_held'
+  | 'mission_won'
+  | 'mission_lost';
 
 export interface SimEvent {
   tick: number;

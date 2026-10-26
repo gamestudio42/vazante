@@ -1,3 +1,4 @@
+import type { RiskPolicy } from './balance/logistics.ts';
 import type { StructureKind } from './balance/structures.ts';
 import type { Formation, SimSpeed, Stance, Vec2 } from './types.ts';
 
@@ -12,6 +13,11 @@ export type Command =
   | { type: 'build'; kind: StructureKind; at: Vec2 }
   | { type: 'demolish'; structure: number }
   | { type: 'toggle_gate'; structure: number }
+  /** Send a vehicle to a base or depot (by base id) with a risk policy for blocked roads. */
+  | { type: 'convoy'; vehicle: number; to: number; policy: RiskPolicy }
+  /** Load cargo from the stock of the site the vehicle is in (negative values unload). */
+  | { type: 'load'; vehicle: number; ammo: number; materials: number }
+  | { type: 'stop_vehicle'; vehicle: number }
   /** Development helper: spawn a group of zombies around a point. */
   | { type: 'debug_spawn'; at: Vec2; count: number };
 

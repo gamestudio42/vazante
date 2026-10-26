@@ -9,6 +9,8 @@ export interface PlacementBase {
   x1: number;
   y1: number;
   materials: number;
+  /** Depots hold stock but cannot be built on. Defaults to true. */
+  buildable?: boolean;
 }
 
 /** What placement needs to know. The engine builds it from the world, the UI from the map and the last frame. */
@@ -35,7 +37,7 @@ export interface PlacementResult {
  */
 export function checkPlacement(ctx: PlacementContext, kind: StructureKind, cx: number, cy: number): PlacementResult {
   if (cx < 0 || cy < 0 || cx >= ctx.width || cy >= ctx.height) return { error: 'out_of_bounds', base: -1 };
-  const base = ctx.bases.findIndex((b) => cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1);
+  const base = ctx.bases.findIndex((b) => b.buildable !== false && cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1);
   if (base < 0) return { error: 'outside_base', base: -1 };
   const cell = cy * ctx.width + cx;
   const g = ctx.ground[cell];

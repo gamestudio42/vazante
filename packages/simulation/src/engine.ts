@@ -10,6 +10,13 @@ import {
   STRUCTURES,
   type SquadView,
   type StructureView,
+  type VehicleView,
+  type MissionView,
+  type DistrictView,
+  SLICE,
+  DISTRICT,
+  TICK_HZ,
+  TRUCK,
 } from '@vazante/shared';
 import { applyCommand } from './commands.ts';
 import { createScenario, type ScenarioId, type ScenarioOptions } from './scenarios/index.ts';
@@ -18,6 +25,8 @@ import { buildTicks, stepConstruction, stepEmplacements } from './systems/constr
 import { stepFlow } from './systems/flow.ts';
 import { stepHorde } from './systems/horde.ts';
 import { stepInfection } from './systems/infection.ts';
+import { stepResupply, stepVehicles } from './systems/logistics.ts';
+import { districtCounts, drivenAlive, stepDistricts, stepMission } from './systems/mission.ts';
 import { decayNoise } from './systems/noise.ts';
 import { stepUnits } from './systems/units.ts';
 import { isActiveSoldier, type World } from './world.ts';
@@ -69,11 +78,15 @@ export class SimulationEngine {
     w.rebuildZombieHash();
     stepHorde(w);
     stepUnits(w);
+    stepVehicles(w);
     w.rebuildZombieHash();
     stepCombat(w);
     stepEmplacements(w);
     stepInfection(w);
     stepConstruction(w);
+    stepResupply(w);
+    stepDistricts(w);
+    stepMission(w);
     decayNoise(w);
     w.tick++;
   }
@@ -167,7 +180,53 @@ export class SimulationEngine {
       open: st.open,
       pile: w.grid.pile[st.cell],
     }));
-    const bases = w.bases.map((b) => ({ ...b }));
+    const bases = w.bases.map((b) => ({ id: b.id, kind: b.kind, name: b.name, x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, materials: b.materials, ammo: b.ammo }));
+    const vehicles: VehicleView[] = w.vehicles.map((v) => ({
+      id: v.id,
+      kind: v.kind,
+      x: v.x,
+      y: v.y,
+      hx: v.hx,
+      hy: v.hy,
+      hp: v.hp,
+      maxHp: TRUCK.hp,
+      cargoAmmo: v.cargoAmmo,
+      cargoMaterials: v.cargoMaterials,
+      state: v.state,
+      policy: v.policy,
+      dest: v.dest,
+      path: v.path.slice(v.pathIdx * 2),
+    }));
+    const m = w.mission;
+    const cp = m ? w.structure(m.commandPost) : undefined;
+    const mission: MissionView | null = m
+      ? {
+          phase: m.phase,
+          wave: m.wave,
+          waves: SLICE.waves.length,
+          waveState: m.waveState,
+          secondsToWave: m.waveState === 'warning' ? Math.max(0, Math.ceil((m.nextAt - w.tick) / TICK_HZ)) : 0,
+          waveZombies: m.waveState === 'active' ? drivenAlive(w) : 0,
+          civilians: m.civilians,
+          civiliansMax: SLICE.civilians,
+          commandPostHp: cp ? cp.hp : 0,
+          commandPostMaxHp: STRUCTURES.command_post.hp,
+          cargoDelivered: m.cargoDelivered,
+          reason: m.reason,
+        }
+      : null;
+    const counts = districtCounts(w);
+    const districts: DistrictView[] = w.districts.map((d) => {
+      const control = w.districtControl[d.id];
+      return {
+        id: d.id,
+        name: d.name,
+        control,
+        state: control > DISTRICT.heldAbove ? 'held' : control <= DISTRICT.lostAt ? 'lost' : 'contested',
+        zombies: counts.zombies[d.id],
+        soldiers: counts.soldiers[d.id],
+      };
+    });
     const events = w.events;
     w.events = [];
     return {
@@ -179,6 +238,9 @@ export class SimulationEngine {
       squads,
       structures,
       bases,
+      vehicles,
+      mission,
+      districts,
       directSoldier: w.directSoldier,
       events,
       stats: {
@@ -202,6 +264,16 @@ export class SimulationEngine {
     h.bytes(w.grid.blocked).bytes(w.grid.noise).bytes(w.grid.flow).bytes(w.grid.structHeight).bytes(w.grid.pile);
     h.byte(w.flowDirty ? 1 : 0);
     for (const b of w.bases) h.u32(b.id).u32(b.materials).u32(b.ammo);
+    h.bytes(w.districtControl);
+    if (w.mission) {
+      const m = w.mission;
+      h.byte(1).str(m.phase).u32(m.wave).str(m.waveState).u32(m.nextAt).u32(m.civilians).u32(m.commandPost).u32(m.base).u32(m.truck).byte(m.cargoDelivered ? 1 : 0).str(m.reason);
+    } else h.byte(0);
+    for (const v of w.vehicles) {
+      h.u32(v.id).f64Value(v.x).f64Value(v.y).f64Value(v.hx).f64Value(v.hy).f64Value(v.hp).u32(v.cargoAmmo).u32(v.cargoMaterials);
+      h.str(v.state).str(v.policy).u32(v.dest).u32(v.origin).u32(v.pathIdx).u32(v.path.length).u32(v.blockedT).byte(v.rerouted ? 1 : 0).byte(v.blockReported ? 1 : 0);
+      for (const p of v.path) h.f64Value(p);
+    }
     for (const st of w.structures) {
       h.u32(st.id).str(st.kind).u32(st.cell).u32(st.base).f64Value(st.hp).u32(st.work).byte(st.built ? 1 : 0).byte(st.open ? 1 : 0);
       h.u32(st.target + 1).f64Value(st.fireAcc);
@@ -214,7 +286,7 @@ export class SimulationEngine {
         continue;
       }
       h.byte(1).u32(s).f64Value(z.x[s]).f64Value(z.y[s]).f64Value(z.vx[s]).f64Value(z.vy[s]);
-      h.u32(z.hp[s] & 0xffff).byte(z.state[s]).byte(z.kind[s]).u32(z.attackCd[s]).u32(z.wanderT[s]).byte(z.wanderDir[s]).u32(z.target[s]).u32(z.stack[s] + 1);
+      h.u32(z.hp[s] & 0xffff).byte(z.state[s]).byte(z.kind[s]).u32(z.attackCd[s]).u32(z.wanderT[s]).byte(z.wanderDir[s]).u32(z.target[s]).u32(z.stack[s] + 1).byte(z.driven[s]);
     }
     for (const v of z.serializeFree()) h.u32(v);
     for (const s of w.soldiers) {

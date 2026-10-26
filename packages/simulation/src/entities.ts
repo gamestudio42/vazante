@@ -1,4 +1,4 @@
-import type { Formation, SoldierActivity, SoldierCondition, SquadKind, SquadOrder, Stance, StructureKind, WeaponId } from '@vazante/shared';
+import type { Formation, RiskPolicy, SoldierActivity, SoldierCondition, SquadKind, SquadOrder, Stance, StructureKind, VehicleState, WeaponId } from '@vazante/shared';
 
 export interface DirectInput {
   mx: number;
@@ -81,6 +81,9 @@ export interface Structure {
 
 export interface Base {
   id: number;
+  kind: 'base' | 'depot';
+  /** Depots hold stock but cannot be built on. */
+  buildable: boolean;
   name: string;
   x0: number;
   y0: number;
@@ -88,4 +91,42 @@ export interface Base {
   y1: number;
   materials: number;
   ammo: number;
+}
+
+export interface Vehicle {
+  id: number;
+  kind: 'truck';
+  x: number;
+  y: number;
+  hx: number;
+  hy: number;
+  hp: number;
+  cargoAmmo: number;
+  cargoMaterials: number;
+  state: VehicleState;
+  policy: RiskPolicy;
+  /** Destination and origin base ids (0 = none). */
+  dest: number;
+  origin: number;
+  path: number[];
+  pathIdx: number;
+  /** Ticks spent blocked since the last reroute. */
+  blockedT: number;
+  rerouted: boolean;
+  blockReported: boolean;
+}
+
+export interface Mission {
+  phase: 'fetch' | 'defend' | 'won' | 'lost';
+  /** Waves started so far. */
+  wave: number;
+  waveState: 'none' | 'warning' | 'active' | 'calm';
+  /** Tick at which the current warning or calm ends. */
+  nextAt: number;
+  civilians: number;
+  commandPost: number;
+  base: number;
+  truck: number;
+  cargoDelivered: boolean;
+  reason: string;
 }
