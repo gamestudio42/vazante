@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": { "lib": ["ES2023"], "types": ["node"] },
-  "include": ["tools", "vitest.config.ts", "vitest.setup.ts", "eslint.config.js"]
+  "compilerOptions": { "lib": ["ES2023", "DOM"], "types": ["node"] },
+  "include": ["tools", "vitest.config.ts", "vitest.setup.ts", "eslint.config.js", "playwright.config.ts", "e2e"]
 }

@@ -95,6 +95,7 @@ export class AudioDirector {
     limiter.connect(ctx.destination);
     this.master = ctx.createGain();
     this.master.connect(limiter);
+    this.master.gain.value = this.muted ? 0 : this.volume;
     this.sfx = this.bus(0.9);
     this.ui = this.bus(0.6);
     this.amb = this.bus(0.7);

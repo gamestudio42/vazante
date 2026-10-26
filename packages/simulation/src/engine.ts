@@ -17,6 +17,9 @@ import {
   DISTRICT,
   TICK_HZ,
   TRUCK,
+  SAVE_FORMAT,
+  SAVE_VERSION,
+  type SaveGame,
 } from '@vazante/shared';
 import { applyCommand } from './commands.ts';
 import { createScenario, type ScenarioId, type ScenarioOptions } from './scenarios/index.ts';
@@ -27,6 +30,7 @@ import { stepHorde } from './systems/horde.ts';
 import { stepInfection } from './systems/infection.ts';
 import { stepResupply, stepVehicles } from './systems/logistics.ts';
 import { districtCounts, drivenAlive, stepDistricts, stepMission } from './systems/mission.ts';
+import { restoreWorld, snapshotWorld } from './snapshot.ts';
 import { decayNoise } from './systems/noise.ts';
 import { stepUnits } from './systems/units.ts';
 import { isActiveSoldier, type World } from './world.ts';
@@ -36,6 +40,7 @@ export class SimulationEngine {
   readonly world: World;
   private queue: CommandEnvelope[] = [];
   private seq = 0;
+  private scenario: ScenarioId = 'last_convoy';
   /** Wall time spent in the last tick (set by the host, not part of the state). */
   lastTickMs = 0;
 
@@ -44,7 +49,33 @@ export class SimulationEngine {
   }
 
   static create(seed: number, scenario: ScenarioId = 'last_convoy', opts?: ScenarioOptions): SimulationEngine {
-    return new SimulationEngine(createScenario(scenario, seed, opts));
+    const e = new SimulationEngine(createScenario(scenario, seed, opts));
+    e.scenario = scenario;
+    return e;
+  }
+
+  /** A full copy of the state, plus the hash to check it against on load. */
+  save(): SaveGame {
+    const w = this.world;
+    return {
+      format: SAVE_FORMAT,
+      version: SAVE_VERSION,
+      scenario: this.scenario,
+      seed: w.seed,
+      tick: w.tick,
+      hash: this.hashState(),
+      world: snapshotWorld(w),
+    };
+  }
+
+  /** Rebuild a saved game. Throws if the save is from another format or does not hash back. */
+  static load(save: SaveGame): SimulationEngine {
+    if (save.format !== SAVE_FORMAT || save.version !== SAVE_VERSION) throw new Error('save_incompatible');
+    const e = new SimulationEngine(restoreWorld(save.world));
+    e.scenario = save.scenario === 'open_field' ? 'open_field' : 'last_convoy';
+    if (e.hashState() !== save.hash) throw new Error('save_mismatch');
+    e.world.speed = 0;
+    return e;
   }
 
   get tickCount(): number {

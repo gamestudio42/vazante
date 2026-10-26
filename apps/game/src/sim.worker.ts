@@ -40,7 +40,17 @@ self.onmessage = (ev: MessageEvent<ToWorker>) => {
   const msg = ev.data;
   switch (msg.type) {
     case 'init': {
-      engine = SimulationEngine.create(msg.seed, msg.scenario === 'open_field' ? 'open_field' : 'last_convoy');
+      const scenario = msg.scenario === 'open_field' ? 'open_field' : 'last_convoy';
+      if (msg.save) {
+        try {
+          engine = SimulationEngine.load(msg.save);
+        } catch (err) {
+          post({ type: 'error', reason: err instanceof Error ? err.message : 'save_invalid' });
+          engine = SimulationEngine.create(msg.seed, scenario);
+        }
+      } else engine = SimulationEngine.create(msg.seed, scenario);
+      // Every game opens paused: behind the menu, the briefing or a loaded save.
+      engine.world.speed = 0;
       const map = engine.mapInfo();
       post({ type: 'ready', map }, [map.ground.buffer, map.heights.buffer]);
       last = performance.now();
@@ -59,6 +69,9 @@ self.onmessage = (ev: MessageEvent<ToWorker>) => {
       engine.enqueue(cmd);
       break;
     }
+    case 'save':
+      if (engine) post({ type: 'saved', slot: msg.slot, save: engine.save() });
+      break;
     case 'request_hash':
       if (engine) post({ type: 'hash', tick: engine.world.tick, hash: engine.hashState() });
       break;

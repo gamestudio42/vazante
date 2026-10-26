@@ -11,10 +11,12 @@
     "test": "vitest run",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "sim": "tsx tools/headless-sim.ts",
-    "bench": "tsx tools/bench.ts"
+    "bench": "tsx tools/bench.ts",
+    "e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "1.63.0",
     "@types/node": "^22.20.5",
     "@vazante/kernel": "workspace:*",
     "@vazante/shared": "workspace:*",

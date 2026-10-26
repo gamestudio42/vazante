@@ -1,6 +1,7 @@
 import type { RiskPolicy } from './balance/logistics.ts';
 import type { StructureKind } from './balance/structures.ts';
 import type { Command } from './commands.ts';
+import type { SaveGame } from './save.ts';
 import type { SimEvent } from './events.ts';
 import type { Formation, MapInfo, SimSpeed, SquadOrder, Stance } from './types.ts';
 
@@ -155,11 +156,14 @@ export interface Frame {
 }
 
 export type ToWorker =
-  | { type: 'init'; seed: number; scenario: string }
+  | { type: 'init'; seed: number; scenario: string; save?: SaveGame }
+  | { type: 'save'; slot: string }
   | { type: 'command'; cmd: Command }
   | { type: 'request_hash' };
 
 export type FromWorker =
   | { type: 'ready'; map: MapInfo }
   | { type: 'frame'; frame: Frame }
-  | { type: 'hash'; tick: number; hash: number };
+  | { type: 'hash'; tick: number; hash: number }
+  | { type: 'saved'; slot: string; save: SaveGame }
+  | { type: 'error'; reason: string };

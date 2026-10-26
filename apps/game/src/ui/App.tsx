@@ -4,15 +4,19 @@ import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from '../client.ts';
 import type { InputController } from '../input.ts';
 import { t } from '../i18n.ts';
+import type { Shell } from '../shell.ts';
+import { ShellOverlay } from './Shell.tsx';
 
 interface Props {
   client: GameClient;
   input: InputController;
   view: GameRenderer;
+  shell: Shell;
 }
 
-export function App({ client, input, view }: Props) {
+export function App({ client, input, view, shell }: Props) {
   const state = useSyncExternalStore(client.subscribe, client.getState);
+  useSyncExternalStore(shell.subscribe, () => shell.version);
   const [, force] = useState(0);
   useEffect(() => input.subscribe(() => force((n) => n + 1)), [input]);
   const [band, setBand] = useState(view.rig.band);
@@ -25,8 +29,12 @@ export function App({ client, input, view }: Props) {
   if (!f) return <div className="boot">{t('boot.loading')}</div>;
 
   const selected = f.squads.filter((q) => state.selected.includes(q.id));
+  const seed = state.map?.seed ?? 1;
+  if (shell.screen === 'menu') return <ShellOverlay shell={shell} seed={seed} />;
+  const ended = f.mission && (f.mission.phase === 'won' || f.mission.phase === 'lost');
   return (
     <>
+      <div className="hud">
       <TopBar frame={f} limited={state.limited} band={input.inDirect ? 'direct' : band} />
       {!input.inDirect && (
         <div className="leftcol">
@@ -43,15 +51,17 @@ export function App({ client, input, view }: Props) {
           {state.vehicle !== null ? <VehiclePanel frame={f} id={state.vehicle} input={input} /> : <SelectionPanel squads={selected} frame={f} input={input} />}
         </div>
       )}
-      {f.mission && (f.mission.phase === 'won' || f.mission.phase === 'lost') && <Summary frame={f} />}
       {input.inDirect && <DirectHud frame={f} />}
-      {input.box && <div className="box" style={boxStyle(input.box)} />}
       {input.helpVisible && !input.inDirect && (
         <div className="help panel">
           <b>{t('help.title')}</b>
           <pre>{t('help.body')}</pre>
         </div>
       )}
+      {ended && shell.screen === 'playing' && <Summary frame={f} shell={shell} seed={seed} />}
+      <ShellOverlay shell={shell} seed={seed} />
+      </div>
+      {input.box && <div className="box" style={boxStyle(input.box)} />}
     </>
   );
 }
@@ -172,16 +182,11 @@ function VehiclePanel({ frame, id, input }: { frame: Frame; id: number; input: I
   );
 }
 
-function Summary({ frame }: { frame: Frame }) {
+function Summary({ frame, shell, seed }: { frame: Frame; shell: Shell; seed: number }) {
   const m = frame.mission!;
   const won = m.phase === 'won';
   const lost = frame.soldiers.length / SOLDIER_STRIDE - frame.stats.soldiersAlive;
-  const restart = (next: boolean) => {
-    const p = new URLSearchParams(location.search);
-    const seed = Number(p.get('seed') ?? 1);
-    if (next) p.set('seed', String(seed + 1));
-    location.search = p.toString();
-  };
+  const restart = (next: boolean) => shell.restart(seed + (next ? 1 : 0), true);
   return (
     <div className="summary">
       <div className="panel card">
@@ -222,6 +227,7 @@ function Summary({ frame }: { frame: Frame }) {
         <div className="row">
           <button onClick={() => restart(false)}>{t('summary.retry')}</button>
           <button onClick={() => restart(true)}>{t('summary.next')}</button>
+          <button onClick={() => shell.restart(seed, false)}>{t('pause.mainMenu')}</button>
         </div>
       </div>
     </div>

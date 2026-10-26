@@ -1,4 +1,4 @@
-import type { Command, Frame, FromWorker, MapInfo, SimEvent, ToWorker } from '@vazante/shared';
+import type { Command, Frame, FromWorker, MapInfo, SaveGame, SimEvent, ToWorker } from '@vazante/shared';
 
 export interface Alert {
   id: number;
@@ -39,6 +39,8 @@ export interface ClientState {
   vehicle: number | null;
   alerts: Alert[];
   limited: boolean;
+  /** Set when a save could not be loaded (the game then starts fresh). */
+  loadError: string | null;
   version: number;
 }
 
@@ -49,12 +51,21 @@ export class GameClient {
   private frameListeners = new Set<(f: Frame) => void>();
   private alertSeq = 0;
   private lastFrameAt = 0;
-  state: ClientState = { map: null, frame: null, selected: [], vehicle: null, alerts: [], limited: false, version: 0 };
+  private pendingSaves = new Map<string, (s: SaveGame) => void>();
+  state: ClientState = { map: null, frame: null, selected: [], vehicle: null, alerts: [], limited: false, loadError: null, version: 0 };
 
-  constructor(seed: number) {
+  constructor(seed: number, save?: SaveGame) {
     this.worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
     this.worker.onmessage = (ev: MessageEvent<FromWorker>) => this.onMessage(ev.data);
-    this.post({ type: 'init', seed, scenario: 'last_convoy' });
+    this.post({ type: 'init', seed, scenario: save?.scenario ?? 'last_convoy', save });
+  }
+
+  /** Ask the worker for a full copy of the current state. */
+  requestSave(slot: string): Promise<SaveGame> {
+    return new Promise((resolve) => {
+      this.pendingSaves.set(slot, resolve);
+      this.post({ type: 'save', slot });
+    });
   }
 
   private post(msg: ToWorker): void {
@@ -68,6 +79,11 @@ export class GameClient {
   private onMessage(msg: FromWorker): void {
     if (msg.type === 'ready') {
       this.update({ map: msg.map });
+    } else if (msg.type === 'saved') {
+      this.pendingSaves.get(msg.slot)?.(msg.save);
+      this.pendingSaves.delete(msg.slot);
+    } else if (msg.type === 'error') {
+      this.update({ loadError: msg.reason });
     } else if (msg.type === 'frame') {
       const f = msg.frame;
       const now = performance.now();

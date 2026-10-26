@@ -36,6 +36,15 @@ export class InputController {
   feedback: (kind: 'select' | 'order' | 'stance' | 'deny' | 'toggle') => void = () => {};
   /** Mute toggle hook (N key). */
   onToggleMute: () => void = () => {};
+  /** Esc with nothing to cancel (opens or closes the pause menu). */
+  onEscape: () => void = () => {};
+  onQuickSave: () => void = () => {};
+  onQuickLoad: () => void = () => {};
+  /** False while a menu covers the game: only Esc gets through. */
+  enabled = true;
+  /** Pan when the mouse touches the screen edge. */
+  edgePan = false;
+  private mouseInside = false;
   private listeners = new Set<() => void>();
 
   constructor(
@@ -53,6 +62,8 @@ export class InputController {
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
+    document.addEventListener('mouseleave', () => (this.mouseInside = false));
+    document.addEventListener('mouseenter', () => (this.mouseInside = true));
     client.onFrame((f) => {
       if (this.directId !== null && f.directSoldier !== this.directId) this.leaveDirectLocal();
     });
@@ -85,9 +96,18 @@ export class InputController {
       return;
     }
     rig.direct = null;
+    if (!this.enabled) return;
     if (this.build.active) this.refreshGhost();
     let dx = 0;
     let dy = 0;
+    if (this.edgePan && this.mouseInside && !this.panning && !this.dragStart) {
+      const { w, h } = this.size();
+      const m = 6;
+      if (this.mouse.x <= m) dx -= 1;
+      if (this.mouse.x >= w - m) dx += 1;
+      if (this.mouse.y <= m) dy -= 1;
+      if (this.mouse.y >= h - m) dy += 1;
+    }
     if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) dy -= 1;
     if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) dy += 1;
     if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) dx -= 1;
@@ -132,6 +152,7 @@ export class InputController {
   private onMouseMove = (e: MouseEvent): void => {
     const r = this.canvas.getBoundingClientRect();
     this.mouse = { x: e.clientX - r.left, y: e.clientY - r.top };
+    this.mouseInside = true;
     if (this.directId !== null) {
       if (document.pointerLockElement === this.canvas) this.directYaw += e.movementX * MOUSE_SENSITIVITY;
       return;
@@ -283,7 +304,11 @@ export class InputController {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.target instanceof HTMLInputElement) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+    if (!this.enabled) {
+      if (e.code === 'Escape') this.onEscape();
+      return;
+    }
     this.keys.add(e.code);
     const rig = this.view.rig;
     switch (e.code) {
@@ -342,6 +367,17 @@ export class InputController {
         break;
       case 'Escape':
         if (this.build.active) this.setBuild(null);
+        else if (this.client.state.vehicle !== null) this.selectVehicle(null);
+        else if (this.client.state.selected.length > 0) this.select([]);
+        else this.onEscape();
+        break;
+      case 'F5':
+        e.preventDefault();
+        this.onQuickSave();
+        break;
+      case 'F9':
+        e.preventDefault();
+        this.onQuickLoad();
         break;
       case 'KeyG':
       case 'Delete':

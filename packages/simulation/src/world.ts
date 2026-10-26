@@ -108,6 +108,16 @@ export class World {
     this.flowDirty = true;
   }
 
+  /** Rebuild the id indexes from the entity arrays (after loading a snapshot from a file). */
+  relink(): void {
+    this.soldierIndex.clear();
+    this.squadIndex.clear();
+    this.structureIndex.clear();
+    for (const s of this.soldiers) this.soldierIndex.set(s.id, s);
+    for (const q of this.squads) this.squadIndex.set(q.id, q);
+    for (const st of this.structures) this.structureIndex.set(st.id, st);
+  }
+
   allocId(): number {
     return this.nextId++;
   }

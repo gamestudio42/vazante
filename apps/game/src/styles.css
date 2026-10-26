@@ -323,3 +323,180 @@ canvas.game {
   position: static;
   max-width: none;
 }
+
+/* ----- Interface scale ----- */
+.hud {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: calc(100vw / var(--ui, 1));
+  height: calc(100vh / var(--ui, 1));
+  transform: scale(var(--ui, 1));
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+/* ----- Menus ----- */
+.menu button,
+.card button {
+  font: inherit;
+  color: var(--text);
+  background: #232a31;
+  border: 1px solid var(--line);
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.menu button:hover,
+.card button:hover,
+.summary button:hover,
+.selection button:hover,
+.build button:hover:not(:disabled) {
+  border-color: #6b7580;
+}
+button.primary {
+  border-color: var(--accent);
+  color: #fff;
+  background: rgba(79, 163, 255, 0.18);
+}
+.menu-screen {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+  background: linear-gradient(90deg, rgba(8, 10, 12, 0.82) 0%, rgba(8, 10, 12, 0.35) 45%, rgba(8, 10, 12, 0) 70%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: 8vw;
+  gap: 28px;
+}
+.menu-title h1 {
+  margin: 0;
+  font-size: 64px;
+  letter-spacing: 10px;
+  text-transform: uppercase;
+  color: var(--text);
+  text-shadow: 0 3px 0 #000;
+}
+.menu-title .muted {
+  letter-spacing: 2px;
+}
+.menu {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 300px;
+  padding: 14px;
+}
+.menu h2,
+.card h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.menu button {
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 14px;
+}
+.menu .city {
+  margin-top: 6px;
+  align-items: center;
+  justify-content: space-between;
+}
+.menu .city button {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+.menu .hint {
+  margin-top: 4px;
+  font-size: 11px;
+}
+.menu-version {
+  position: absolute;
+  bottom: 12px;
+  left: 8vw;
+  font-size: 11px;
+}
+.modal {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 12, 0.55);
+  pointer-events: auto;
+}
+.card {
+  position: static;
+  padding: 18px 22px;
+}
+.briefing {
+  max-width: 620px;
+  line-height: 1.55;
+}
+.briefing h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.briefing .tips {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  font-size: 12px;
+}
+.row.end {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.settings {
+  width: 520px;
+}
+.settings label {
+  display: grid;
+  grid-template-columns: 220px 1fr 70px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.settings select,
+.saves button {
+  font: inherit;
+}
+.settings select {
+  background: #1b2127;
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 4px;
+}
+.saves {
+  width: 640px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.save-list {
+  overflow-y: auto;
+}
+.save-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.toast {
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-color: var(--accent);
+  animation: toast-in 0.2s ease-out;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+}
