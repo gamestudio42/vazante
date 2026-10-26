@@ -41,6 +41,9 @@ importers:
 
   apps/game:
     dependencies:
+      '@vazante/audio':
+        specifier: workspace:*
+        version: link:../../packages/audio
       '@vazante/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
@@ -72,6 +75,12 @@ importers:
       vite:
         specifier: ^7.3.7
         version: 7.3.7(@types/node@22.20.5)(tsx@4.23.15)
+
+  packages/audio:
+    dependencies:
+      '@vazante/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/kernel: {}
 

@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vazante/audio": "workspace:*",
     "@vazante/kernel": "workspace:*",
     "@vazante/shared": "workspace:*",
     "@vazante/simulation": "workspace:*",

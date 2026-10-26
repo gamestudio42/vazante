@@ -45,7 +45,7 @@ const en = {
   'help.title': 'Controls',
   'help.toggle': 'H: help',
   'help.body':
-    'Pan: WASD / arrows / middle drag · Zoom: wheel · M: operations map · Q/E rotate\nSelect: click or drag · Move: right click · Stance: Z X C V · Formation: F\nSpace pause · F1 F2 F3 speed · TAB direct control · K spawn a test horde at the cursor',
+    'Pan: WASD / arrows / middle drag · Zoom: wheel · M: operations map · Q/E rotate\nSelect: click or drag · Move: right click · Stance: Z X C V · Formation: F\nSpace pause · F1 F2 F3 speed · TAB direct control · K spawn a test horde at the cursor · N sound on/off',
 } as const;
 
 type Key = keyof typeof en;
@@ -97,7 +97,7 @@ const ptBR: Record<Key, string> = {
   'help.title': 'Controles',
   'help.toggle': 'H: ajuda',
   'help.body':
-    'Mover câmera: WASD / setas / botão do meio · Zoom: roda · M: mapa de operações · Q/E girar\nSelecionar: clique ou arraste · Mover: clique direito · Postura: Z X C V · Formação: F\nEspaço pausa · F1 F2 F3 velocidade · TAB controle direto · K cria uma horda de teste no cursor',
+    'Mover câmera: WASD / setas / botão do meio · Zoom: roda · M: mapa de operações · Q/E girar\nSelecionar: clique ou arraste · Mover: clique direito · Postura: Z X C V · Formação: F\nEspaço pausa · F1 F2 F3 velocidade · TAB controle direto · K cria uma horda de teste no cursor · N som liga/desliga',
 };
 
 const dictionaries = { en, 'pt-BR': ptBR } as const;

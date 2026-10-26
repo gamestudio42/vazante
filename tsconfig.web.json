@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": { "lib": ["ES2023", "DOM", "DOM.Iterable", "WebWorker.ImportScripts"], "jsx": "react-jsx" },
-  "include": ["packages/view3d", "apps/game/src", "apps/game/vite.config.ts"]
+  "include": ["packages/view3d", "packages/audio", "apps/game/src", "apps/game/vite.config.ts"]
 }

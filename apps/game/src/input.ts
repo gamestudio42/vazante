@@ -30,6 +30,10 @@ export class InputController {
   private lastDirectKey = '';
   box: BoxRect | null = null;
   helpVisible = true;
+  /** Immediate audio feedback for player actions (wired to the audio director in main). */
+  feedback: (kind: 'select' | 'order' | 'stance' | 'deny' | 'toggle') => void = () => {};
+  /** Mute toggle hook (N key). */
+  onToggleMute: () => void = () => {};
   private listeners = new Set<() => void>();
 
   constructor(
@@ -161,6 +165,7 @@ export class InputController {
   select(ids: number[]): void {
     this.client.select(ids);
     this.view.selectedSquads = new Set(ids);
+    if (ids.length) this.feedback('select');
   }
 
   private orderMove(x: number, y: number): void {
@@ -171,11 +176,14 @@ export class InputController {
     if (!p) return;
     this.client.send({ type: 'move', squads: sel, to: p });
     this.view.markOrder(p.x, p.y);
+    this.feedback('order');
   }
 
   setStance(stance: Stance): void {
     const sel = this.client.state.selected;
-    if (sel.length) this.client.send({ type: 'stance', squads: sel, stance });
+    if (!sel.length) return;
+    this.client.send({ type: 'stance', squads: sel, stance });
+    this.feedback('stance');
   }
 
   cycleFormation(): void {
@@ -185,6 +193,7 @@ export class InputController {
     const q = f.squads.find((s) => s.id === sel[0]);
     const next = FORMATIONS[(FORMATIONS.indexOf(q?.formation ?? 'line') + 1) % FORMATIONS.length];
     this.client.send({ type: 'formation', squads: sel, formation: next });
+    this.feedback('stance');
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -236,6 +245,10 @@ export class InputController {
       case 'KeyF':
         this.cycleFormation();
         break;
+      case 'KeyN':
+        this.onToggleMute();
+        this.changed();
+        break;
       case 'KeyH':
         this.helpVisible = !this.helpVisible;
         this.changed();
@@ -264,7 +277,10 @@ export class InputController {
     }
     const f = this.client.state.frame;
     const sel = this.client.state.selected;
-    if (!f || sel.length === 0) return;
+    if (!f || sel.length === 0) {
+      this.feedback('deny');
+      return;
+    }
     const q = f.squads.find((s) => s.id === sel[0]);
     if (!q) return;
     for (let i = 0; i < f.soldiers.length / SOLDIER_STRIDE; i++) {
@@ -275,6 +291,7 @@ export class InputController {
         this.directId = id;
         this.directYaw = Math.atan2(f.soldiers[o + SoldierField.FacingY], f.soldiers[o + SoldierField.FacingX]);
         this.client.send({ type: 'set_direct_control', soldier: id });
+        this.feedback('toggle');
         this.canvas.requestPointerLock?.();
         this.changed();
         return;
