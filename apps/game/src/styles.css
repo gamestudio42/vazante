@@ -514,3 +514,7 @@ button.primary {
   image-rendering: pixelated;
   cursor: crosshair;
 }
+
+.topbar .night {
+  color: #9fb4e0;
+}

@@ -48,6 +48,7 @@ async function boot(): Promise<void> {
 
 function start(client: GameClient, map: NonNullable<GameClient['state']['map']>, initial: Screen): void {
   const view = new GameRenderer(canvas, map);
+  view.warmUp();
   const base = map.sites.find((s) => s.kind === 'base');
   if (base) view.rig.centerOn(((base.x0 + base.x1 + 1) / 2) * map.cellSize, ((base.y0 + base.y1 + 1) / 2) * map.cellSize);
   const input = new InputController(canvas, client, view);

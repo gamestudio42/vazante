@@ -100,7 +100,28 @@ export class CameraRig {
     this.focusY = y;
   }
 
+  /** Trauma 0..1; shake grows with its square and decays over about a second. */
+  private trauma = 0;
+  private shakeT = 0;
+
+  /** Kick the camera (explosions, heavy hits). Amounts add up and saturate at 1. */
+  shake(amount: number): void {
+    this.trauma = Math.min(1, this.trauma + amount);
+  }
+
+  private shakeOffset(dtS: number): { x: number; y: number } {
+    this.trauma = Math.max(0, this.trauma - dtS * 1.2);
+    this.shakeT += dtS;
+    const a = this.trauma * this.trauma;
+    if (a === 0) return { x: 0, y: 0 };
+    // Smooth noise from a few incommensurate sines (no per-frame random jitter).
+    const t = this.shakeT * 30;
+    const mag = a * (this.direct ? 0.6 : this.span * 0.012);
+    return { x: (Math.sin(t * 1.1) + Math.sin(t * 2.3 + 1.7)) * 0.5 * mag, y: (Math.sin(t * 1.7 + 0.5) + Math.sin(t * 2.9 + 2.1)) * 0.5 * mag };
+  }
+
   update(dtS: number): void {
+    const sh = this.shakeOffset(dtS);
     const k = 1 - Math.exp(-dtS / 0.15);
     this.span += (this.targetSpan - this.span) * k;
     this.yaw += (this.targetYaw - this.yaw) * k;
@@ -109,9 +130,9 @@ export class CameraRig {
       const { x, y, yaw } = this.direct;
       const fx = Math.cos(yaw);
       const fy = Math.sin(yaw);
-      this.persp.position.set(x - fx * 12, 8, y - fy * 12);
+      this.persp.position.set(x - fx * 12 + sh.x, 8 + sh.y, y - fy * 12);
       this.persp.up.set(0, 1, 0);
-      this.persp.lookAt(x + fx * 10, 1.5, y + fy * 10);
+      this.persp.lookAt(x + fx * 10 + sh.x, 1.5 + sh.y, y + fy * 10);
       this.persp.updateMatrixWorld();
       return;
     }
@@ -129,10 +150,12 @@ export class CameraRig {
     const up = Math.sin(tilt) * DISTANCE;
     const bx = Math.sin(this.yaw) * back;
     const by = Math.cos(this.yaw) * back;
-    cam.position.set(this.focusX + bx, up, this.focusY + by);
+    const fxs = this.focusX + sh.x;
+    const fys = this.focusY + sh.y;
+    cam.position.set(fxs + bx, up, fys + by);
     // Screen-up points toward the yawed north.
     cam.up.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    cam.lookAt(this.focusX, 0, this.focusY);
+    cam.lookAt(fxs, 0, fys);
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
   }

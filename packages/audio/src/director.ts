@@ -1,5 +1,6 @@
 import type { Frame, SimEvent } from '@vazante/shared';
 import { ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
+import { MusicDirector } from './music.ts';
 
 /** Where the player is listening from: the camera focus (map views) or the controlled soldier. */
 export interface Listener {
@@ -55,8 +56,21 @@ export class AudioDirector {
   private threat = 0;
   private groanTimer = 0;
   private nearest: [number, number][] = [];
+  private music: MusicDirector | null = null;
+  private recentShots = 0;
   volume = 0.8;
+  musicVolume = 0.7;
   muted = false;
+
+  /** Current music intensity 0..1 (for the debug overlay and tests). */
+  get musicIntensity(): number {
+    return this.music?.intensity ?? 0;
+  }
+
+  setMusicVolume(v: number): void {
+    this.musicVolume = Math.max(0, Math.min(1, v));
+    this.music?.setVolume(this.musicVolume);
+  }
 
   /** Browsers only start audio after a user gesture; call from the first pointer or key event. */
   unlock(): void {
@@ -107,6 +121,8 @@ export class AudioDirector {
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
 
     this.startAmbience();
+    this.music = new MusicDirector(ctx, this.master, this.noise);
+    this.music.setVolume(this.musicVolume);
   }
 
   private bus(gain: number): GainNode {
@@ -201,6 +217,7 @@ export class AudioDirector {
     }
     this.nearZombies = near;
     this.threat = threat;
+    if (this.music) this.music.target = MusicDirector.targetFor(f, threat, this.recentShots);
   }
 
   /** Called every render frame. */
@@ -220,6 +237,8 @@ export class AudioDirector {
       this.groanTimer = 0.25 + Math.random() * (3 / Math.sqrt(near + 1));
     }
     for (let i = this.voices.length - 1; i >= 0; i--) if (this.voices[i].end < t) this.voices.splice(i, 1);
+    this.recentShots *= Math.exp(-dt / 3);
+    this.music?.update(dt);
   }
 
   private hearingRadius(): number {
@@ -229,6 +248,7 @@ export class AudioDirector {
   private onEvent(e: SimEvent): void {
     switch (e.type) {
       case 'shot':
+        this.recentShots++;
         if (this.throttle('shot', 0.03)) this.gunshot(e.x!, e.y!, (e.value ?? 0) > 0);
         return;
       case 'zombie_killed':
@@ -289,6 +309,7 @@ export class AudioDirector {
         return;
       case 'mission_won':
       case 'mission_lost':
+        this.music?.end();
         this.stinger(e.type === 'mission_won');
         return;
       case 'gate_toggled':

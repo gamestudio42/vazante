@@ -8,12 +8,16 @@ import {
   ZOMBIE_STRIDE,
   ZombieField,
   ZombieState,
+  clockHours,
+  daylight,
   type Frame,
   type MapInfo,
 } from '@vazante/shared';
 import { CameraRig } from './camera.ts';
 import { CharacterBatch, IDLE_POSE, walkPose, type CharacterColors, type Pose } from './characters.ts';
 import { buildCity, buildDistrictOverlay, hash } from './city.ts';
+import { LightPools } from './lights.ts';
+import { FireAndSmoke } from './smoke.ts';
 import { DecalLayer, OrderMarkers, Particles } from './fx.ts';
 import { toon } from './materials.ts';
 import { PALETTE } from './palette.ts';
@@ -60,6 +64,11 @@ export class GameRenderer {
   readonly map: MapInfo;
   private readonly post = new PixelPost();
   private readonly sun: THREE.DirectionalLight;
+  private readonly hemi: THREE.HemisphereLight;
+  private readonly lights = new LightPools(2048);
+  /** Current hour (0..24) and darkness (0 day .. 1 night), for the HUD and audio. */
+  hours = 16;
+  night = 0;
   private readonly fog: THREE.Fog;
   private readonly soldiers: CharacterBatch;
   private readonly zombies: CharacterBatch;
@@ -72,6 +81,7 @@ export class GameRenderer {
   private readonly tracers: Tracer[] = [];
   private readonly blood: DecalLayer;
   private readonly particles = new Particles(1200);
+  private readonly fire = new FireAndSmoke();
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   readonly structures: StructureLayer;
   readonly vehicles = new VehicleLayer();
@@ -129,7 +139,8 @@ export class GameRenderer {
     const hM = map.height * map.cellSize;
     this.rig = new CameraRig(wM, hM);
 
-    this.scene.add(new THREE.HemisphereLight(PALETTE.skyLight, PALETTE.groundLight, 1.6));
+    this.hemi = new THREE.HemisphereLight(PALETTE.skyLight, PALETTE.groundLight, 1.6);
+    this.scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight(PALETTE.sun, 2.2);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -137,7 +148,25 @@ export class GameRenderer {
     this.sun.shadow.normalBias = 0.3;
     this.scene.add(this.sun, this.sun.target);
 
-    this.scene.add(buildCity(map));
+    const city = buildCity(map);
+    this.scene.add(city);
+    for (const [x, y] of city.userData.lamps as [number, number][]) this.lights.addStatic(x, y, 8, PALETTE.lampLight, 0.3);
+    for (const site of map.sites) {
+      const cs = map.cellSize;
+      const x0 = site.x0 * cs;
+      const y0 = site.y0 * cs;
+      const x1 = (site.x1 + 1) * cs;
+      const y1 = (site.y1 + 1) * cs;
+      for (const [x, y] of [
+        [x0, y0],
+        [x1, y0],
+        [x0, y1],
+        [x1, y1],
+      ])
+        this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
+    }
+    this.scene.add(this.lights.mesh, this.fire.group);
+    this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
     this.districts = buildDistrictOverlay(map);
@@ -274,8 +303,11 @@ export class GameRenderer {
         return;
       case 'vehicle_destroyed':
         if (e.x === undefined) return;
-        this.particles.emit(e.x, e.y!, 1.5, 40, { speed: 6, up: 6, life: 1.0, size: 0.5, color: PALETTE.muzzle, gravity: 4 });
-        this.particles.emit(e.x, e.y!, 2, 30, { speed: 2, up: 3, life: 2.5, size: 0.9, color: PALETTE.wreck, gravity: -0.5 });
+        this.particles.emit(e.x, e.y!, 1.5, 40, { speed: 6, up: 6, life: 1.0, size: 0.35, color: PALETTE.wreck, gravity: 9 });
+        this.fire.explode(e.x, e.y!, 1.2);
+        this.fire.addFire(e.x, e.y!, 1, 90);
+        this.flashes.push({ x: e.x, y: e.y!, t: 0.6, life: 0.6 });
+        this.shakeAt(e.x, e.y!, 0.8);
         this.blood.add(e.x, e.y!, 6, Math.random() * Math.PI, 1.3);
         return;
       case 'structure_built':
@@ -313,6 +345,22 @@ export class GameRenderer {
     return Math.min(1, Math.max(0, (nowMs - this.currAt) / this.interval));
   }
 
+  /**
+   * Compile every shader up front, including layers that start hidden or empty (blood, corpses,
+   * flashes, ghosts). Otherwise each compiles on first use and the frame where combat starts stalls.
+   */
+  warmUp(): void {
+    const hidden: THREE.Object3D[] = [];
+    this.scene.traverse((o) => {
+      if (!o.visible) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    this.renderer.compile(this.scene, this.rig.active);
+    for (const o of hidden) o.visible = false;
+  }
+
   render(nowMs: number, dtS: number): void {
     this.rig.update(dtS);
     const f = this.curr;
@@ -328,10 +376,105 @@ export class GameRenderer {
     this.drawCorpses(nowMs);
     this.drawTracers(dtS);
     this.particles.update(dtS);
+    this.fire.smokeShade = 1 - 0.6 * this.night;
+    this.fire.update(dtS);
     this.orders.update(dtS, this.unitScale());
+    this.updateTimeOfDay(f ? f.tick + this.alpha(nowMs) : 0);
+    this.lights.beginDynamic();
+    if (f) this.drawFlashlights(f, this.alpha(nowMs));
+    this.drawFireLights(t, dtS);
+    this.lights.end(this.night);
     this.updateLighting();
     this.districts.visible = this.rig.band !== 'tactical' && !this.rig.direct;
     this.post.render(this.renderer, this.scene, this.rig.active);
+  }
+
+  private readonly cDay = new THREE.Color();
+  private readonly cNight = new THREE.Color();
+
+  /** Sun or moon, sky, fog and ambient follow the game clock. */
+  private updateTimeOfDay(tick: number): void {
+    const h = clockHours(tick);
+    const day = daylight(h);
+    this.hours = h;
+    this.night = 1 - day;
+    const bg = this.scene.background as THREE.Color;
+    bg.copy(this.cDay.set(PALETTE.sky)).lerp(this.cNight.set(PALETTE.skyNight), this.night);
+    this.fog.color.copy(this.cDay.set(PALETTE.fog)).lerp(this.cNight.set(PALETTE.fogNight), this.night);
+    this.hemi.color.copy(this.cDay.set(PALETTE.skyLight)).lerp(this.cNight.set(PALETTE.skyLightNight), this.night);
+    this.hemi.groundColor.copy(this.cDay.set(PALETTE.groundLight)).lerp(this.cNight.set(PALETTE.groundLightNight), this.night);
+    this.hemi.intensity = 0.8 + 0.8 * day;
+    // Low warm sun around dawn and dusk, cold moonlight at night.
+    const low = Math.min(1, Math.abs(h - 12) / 6);
+    this.sun.color.copy(this.cDay.set(PALETTE.sun)).lerp(this.cNight.set(PALETTE.sunDusk), Math.max(0, low - 0.5) * 2 * day);
+    this.sun.color.lerp(this.cNight.set(PALETTE.moon), this.night);
+    this.sun.intensity = 0.9 + 1.3 * day;
+    this.sunHeight = day > 0.5 ? Math.max(0.25, 1 - low * 0.75) : 0.9;
+  }
+
+  private sunHeight = 1;
+
+  /** Soldiers carry weapon lights at night. */
+  private drawFlashlights(f: Frame, a: number): void {
+    if (this.night < 0.05) return;
+    const s = f.soldiers;
+    const n = Math.min(MAX_SOLDIERS, s.length / SOLDIER_STRIDE);
+    for (let i = 0; i < n; i++) {
+      const o = i * SOLDIER_STRIDE;
+      if (s[o + SoldierField.Condition] > SoldierCondition.Bitten) continue;
+      const [x, y] = this.soldierPos(i, a);
+      const fx = s[o + SoldierField.FacingX];
+      const fy = s[o + SoldierField.FacingY];
+      this.lights.addBeam(x + fx * 0.6, y + fy * 0.6, fx, fy, 16, 5, PALETTE.flashlight, 0.32);
+      this.lights.addPool(x, y, 2.5, PALETTE.flashlight, 0.15);
+    }
+    for (const v of f.vehicles) {
+      if (v.state === 'destroyed') continue;
+      const p = this.vehicles.position(v.id, a);
+      if (p) this.lights.addBeam(p.x + v.hx * 3, p.y + v.hy * 3, v.hx, v.hy, 24, 8, PALETTE.flashlight, 0.4);
+    }
+  }
+
+  private readonly flashes: { x: number; y: number; t: number; life: number }[] = [];
+
+  /** Fires glow and explosions flash at night (in daylight the sprites carry them). */
+  private drawFireLights(t: number, dtS: number): void {
+    for (const fs of this.fire.fires) this.lights.addPool(fs.x, fs.y, 7 + 5 * fs.strength, PALETTE.fireLight, 0.35 * FireAndSmoke.flicker(fs, t) * Math.min(1, fs.ttl / 10));
+    for (let i = this.flashes.length - 1; i >= 0; i--) {
+      const fl = this.flashes[i];
+      fl.t -= dtS;
+      if (fl.t <= 0) {
+        this.flashes.splice(i, 1);
+        continue;
+      }
+      this.lights.addPool(fl.x, fl.y, 18, PALETTE.fireLight, (fl.t / fl.life) * 1.2);
+    }
+  }
+
+  /** Shake scaled by how close the event is to what the camera is looking at. */
+  private shakeAt(x: number, y: number, amount: number): void {
+    const d = this.rig.direct;
+    const fx = d ? d.x : this.rig.focusX;
+    const fy = d ? d.y : this.rig.focusY;
+    const reach = d ? 60 : Math.max(60, this.rig.span);
+    const k = 1 - Math.min(1, Math.hypot(x - fx, y - fy) / reach);
+    if (k > 0) this.rig.shake(amount * k);
+  }
+
+  /** A few buildings burn forever: the city fell recently. Placed by hash, away from bases. */
+  private addAmbientFires(map: MapInfo): void {
+    const cs = map.cellSize;
+    let placed = 0;
+    for (const b of map.buildings) {
+      if (placed >= 9) break;
+      if (hash(b.id * 2654435761 + map.seed) % 23 !== 0) continue;
+      const x = ((b.x0 + b.x1 + 1) / 2) * cs;
+      const y = ((b.y0 + b.y1 + 1) / 2) * cs;
+      const nearSite = map.sites.some((s) => x > (s.x0 - 8) * cs && x < (s.x1 + 9) * cs && y > (s.y0 - 8) * cs && y < (s.y1 + 9) * cs);
+      if (nearSite) continue;
+      this.fire.addFire(x, y, 1.6, Infinity, b.height);
+      placed++;
+    }
   }
 
   /** Shadow frustum follows what the camera looks at; fog only in the third-person view. */
@@ -340,7 +483,7 @@ export class GameRenderer {
     const fx = d ? d.x : this.rig.focusX;
     const fy = d ? d.y : this.rig.focusY;
     const half = d ? 70 : Math.min(this.rig.span * 0.75 + 20, 450);
-    this.sun.position.set(fx - 220, 400, fy - 300);
+    this.sun.position.set(fx - 220, 400 * this.sunHeight, fy - 300);
     this.sun.target.position.set(fx, 0, fy);
     const cam = this.sun.shadow.camera;
     if (cam.right !== half) {

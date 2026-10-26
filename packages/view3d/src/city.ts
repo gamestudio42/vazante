@@ -43,7 +43,9 @@ export function buildCity(map: MapInfo): THREE.Group {
   inst.name = 'buildings';
   group.add(inst);
 
-  group.add(buildProps(map));
+  const props = buildProps(map);
+  group.add(props);
+  group.userData.lamps = props.userData.lamps;
 
   for (const s of map.sites) {
     group.add(rectOutline(s.x0 * cs, s.y0 * cs, (s.x1 + 1) * cs, (s.y1 + 1) * cs, s.kind === 'base' ? PALETTE.base : PALETTE.depot, 0.12));
@@ -164,6 +166,7 @@ function buildProps(map: MapInfo): THREE.Group {
   poles.count = heads.count = lamps.length;
   poles.castShadow = true;
   group.add(poles, heads);
+  group.userData.lamps = lamps;
   return group;
 }
 

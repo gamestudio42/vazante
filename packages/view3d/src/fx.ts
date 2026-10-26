@@ -128,8 +128,11 @@ export class OrderMarkers {
     this.geo.rotateX(-Math.PI / 2);
   }
 
+  /** Finished markers are kept and reused: disposing the last material would free its shader program, and the next order would recompile it mid-game. */
+  private readonly pool: THREE.Mesh[] = [];
+
   add(x: number, y: number): void {
-    const mesh = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ color: this.color, transparent: true, depthWrite: false }));
+    const mesh = this.pool.pop() ?? new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ color: this.color, transparent: true, depthWrite: false }));
     mesh.position.set(x, 0.08, y);
     this.group.add(mesh);
     this.items.push({ mesh, age: 0 });
@@ -142,7 +145,7 @@ export class OrderMarkers {
       const k = it.age / 0.7;
       if (k >= 1) {
         this.group.remove(it.mesh);
-        (it.mesh.material as THREE.Material).dispose();
+        this.pool.push(it.mesh);
         this.items.splice(i, 1);
         continue;
       }

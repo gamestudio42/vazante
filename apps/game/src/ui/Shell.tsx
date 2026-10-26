@@ -107,6 +107,11 @@ function SettingsPanel({ shell }: { shell: Shell }) {
           <span className="muted">{Math.round(s.volume * 100)}%</span>
         </label>
         <label>
+          <span>{t('settings.music')}</span>
+          <input type="range" min={0} max={1} step={0.05} value={s.musicVolume} onChange={(e) => set({ musicVolume: Number(e.target.value) })} />
+          <span className="muted">{Math.round(s.musicVolume * 100)}%</span>
+        </label>
+        <label>
           <span>{t('settings.language')}</span>
           <select value={s.locale} onChange={(e) => set({ locale: e.target.value as Locale })}>
             <option value="pt-BR">Português (Brasil)</option>

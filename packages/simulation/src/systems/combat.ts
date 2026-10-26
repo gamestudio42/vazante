@@ -11,11 +11,15 @@ import {
   TICK_DT,
   TICK_HZ,
   WEAPONS,
+  DAY,
+  clockHours,
+  daylight,
   type Stance,
   type WeaponStats,
 } from '@vazante/shared';
 import type { Soldier } from '../entities.ts';
 import { isActiveSoldier, type World } from '../world.ts';
+import { distToSite } from './logistics.ts';
 
 /** cos(45°): `hold` only engages inside the 90° arc in front of the formation. */
 const HOLD_ARC_COS = 0.7071;
@@ -46,7 +50,7 @@ export function stepCombat(w: World): void {
 
     const q = w.squad(s.squad);
     const stance: Stance = q ? q.stance : 'aggressive';
-    const range = engagementRange(stance, wpn);
+    const range = engagementRange(stance, wpn) * sightFactor(w, s.x, s.y);
     if (!validTarget(w, s, s.target, range) || (w.tick + s.id) % RETARGET_INTERVAL_TICKS === 0) {
       s.target = acquire(w, s, range, stance, q ? q.hx : s.fx, q ? q.hy : s.fy);
     }
@@ -72,6 +76,14 @@ export function stepCombat(w: World): void {
     }
     if (!w.zombies.isAlive(s.target)) s.target = -1;
   }
+}
+
+/** At night soldiers see half as far, except under the floodlights around bases and depots. */
+function sightFactor(w: World, x: number, y: number): number {
+  const day = daylight(clockHours(w.tick));
+  if (day >= 1) return 1;
+  for (const b of w.bases) if (distToSite(b, x, y) <= DAY.siteLightM) return 1;
+  return 1 - (1 - DAY.nightVision) * (1 - day);
 }
 
 function engagementRange(stance: Stance, wpn: WeaponStats): number {

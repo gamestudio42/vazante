@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { RISK_POLICIES, SOLDIER_STRIDE, SoldierField, STANCES, STRUCTURES, STRUCTURE_KINDS, TICK_HZ, type Frame, type SquadView } from '@vazante/shared';
+import { clockHours, daylight, RISK_POLICIES, SOLDIER_STRIDE, SoldierField, STANCES, STRUCTURES, STRUCTURE_KINDS, TICK_HZ, type Frame, type SquadView } from '@vazante/shared';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from '../client.ts';
 import type { InputController } from '../input.ts';
@@ -245,6 +245,7 @@ function TopBar({ frame, limited, band }: { frame: Frame; limited: boolean; band
       <span>
         {t('top.time')} {clock}
       </span>
+      <DayClock tick={frame.tick} />
       <span className={frame.speed === 0 ? 'paused' : ''}>{frame.speed === 0 ? t('top.paused') : `${frame.speed}x`}</span>
       {limited && <span className="warn">{t('top.limited')}</span>}
       <span>
@@ -267,6 +268,18 @@ function TopBar({ frame, limited, band }: { frame: Frame; limited: boolean; band
       <span className="band">{t(`band.${band}`)}</span>
       <span className="muted">{t('help.toggle')}</span>
     </div>
+  );
+}
+
+function DayClock({ tick }: { tick: number }) {
+  const h = clockHours(tick);
+  const hh = Math.floor(h);
+  const mm = Math.floor((h - hh) * 60);
+  const day = daylight(h);
+  return (
+    <span className={day < 0.5 ? 'night' : ''} title={t(day < 0.5 ? 'top.night' : 'top.day')}>
+      {day < 0.5 ? '☾' : '☀'} {String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}
+    </span>
   );
 }
 

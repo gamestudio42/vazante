@@ -62,3 +62,32 @@ describe('combat', () => {
     expect(e.world.stats.shotsFired).toBeGreaterThan(0);
   });
 });
+
+describe('day and night', () => {
+  it('clock and daylight follow the 20-minute day', async () => {
+    const { clockHours, daylight, DAY, TICK_HZ } = await import('@vazante/shared');
+    expect(clockHours(0)).toBe(DAY.startHour);
+    expect(clockHours((DAY.lengthS * TICK_HZ) / 2)).toBeCloseTo((DAY.startHour + 12) % 24);
+    expect(daylight(12)).toBe(1);
+    expect(daylight(0)).toBe(0);
+    expect(daylight(18.5)).toBeGreaterThan(0);
+    expect(daylight(18.5)).toBeLessThan(1);
+  });
+
+  it('at night soldiers away from lit sites only see half as far', async () => {
+    const { DAY, TICK_HZ } = await import('@vazante/shared');
+    const engaged = (tick: number) => {
+      const e = fieldEngine(3);
+      e.world.tick = tick;
+      addSquad(e, 'guard', 128, 128);
+      // A lone zombie 45 m away: inside rifle range (60 m) by day, outside it at night (30 m).
+      e.world.zombies.spawn(128, 83, ZombieKind.Common, ZombieState.Wandering);
+      e.runTicks(15);
+      return e.world.stats.shotsFired > 0;
+    };
+    const noon = ((12 - DAY.startHour + 24) % 24) * (DAY.lengthS * TICK_HZ) / 24;
+    const midnight = ((24 - DAY.startHour) % 24) * (DAY.lengthS * TICK_HZ) / 24;
+    expect(engaged(noon)).toBe(true);
+    expect(engaged(midnight)).toBe(false);
+  });
+});

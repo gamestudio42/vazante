@@ -215,6 +215,7 @@ export class Shell {
     document.documentElement.lang = s.locale;
     document.documentElement.style.setProperty('--ui', String(s.uiScale));
     this.audio.setVolume(s.volume);
+    this.audio.setMusicVolume(s.musicVolume);
     this.input.edgePan = s.edgePan;
     this.changed();
   }
