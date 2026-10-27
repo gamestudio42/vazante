@@ -38,8 +38,8 @@ export class CameraRig {
     this.mapW = mapWidthM;
     this.mapH = mapHeightM;
     this.maxSpan = Math.max(mapWidthM, mapHeightM) * 1.1;
-    this.span = 160;
-    this.targetSpan = 160;
+    this.span = 110;
+    this.targetSpan = 110;
   }
 
   get active(): THREE.Camera {
@@ -71,7 +71,7 @@ export class CameraRig {
   /** Toggle between the operations map (whole city) and the tactical view at the previous spot. */
   toggleMap(): void {
     if (this.targetSpan >= STRATEGIC_SPAN) {
-      this.targetSpan = 160;
+      this.targetSpan = 110;
       if (this.savedFocus) [this.focusX, this.focusY] = this.savedFocus;
       this.savedFocus = null;
     } else {

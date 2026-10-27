@@ -29,6 +29,9 @@ const JOBS: Job[] = [
   },
 ];
 
+/** Static props: converted whole. */
+const PROPS = ['Debris_BrokenCar', 'SackTrench', 'Barrier_Large', 'Container_Long', 'Tank'];
+
 const io = new NodeIO();
 mkdirSync(OUT, { recursive: true });
 for (const job of JOBS) {
@@ -42,4 +45,12 @@ for (const job of JOBS) {
   await io.write(job.out, doc);
   const kept = root.listNodes().filter((n) => n.getMesh()).map((n) => n.getName());
   console.log(`${job.out}: meshes ${kept.join(', ')}; clips ${root.listAnimations().map((a) => a.getName()).join(', ')}`);
+}
+
+mkdirSync(`${OUT}/props`, { recursive: true });
+for (const name of PROPS) {
+  const doc = await io.read(`${SRC}/env/${name}.gltf`);
+  await doc.transform(prune(), dedup());
+  await io.write(`${OUT}/props/${name}.glb`, doc);
+  console.log(`${OUT}/props/${name}.glb`);
 }

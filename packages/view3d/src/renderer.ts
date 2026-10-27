@@ -19,8 +19,9 @@ import { CharacterBatch, IDLE_POSE, walkPose, type CharacterColors, type Pose } 
 import { buildCity, buildDistrictOverlay, hash } from './city.ts';
 import { LightPools } from './lights.ts';
 import { FireAndSmoke } from './smoke.ts';
+import { buildProps } from './props.ts';
 import { DecalLayer, OrderMarkers, Particles } from './fx.ts';
-import { toon } from './materials.ts';
+import { cityUniforms, toon } from './materials.ts';
 import { PALETTE } from './palette.ts';
 import { PixelPost } from './post.ts';
 import { StructureLayer } from './structures.ts';
@@ -367,13 +368,13 @@ export class GameRenderer {
    * without them: if loading fails it keeps the block figures.
    */
   async loadModels(baseUrl: string): Promise<void> {
-    const [soldier, infected] = await Promise.all([
+    const [soldier, infected, props] = await Promise.all([
       loadBakedModel(`${baseUrl}soldier.glb`, {
         height: 1.8,
         clips: ['Idle', 'Walk', 'Run_Gun', 'Idle_Shoot', 'Walk_Shoot', 'Run_Shoot', 'Death'],
         once: ['Death'],
         colors: { Pants: PALETTE.fatigues, Skin: 0xc8916b, Grey: 0x4a4f44 },
-        tint: { Character_Main: 0.65 },
+        tint: { Character_Main: 0.45 },
       }),
       loadBakedModel(`${baseUrl}infected.glb`, {
         height: 1.75,
@@ -383,7 +384,9 @@ export class GameRenderer {
         colors: { Skin: PALETTE.zombieSkin[0], 'Character_Enemy_Head/Enemy_Red': 0x2b2119, Grey: 0x45464c },
         tint: { Enemy_Red: 1 },
       }),
+      buildProps(this.map, baseUrl),
     ]);
+    this.scene.add(props);
     this.soldierCrowd = new Crowd(soldier, MAX_SOLDIERS);
     this.zombieCrowd = new Crowd(infected, MAX_SKINNED_ZOMBIES);
     this.corpseCrowd = new Crowd(infected, MAX_SKINNED_CORPSES);
@@ -473,12 +476,13 @@ export class GameRenderer {
     this.fog.color.copy(this.cDay.set(PALETTE.fog)).lerp(this.cNight.set(PALETTE.fogNight), this.night);
     this.hemi.color.copy(this.cDay.set(PALETTE.skyLight)).lerp(this.cNight.set(PALETTE.skyLightNight), this.night);
     this.hemi.groundColor.copy(this.cDay.set(PALETTE.groundLight)).lerp(this.cNight.set(PALETTE.groundLightNight), this.night);
-    this.hemi.intensity = 0.8 + 0.8 * day;
+    this.hemi.intensity = 1.9 - 0.3 * day;
+    cityUniforms.uNight.value = Math.max(0, (this.night - 0.3) / 0.7);
     // Low warm sun around dawn and dusk, cold moonlight at night.
     const low = Math.min(1, Math.abs(h - 12) / 6);
     this.sun.color.copy(this.cDay.set(PALETTE.sun)).lerp(this.cNight.set(PALETTE.sunDusk), Math.max(0, low - 0.5) * 2 * day);
     this.sun.color.lerp(this.cNight.set(PALETTE.moon), this.night);
-    this.sun.intensity = 0.9 + 1.3 * day;
+    this.sun.intensity = 1.5 + 0.7 * day;
     this.sunHeight = day > 0.5 ? Math.max(0.25, 1 - low * 0.75) : 0.9;
   }
 

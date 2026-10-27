@@ -82,6 +82,7 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
     [Ground.Park]: PALETTE.park,
   };
   const g = (cx: number, cy: number) => (cx < 0 || cy < 0 || cx >= map.width || cy >= map.height ? -1 : map.ground[cy * map.width + cx]);
+  const inSite = (cx: number, cy: number) => map.sites.some((st) => cx >= st.x0 && cx <= st.x1 && cy >= st.y0 && cy <= st.y1);
   for (let ty = 0; ty < H; ty++) {
     const cy = Math.floor(ty / TPC);
     const sy = ty % TPC;
@@ -105,6 +106,12 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
         if (curb) c = PALETTE.curb;
       } else if (kind === Ground.Park) {
         shade *= 1 + ((hash(cx * 31 + cy * 17 + sx * 3 + sy) % 13) - 6) / 60;
+      } else if (kind === Ground.Lot && inSite(cx, cy)) {
+        // Bases and depots sit on a gravel pad with concrete slab joints and worn vehicle tracks.
+        c = PALETTE.basePad;
+        if ((sx === 0 && cx % 2 === 0) || (sy === 0 && cy % 2 === 0)) shade *= 0.86;
+        if ((cx + cy) % 7 === 0 && (sx === 2 || sx === 5)) shade *= 0.9;
+        shade *= 1 + ((hash(tx * 131 + ty * 977) % 7) - 3) / 40;
       }
       const o = (ty * W + tx) * 4;
       data[o] = Math.min(255, ((c >> 16) & 255) * shade);
