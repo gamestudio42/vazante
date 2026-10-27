@@ -85,7 +85,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     squads: [
       { kind: 'slice', name: 'Alfa' },
       { kind: 'police', name: 'Bravo' },
-      { kind: 'slice', name: 'Charlie' },
+      { kind: 'marines', name: 'Charlie' },
     ],
     trucks: [{ at: 'base', ammo: 0, materials: 0 }],
     zones: [{ site: 'Hospital São Lucas' }],
@@ -106,7 +106,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     map: 'city',
     squads: [
       { kind: 'marines', name: 'Alfa' },
-      { kind: 'slice', name: 'Bravo' },
+      { kind: 'engineers', name: 'Bravo' },
       { kind: 'police', name: 'Charlie' },
     ],
     trucks: [{ at: 'base', ammo: 3000, materials: 320 }],
@@ -127,7 +127,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     map: 'city',
     squads: [
       { kind: 'marines', name: 'Alfa' },
-      { kind: 'slice', name: 'Bravo' },
+      { kind: 'engineers', name: 'Bravo' },
       { kind: 'police', name: 'Charlie' },
       { kind: 'marines', name: 'Delta' },
     ],

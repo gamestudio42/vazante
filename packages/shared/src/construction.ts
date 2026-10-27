@@ -23,6 +23,10 @@ export interface PlacementContext {
   structureAt(cell: number): boolean;
   /** True if a soldier stands in the cell (zombies only delay completion). */
   unitIn(cell: number): boolean;
+  /** An engineer close enough to build at the cell outside a base (ENGINEER.buildM). */
+  engineerNear?(cx: number, cy: number): boolean;
+  /** Index into `bases` of the player's base, which pays for engineer work outside it. */
+  homeBase?: number;
 }
 
 export interface PlacementResult {
@@ -37,7 +41,8 @@ export interface PlacementResult {
  */
 export function checkPlacement(ctx: PlacementContext, kind: StructureKind, cx: number, cy: number): PlacementResult {
   if (cx < 0 || cy < 0 || cx >= ctx.width || cy >= ctx.height) return { error: 'out_of_bounds', base: -1 };
-  const base = ctx.bases.findIndex((b) => b.buildable !== false && cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1);
+  let base = ctx.bases.findIndex((b) => b.buildable !== false && cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1);
+  if (base < 0 && ctx.homeBase !== undefined && ctx.homeBase >= 0 && ctx.engineerNear?.(cx, cy)) base = ctx.homeBase;
   if (base < 0) return { error: 'outside_base', base: -1 };
   const cell = cy * ctx.width + cx;
   const g = ctx.ground[cell];

@@ -2,6 +2,21 @@
 
 2026-10-26 · first audit at build `8069844` (28 tests); progress column updated after the quality pass and M5 (40 tests)
 
+## Re-audit 2026-10-27, content milestone (95 unit tests, 13 e2e)
+
+**Overall 7 / 10** (6.5 before). The content gap that held the score down is narrower: a four-mission campaign with unlocks, two new infected and three new soldier roles, all covered by tests and playable on Pages. The missions are tuned by simulation tests and short browser runs, not yet by full playthroughs, so balance is the first thing to watch.
+
+| Area | before → now | What changed | Biggest gaps |
+| --- | --- | --- | --- |
+| Content | 3 → 5.5 | missions Hospital São Lucas (evacuation), A Ponte (hold a bridge), Retomar a Ribeira (retake a district, then waves); Gritador and Inchado; marines with a marksman and a medic, engineers | helicopter, artillery, vehicles beyond the truck, more maps, cutscenes and voice |
+| Game loop | 6.5 → 7.5 | campaign with unlocks, data-driven stages (deliver, reach, hold, evacuate, waves, retake), per-mission briefing and summary | economy depth, persistent roster between missions |
+| Squad AI and combat | 6.5 → 7 | medics heal and slow infection, marksmen pick the special infected, engineers build in the field, parked trucks resupply | flanking, grenades |
+| Horde AI | 7 → 7.5 | screams pull the horde from 110 m; bursts chain | Choir directives |
+| Engineering | 7.5 → 8 | public repository, Pages deploy on every push | crash reporting, CI on pull requests |
+| Platform | 6 → 6.5 | playable in the browser from GitHub Pages | Snap, Flatpak, Windows, macOS; Steam |
+
+Other areas unchanged. Next for content: playtest and balance the three new missions, then a fifth mission with the helicopter or artillery.
+
 ## Re-audit 2026-10-27 (build `fdd5477`, 62 unit tests, 10 e2e)
 
 **Overall 6.5 / 10: a polished indie vertical slice** (about 4 at the first audit). The slice plays end to end with objectives, three waves, win and loss, saves, animated characters, day and night, adaptive music and a professional HUD. What separates it from AAA now is content volume and tactical depth more than technology.

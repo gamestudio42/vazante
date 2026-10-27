@@ -12,6 +12,7 @@ import {
   STAGGER_TICKS,
   STRESS,
   SoldierActivity,
+  SPECIAL_PRIORITY,
   TARGET_SHARE_PENALTY,
   TICK_DT,
   ZombieKind,
@@ -131,15 +132,26 @@ function mateTargets(w: World, s: Soldier): number[] {
  * Nearest visible zombie in range (and in the front arc for `hold`). A zombie that squadmates
  * already shoot at counts as farther, so a squad spreads its fire over the front.
  */
+/**
+ * Special infected count as closer than they are: every soldier leans towards a Gritador or an
+ * Inchado, a marksman goes for them first.
+ */
+function priority(w: World, s: Soldier, slot: number): number {
+  const k = w.zombies.kind[slot];
+  if (k !== ZombieKind.Screamer && k !== ZombieKind.Bloater) return 1;
+  return s.weapon === 'dmr' ? SPECIAL_PRIORITY.marksman : SPECIAL_PRIORITY.anyone;
+}
+
 function acquire(w: World, s: Soldier, range: number, stance: Stance, hx: number, hy: number, taken: readonly number[]): number {
   let best = -1;
   let bestScore = Infinity;
   w.forZombiesNear(s.x, s.y, range, (slot, d2) => {
-    if (d2 >= bestScore) return;
+    const pri = priority(w, s, slot);
+    if (d2 * pri >= bestScore) return;
     let n = 0;
     for (const t of taken) if (t === slot) n++;
     const f = 1 + TARGET_SHARE_PENALTY * n;
-    const score = d2 * f * f;
+    const score = d2 * f * f * pri;
     if (score >= bestScore) return;
     const dx = w.zombies.x[slot] - s.x;
     const dy = w.zombies.y[slot] - s.y;

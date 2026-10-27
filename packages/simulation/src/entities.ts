@@ -1,4 +1,4 @@
-import type { Formation, MissionId, RiskPolicy, SoldierActivity, SoldierCondition, SquadKind, SquadOrder, Stance, StructureKind, VehicleState, WeaponId } from '@vazante/shared';
+import type { Formation, MissionId, RiskPolicy, SoldierActivity, SoldierCondition, SoldierRole, SquadKind, SquadOrder, Stance, StructureKind, VehicleState, WeaponId } from '@vazante/shared';
 
 export interface DirectInput {
   mx: number;
@@ -20,6 +20,8 @@ export interface Soldier {
   hp: number;
   maxHp: number;
   weapon: WeaponId;
+  /** Medic or engineer; absent in saves made before roles. */
+  role?: SoldierRole;
   /** Rounds in the loaded magazine. */
   mag: number;
   /** Reserve rounds, not counting the magazine. */

@@ -547,6 +547,17 @@ b {
 .morale-tag.cover {
   color: var(--accent);
 }
+.squad .name .kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  vertical-align: middle;
+}
 .bars .num {
   font-size: 11px;
   text-align: right;

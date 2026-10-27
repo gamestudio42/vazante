@@ -4,6 +4,7 @@ import {
   Blocked,
   CELL_SIZE,
   DEMOLISH_REFUND,
+  ENGINEER,
   MG_NEST,
   NOISE_SHOT,
   NOISE_SHOT_RADIUS_M,
@@ -29,7 +30,20 @@ export function placementContext(w: World): PlacementContext {
     bases: w.bases,
     structureAt: (cell) => g.structure[cell] !== 0 || g.blocked[cell] !== Blocked.None,
     unitIn: (cell) => w.soldiers.some((s) => isActiveSoldier(s) && g.cellAt(s.x, s.y) === cell),
+    engineerNear: (cx, cy) => engineerNear(w, (cx + 0.5) * CELL_SIZE, (cy + 0.5) * CELL_SIZE, ENGINEER.buildM),
+    homeBase: w.bases.findIndex((b) => b.kind === 'base'),
   };
+}
+
+function engineerNear(w: World, x: number, y: number, r: number): boolean {
+  return w.soldiers.some((s) => s.role === 'engineer' && isActiveSoldier(s) && (s.x - x) * (s.x - x) + (s.y - y) * (s.y - y) <= r * r);
+}
+
+function insideBase(w: World, st: Structure): boolean {
+  const b = w.bases[st.base];
+  const cx = st.cell % w.grid.width;
+  const cy = (st.cell - cx) / w.grid.width;
+  return !!b && cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1;
 }
 
 /** Validate, pay and place a blueprint. Returns a rejection reason or null. */
@@ -103,11 +117,17 @@ function assignBuilders(w: World): void {
     let bd = Infinity;
     const sx = w.grid.cellCenterX(st.cell);
     const sy = w.grid.cellCenterY(st.cell);
+    // Outside the walls only engineers in reach take the job.
+    const field = !insideBase(w, st);
     for (const q of w.squads) {
       if (!q.autoBuild || q.buildTask !== 0 || q.order.kind === 'move' || !squadCanBuild(w, q)) continue;
-      const qcx = Math.floor(q.ax / CELL_SIZE);
-      const qcy = Math.floor(q.ay / CELL_SIZE);
-      if (!base || qcx < base.x0 - TASK_BASE_MARGIN || qcx > base.x1 + TASK_BASE_MARGIN || qcy < base.y0 - TASK_BASE_MARGIN || qcy > base.y1 + TASK_BASE_MARGIN) continue;
+      if (field) {
+        if (q.kind !== 'engineers' || (q.ax - sx) * (q.ax - sx) + (q.ay - sy) * (q.ay - sy) > 4 * ENGINEER.buildM * ENGINEER.buildM) continue;
+      } else {
+        const qcx = Math.floor(q.ax / CELL_SIZE);
+        const qcy = Math.floor(q.ay / CELL_SIZE);
+        if (!base || qcx < base.x0 - TASK_BASE_MARGIN || qcx > base.x1 + TASK_BASE_MARGIN || qcy < base.y0 - TASK_BASE_MARGIN || qcy > base.y1 + TASK_BASE_MARGIN) continue;
+      }
       const d = (q.ax - sx) * (q.ax - sx) + (q.ay - sy) * (q.ay - sy);
       if (d < bd) {
         bd = d;
@@ -169,13 +189,17 @@ export function stepConstruction(w: World): void {
       const cx = w.grid.cellCenterX(st.cell);
       const cy = w.grid.cellCenterY(st.cell);
       let builders = 0;
+      let engineers = 0;
       for (const s of w.soldiers) {
         if (!isActiveSoldier(s) || s.direct) continue;
         const dx = s.x - cx;
         const dy = s.y - cy;
-        if (dx * dx + dy * dy <= r2 && ++builders >= BUILDERS_REQUIRED) break;
+        if (dx * dx + dy * dy > r2) continue;
+        builders++;
+        if (s.role === 'engineer') engineers++;
+        if (builders >= BUILDERS_REQUIRED && engineers > 0) break;
       }
-      if (builders >= BUILDERS_REQUIRED) st.work++;
+      if (builders >= BUILDERS_REQUIRED) st.work = Math.min(need, st.work + (engineers > 0 ? ENGINEER.rate : 1));
     }
     if (st.work >= need && !cellOccupied(w, st.cell)) {
       st.built = true;

@@ -1,4 +1,4 @@
-import { SOLDIER_STRIDE, STRUCTURES, SoldierField, checkPlacement, type Frame, type MapInfo, type PlacementContext, type PlacementError, type StructureKind } from '@vazante/shared';
+import { ENGINEER, SOLDIER_STRIDE, STRUCTURES, SoldierField, checkPlacement, type Frame, type MapInfo, type PlacementContext, type PlacementError, type StructureKind } from '@vazante/shared';
 
 export interface GhostCell {
   cx: number;
@@ -74,6 +74,7 @@ export class BuildTool {
     const m = this.map;
     const taken = new Set<number>();
     const units = new Set<number>();
+    const engineers: [number, number][] = [];
     if (frame) {
       for (const s of frame.structures) taken.add(s.cy * m.width + s.cx);
       for (let i = 0; i < frame.soldiers.length; i += SOLDIER_STRIDE) {
@@ -82,6 +83,7 @@ export class BuildTool {
         const cx = Math.floor(frame.soldiers[i + SoldierField.X] / m.cellSize);
         const cy = Math.floor(frame.soldiers[i + SoldierField.Y] / m.cellSize);
         units.add(cy * m.width + cx);
+        if (frame.soldiers[i + SoldierField.Flags] & 8) engineers.push([frame.soldiers[i + SoldierField.X], frame.soldiers[i + SoldierField.Y]]);
       }
     }
     return {
@@ -91,6 +93,12 @@ export class BuildTool {
       bases: frame?.bases ?? [],
       structureAt: (cell) => taken.has(cell),
       unitIn: (cell) => units.has(cell),
+      engineerNear: (cx, cy) => {
+        const x = (cx + 0.5) * m.cellSize;
+        const y = (cy + 0.5) * m.cellSize;
+        return engineers.some(([ex, ey]) => (ex - x) * (ex - x) + (ey - y) * (ey - y) <= ENGINEER.buildM * ENGINEER.buildM);
+      },
+      homeBase: frame ? frame.bases.findIndex((b) => b.kind === 'base') : -1,
     };
   }
 }

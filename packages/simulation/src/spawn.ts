@@ -45,6 +45,7 @@ export function spawnSquad(w: World, kind: SquadKind, name: string, x: number, y
       hp: t.soldierHp,
       maxHp: t.soldierHp,
       weapon,
+      role: t.roles?.[i] ?? 'none',
       mag,
       ammo: wpn.ammoPerSoldier - mag,
       condition: SoldierCondition.Ok,

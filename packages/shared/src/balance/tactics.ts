@@ -4,13 +4,15 @@
  * Suppression: a hit that does not kill staggers the zombie for this many ticks (per weapon), during
  * which it moves at STAGGER_SPEED_FACTOR and cannot attack. Sustained fire holds a line back.
  */
-export const STAGGER_TICKS = { rifle: 4, lmg: 3, shotgun: 9 } as const;
+export const STAGGER_TICKS = { rifle: 4, lmg: 3, shotgun: 9, dmr: 10 } as const;
 export const STAGGER_SPEED_FACTOR = 0.15;
 /** Brutes shrug off part of it. */
 export const BRUTE_STAGGER_FACTOR = 0.5;
 
 /** Fire distribution: a zombie already targeted by n squadmates counts as this much farther per mate. */
 export const TARGET_SHARE_PENALTY = 0.8;
+/** Squared-distance factor for Gritadores and Inchados in target choice (lower = sooner). */
+export const SPECIAL_PRIORITY = { anyone: 0.5, marksman: 0.05 } as const;
 
 /** Braced against cover (next to a built structure): hit chance and morale. */
 export const COVER_ACCURACY_BONUS = 1.15;

@@ -72,7 +72,8 @@ export function cityWar(seed: number, opts: ScenarioOptions = {}): World {
   const home = w.bases.find((b) => b.kind === 'base')!;
   const bx = ((home.x0 + home.x1 + 1) / 2) * CELL_SIZE;
   const by = ((home.y0 + home.y1 + 1) / 2) * CELL_SIZE;
-  ['Alfa', 'Bravo', 'Charlie', 'Delta'].forEach((name, i) => spawnSquad(w, 'slice', name, bx - 24 + i * 16, by));
+  const kinds = ['slice', 'marines', 'engineers', 'police'] as const;
+  ['Alfa', 'Bravo', 'Charlie', 'Delta'].forEach((name, i) => spawnSquad(w, kinds[i], name, bx - 24 + i * 16, by));
   home.materials = SLICE.baseMaterials * 2 + diff.baseMaterials;
   home.ammo = SLICE.baseAmmo * 2 + diff.baseAmmo;
   for (const d of w.bases) {

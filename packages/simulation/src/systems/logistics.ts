@@ -8,6 +8,7 @@ import {
   TICK_DT,
   TICK_HZ,
   TRUCK,
+  TRUCK_RESUPPLY_M,
   WEAPONS,
   type RiskPolicy,
 } from '@vazante/shared';
@@ -31,20 +32,33 @@ export function distToSite(b: Base, x: number, y: number): number {
 
 /**
  * Soldiers near a base or depot with ammunition refill their reserve at a fixed rate from that
- * site's stock. Far from every site, a squad that runs dry stays dry.
+ * site's stock; away from the sites, a parked truck hands out its ammunition cargo the same way.
+ * Far from both, a squad that runs dry stays dry.
  */
 export function stepResupply(w: World): void {
   const perTick = RESUPPLY_ROUNDS_PER_S * TICK_DT;
+  const r2 = TRUCK_RESUPPLY_M * TRUCK_RESUPPLY_M;
   for (const s of w.soldiers) {
     if (!isActiveSoldier(s)) continue;
     const cap = WEAPONS[s.weapon].ammoPerSoldier;
     const need = cap - (s.ammo + s.mag);
     if (need <= 0) continue;
+    let fed = false;
     for (const b of w.bases) {
       if (b.ammo <= 0 || distToSite(b, s.x, s.y) > RESUPPLY_RADIUS_M) continue;
       const n = Math.min(need, perTick, b.ammo);
       s.ammo += n;
       b.ammo -= n;
+      s.outOfAmmoReported = false;
+      fed = true;
+      break;
+    }
+    if (fed) continue;
+    for (const v of w.vehicles) {
+      if (v.state !== 'idle' || v.cargoAmmo <= 0 || (v.x - s.x) * (v.x - s.x) + (v.y - s.y) * (v.y - s.y) > r2) continue;
+      const n = Math.min(need, perTick, v.cargoAmmo);
+      s.ammo += n;
+      v.cargoAmmo -= n;
       s.outOfAmmoReported = false;
       break;
     }

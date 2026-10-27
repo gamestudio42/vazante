@@ -36,7 +36,7 @@ interface Voice {
 const VOICE_CAP = 24;
 
 /** Weapon id on a shot event to its sample family; turrets and unknown weapons use the rifle. */
-const SHOT_FAMILY: Record<string, SampleFamily> = { rifle: 'rifle', lmg: 'lmg', shotgun: 'shotgun' };
+const SHOT_FAMILY: Record<string, SampleFamily> = { rifle: 'rifle', lmg: 'lmg', shotgun: 'shotgun', dmr: 'rifle' };
 
 /**
  * Sound for Vazante. Owns the mix (master limiter, buses, voice cap with priorities) and turns
@@ -498,7 +498,8 @@ export class AudioDirector {
     if (!out) return;
     const t = this.ctx!.currentTime;
     const family = SHOT_FAMILY[weapon ?? ''] ?? 'rifle';
-    if (this.sample(out, family, t, 0.8, family === 'lmg' ? 0.92 : 1)) {
+    // The marksman rifle is the rifle take pitched down and louder: a heavier crack.
+    if (this.sample(out, family, t, weapon === 'dmr' ? 1 : 0.8, family === 'lmg' ? 0.92 : weapon === 'dmr' ? 0.8 : 1)) {
       if (hit && this.samples.has('splat')) this.sample(out, 'splat', t + 0.04, 0.25, 1.1, 0.1);
       return;
     }

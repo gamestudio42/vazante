@@ -28,5 +28,7 @@ export const TRUCK = {
 /** Distance at which zombies can hit a vehicle. */
 export const ZOMBIE_VEHICLE_REACH_M = 2.2;
 /** Engine noise of a moving truck. */
+/** A parked truck hands out its ammunition cargo to the soldiers this close. */
+export const TRUCK_RESUPPLY_M = 12;
 export const NOISE_TRUCK = 45;
 export const NOISE_TRUCK_RADIUS_M = 25;

@@ -2,6 +2,7 @@ import type { DifficultyId } from './balance/difficulty.ts';
 import type { RiskPolicy } from './balance/logistics.ts';
 import type { MissionId, StageKind } from './balance/missions.ts';
 import type { StructureKind } from './balance/structures.ts';
+import type { SquadKind } from './balance/units.ts';
 import type { Command } from './commands.ts';
 import type { SaveGame } from './save.ts';
 import type { SimEvent } from './events.ts';
@@ -24,7 +25,7 @@ export enum SoldierField {
   Magazine = 10,
   /** Morale stress 0..100. */
   Stress = 11,
-  /** Bit 0: panicking; bit 1: in cover. */
+  /** Bit 0: panicking; 1: in cover; 2: medic; 3: engineer; 4: marksman. */
   Flags = 12,
 }
 
@@ -43,6 +44,7 @@ export enum ZombieField {
 export interface SquadView {
   id: number;
   name: string;
+  kind: SquadKind;
   members: number[];
   alive: number;
   order: SquadOrder;

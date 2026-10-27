@@ -13,6 +13,7 @@ import {
   Gamepad2,
   Hammer,
   Heart,
+  HeartPulse,
   Map as MapIcon,
   Moon,
   Package,
@@ -37,6 +38,7 @@ import {
   Hand,
   Brain,
   ShieldHalf,
+  Wrench,
   Zap,
   type LucideIcon,
 } from 'lucide-react';
@@ -394,6 +396,7 @@ function squadStats(frame: Frame, q: SquadView) {
   let stress = 0;
   let panic = 0;
   let cover = 0;
+  const roles = { medic: 0, engineer: 0, marksman: 0 };
   const members: Member[] = [];
   for (let i = 0; i < frame.soldiers.length / SOLDIER_STRIDE; i++) {
     const o = i * SOLDIER_STRIDE;
@@ -403,6 +406,9 @@ function squadStats(frame: Frame, q: SquadView) {
     const flags = frame.soldiers[o + SoldierField.Flags];
     members.push({ hp: h, condition: c, panic: (flags & 1) !== 0 });
     if (c > SoldierCondition.Bitten) continue;
+    if (flags & 4) roles.medic++;
+    if (flags & 8) roles.engineer++;
+    if (flags & 16) roles.marksman++;
     stress += frame.soldiers[o + SoldierField.Stress];
     if (flags & 1) panic++;
     if (flags & 2) cover++;
@@ -416,7 +422,7 @@ function squadStats(frame: Frame, q: SquadView) {
   peaks.set(q.id, p);
   const avg = q.alive ? hp / q.alive : 0;
   const morale = q.alive ? 1 - stress / q.alive / 100 : 0;
-  return { hp: Math.round(avg), hpFrac: avg / p.hp, ammo, ammoFrac: ammo / p.ammo, members, maxHp: p.hp, morale, panic, cover };
+  return { hp: Math.round(avg), hpFrac: avg / p.hp, ammo, ammoFrac: ammo / p.ammo, members, maxHp: p.hp, morale, panic, cover, roles };
 }
 
 function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; selected: number[]; onSelect: (id: number) => void; onCenter: (q: SquadView) => void }) {
@@ -436,7 +442,15 @@ function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; sele
             <span className="hotkey">{q.name[0]}</span>
             <div className="squad-body">
               <div className="row between">
-                <span className="name">{q.name}</span>
+                <span className="name">
+                  {q.name}
+                  <span className="kind" title={t(`squadKind.${q.kind}.hint`)}>
+                    {t(`squadKind.${q.kind}`)}
+                    {s.roles.medic > 0 && <HeartPulse size={10} aria-label={t('role.medic')} />}
+                    {s.roles.marksman > 0 && <Crosshair size={10} aria-label={t('role.marksman')} />}
+                    {s.roles.engineer > 0 && <Wrench size={10} aria-label={t('role.engineer')} />}
+                  </span>
+                </span>
                 <span className="badges">
                   <span className="badge" title={t(`stance.${q.stance}`)}>
                     <StanceIcon size={11} />

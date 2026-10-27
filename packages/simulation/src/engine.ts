@@ -27,6 +27,7 @@ import { stepFlow } from './systems/flow.ts';
 import { stepHorde } from './systems/horde.ts';
 import { stepInfection } from './systems/infection.ts';
 import { stepResupply, stepVehicles } from './systems/logistics.ts';
+import { stepMedics } from './systems/medics.ts';
 import { stepMorale } from './systems/morale.ts';
 import { districtCounts, stepDistricts, stepMission } from './systems/mission.ts';
 import { missionView } from './systems/missionView.ts';
@@ -46,6 +47,7 @@ const STEPS: readonly (readonly [string, (w: World) => void])[] = [
   ['combat', stepCombat],
   ['infected', stepInfected],
   ['morale', stepMorale],
+  ['medics', stepMedics],
   ['emplacements', stepEmplacements],
   ['infection', stepInfection],
   ['construction', stepConstruction],
@@ -178,7 +180,7 @@ export class SimulationEngine {
       soldiers[o + 9] = s.activity;
       soldiers[o + 10] = s.mag;
       soldiers[o + 11] = s.stress;
-      soldiers[o + 12] = (s.panicT > 0 ? 1 : 0) | (s.inCover ? 2 : 0);
+      soldiers[o + 12] = (s.panicT > 0 ? 1 : 0) | (s.inCover ? 2 : 0) | (s.role === 'medic' ? 4 : 0) | (s.role === 'engineer' ? 8 : 0) | (s.weapon === 'dmr' ? 16 : 0);
       if (isActiveSoldier(s)) {
         soldiersAlive++;
         ammoTotal += s.ammo + s.mag;
@@ -207,6 +209,7 @@ export class SimulationEngine {
       return {
         id: q.id,
         name: q.name,
+        kind: q.kind,
         members: q.members.slice(),
         alive,
         order: structuredCloneOrder(q.order),
