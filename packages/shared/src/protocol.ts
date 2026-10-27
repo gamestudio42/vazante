@@ -1,5 +1,6 @@
 import type { DifficultyId } from './balance/difficulty.ts';
 import type { RiskPolicy } from './balance/logistics.ts';
+import type { MissionId, StageKind } from './balance/missions.ts';
 import type { StructureKind } from './balance/structures.ts';
 import type { Command } from './commands.ts';
 import type { SaveGame } from './save.ts';
@@ -86,26 +87,61 @@ export interface VehicleView {
   policy: RiskPolicy;
   /** Destination base id, 0 = none. */
   dest: number;
+  /** Civilians aboard. */
+  passengers: number;
   /** Remaining route, flattened x, y pairs. */
   path: number[];
 }
 
-export type MissionPhase = 'fetch' | 'defend' | 'won' | 'lost';
+export type MissionPhase = 'active' | 'won' | 'lost';
+export type ObjectiveState = 'done' | 'active' | 'pending';
+
+/** One stage of the mission as the objectives panel shows it. */
+export interface ObjectiveView {
+  kind: StageKind;
+  state: ObjectiveState;
+  /** Zone, district or destination name for the label. */
+  place: string;
+  /** Where the truck starts (deliver) or waits (evacuate). */
+  from: string;
+  /** 0..1 for timed stages and district control; -1 when the stage has no meter. */
+  progress: number;
+  /** Seconds, civilians or waves the stage asks for (0 when none). */
+  total: number;
+}
+
+/** A mission area in cells, for the map marker and the minimap. */
+export interface ZoneView {
+  name: string;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  /** The current stage is about this zone. */
+  active: boolean;
+}
 
 export interface MissionView {
+  id: MissionId;
   phase: MissionPhase;
-  /** Waves started so far and total. */
+  /** Index of the current stage (equals objectives.length once won). */
+  stage: number;
+  objectives: ObjectiveView[];
+  zones: ZoneView[];
+  /** Waves started so far and total in the current waves stage. */
   wave: number;
   waves: number;
   waveState: 'none' | 'warning' | 'active' | 'calm';
   /** Seconds until the next wave hits (during a warning). */
   secondsToWave: number;
   waveZombies: number;
+  /** Civilians in the command post (0 and max 0 when the mission has none). */
   civilians: number;
   civiliansMax: number;
   commandPostHp: number;
   commandPostMaxHp: number;
-  cargoDelivered: boolean;
+  /** Civilians brought back to the base. */
+  evacuated: number;
   /** Why the mission was lost. */
   reason: string;
 }

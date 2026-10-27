@@ -40,6 +40,7 @@ export const PALETTE = {
   tracer: 0xfff1a8,
   selection: 0xffffff,
   orderMarker: 0x8fe08a,
+  zone: 0xf0b03f,
   path: 0xd8f0c8,
   directRing: 0xff5a3c,
   hesco: 0xb59a6a,

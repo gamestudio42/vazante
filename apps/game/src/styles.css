@@ -195,6 +195,9 @@ b {
 .meter.m-ammo.low > div {
   background: var(--warn);
 }
+.meter.m-wave > div {
+  background: var(--accent);
+}
 .meter.m-post {
   margin-top: 4px;
 }
@@ -1311,6 +1314,62 @@ button.big {
 }
 .settings {
   width: 540px;
+}
+.campaign {
+  width: 520px;
+  max-width: calc(100vw - 32px);
+}
+.missions {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.mission-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+}
+.mission-row:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mission-n {
+  font-size: 20px;
+  font-weight: 700;
+  width: 22px;
+  color: var(--accent);
+}
+.mission-row:disabled .mission-n {
+  color: var(--dim);
+}
+.mission-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  font-size: 12px;
+}
+.mission-text b {
+  font-size: 14px;
+}
+.mission-row .ok {
+  color: var(--ok);
+}
+.obj-meter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.obj .hint {
+  margin-top: 2px;
+  font-size: 11px;
 }
 .settings label {
   display: grid;

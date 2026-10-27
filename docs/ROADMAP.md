@@ -109,6 +109,9 @@ Progress (2026-10-27):
 - [x] Simulation gate in the container: 8,000 agents on the 2 km city, mean 6.6 ms, p95 10.3 ms, worst 19 ms.
 - [ ] Render gate (60 fps with 5,000 visible) on Marcel's laptop.
 - [ ] Sector LOD L0/L1/L2 with conservation and calibration tests.
+- [x] Data-driven missions (`balance/missions.ts`, `systems/mission.ts`): ordered stages (deliver, reach, hold, evacuate, waves, retake) with pressure groups; O Último Comboio migrated with an identical run.
+- [x] Campaign of four missions with unlocks, per-mission briefing and summary: O Último Comboio, Hospital São Lucas (evacuation), A Ponte (hold the crossing), Retomar a Ribeira (retake a district, then the final waves). Mission areas are marked on the ground and on the minimap.
+- [ ] New infected (Gritador, Inchado) and units (medic, marksman, engineers); a parked truck resupplies the soldiers around it.
 - [ ] Objectives for the city, armored vehicles, helicopters, fire support, evacuation and triage, the full Choir, building damage and rubble.
 
 ## v1.0 World survival

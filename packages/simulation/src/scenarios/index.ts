@@ -1,43 +1,24 @@
-import { CELL_SIZE, DIFFICULTY, SLICE, type DifficultyId, ZOMBIE_POOL_CAPACITY, ZombieState } from '@vazante/shared';
+import { CELL_SIZE, DIFFICULTY, MISSIONS, MISSION_IDS, SLICE, type DifficultyId, type MissionId, ZOMBIE_POOL_CAPACITY, ZombieState } from '@vazante/shared';
 import { Grid } from '../grid.ts';
 import { generateCityMap, generateSliceMap } from '../mapgen.ts';
 import { rollZombieKind, spawnSquad } from '../spawn.ts';
 import { spawnTruck } from '../systems/logistics.ts';
-import { startSliceMission } from '../systems/mission.ts';
+import { startMission } from '../systems/mission.ts';
 import { World } from '../world.ts';
 
-export type ScenarioId = 'last_convoy' | 'open_field' | 'city_war';
+/** Campaign missions, the Porto Velário sandbox, and an empty field for tests. */
+export type ScenarioId = MissionId | 'open_field' | 'city_war';
 
-export const SCENARIO_IDS: readonly ScenarioId[] = ['last_convoy', 'open_field', 'city_war'];
+export const SCENARIO_IDS: readonly ScenarioId[] = [...MISSION_IDS, 'open_field', 'city_war'];
 
 export interface ScenarioOptions {
   zombies?: number;
   difficulty?: DifficultyId;
 }
 
-/** "O Último Comboio": two squads at the base, the horde spread over the city. */
-export function lastConvoy(seed: number, opts: ScenarioOptions = {}): World {
-  const map = generateSliceMap(seed);
-  const w = new World(seed, map.grid, map.buildings, map.districts, map.sites, ZOMBIE_POOL_CAPACITY);
-  w.difficulty = opts.difficulty ?? 'veteran';
-  const diff = DIFFICULTY[w.difficulty];
-  const base = map.sites.find((s) => s.kind === 'base')!;
-  const bx = ((base.x0 + base.x1 + 1) / 2) * CELL_SIZE;
-  const by = ((base.y0 + base.y1 + 1) / 2) * CELL_SIZE;
-  spawnSquad(w, 'slice', 'Alfa', bx - 10, by);
-  spawnSquad(w, 'slice', 'Bravo', bx + 10, by);
-
-  // The post is running out of ammunition; a loaded truck waits at the depot across the city.
-  const home = w.bases.find((b) => b.kind === 'base')!;
-  home.materials = SLICE.baseMaterials + diff.baseMaterials;
-  home.ammo = SLICE.baseAmmo + diff.baseAmmo;
-  const depot = map.sites.find((s) => s.kind === 'depot')!;
-  const tx = ((depot.x0 + depot.x1 + 1) / 2) * CELL_SIZE;
-  const ty = ((depot.y0 + depot.y1 + 1) / 2) * CELL_SIZE;
-  const truck = spawnTruck(w, tx, ty, SLICE.truckAmmo, SLICE.truckMaterials);
-
-  const count = opts.zombies ?? Math.round(200 * diff.cityZombies);
-  const minDist2 = 150 * 150;
+/** Scatter wandering zombies over walkable cells, keeping `clearM` metres around (bx, by) empty. */
+function scatterHorde(w: World, count: number, bx: number, by: number, clearM: number): void {
+  const minDist2 = clearM * clearM;
   let placed = 0;
   for (let attempts = 0; placed < count && attempts < count * 50; attempts++) {
     const x = w.rng.range(0, w.grid.widthM);
@@ -46,13 +27,41 @@ export function lastConvoy(seed: number, opts: ScenarioOptions = {}): World {
     if ((x - bx) * (x - bx) + (y - by) * (y - by) < minDist2) continue;
     if (w.zombies.spawn(x, y, rollZombieKind(w), ZombieState.Wandering) >= 0) placed++;
   }
-  startSliceMission(w, home.id, truck.id);
+}
+
+/**
+ * Build a campaign mission: its map, squads in a row at the base (spaced 20 m on the slice map,
+ * 16 m in the city), trucks at their sites, the base stock and the horde, then the objectives.
+ */
+export function buildMission(id: MissionId, seed: number, opts: ScenarioOptions = {}): World {
+  const def = MISSIONS[id];
+  const map = def.map === 'city' ? generateCityMap(seed) : generateSliceMap(seed);
+  const w = new World(seed, map.grid, map.buildings, map.districts, map.sites, ZOMBIE_POOL_CAPACITY);
+  w.difficulty = opts.difficulty ?? 'veteran';
+  const diff = DIFFICULTY[w.difficulty];
+  const home = w.bases.find((b) => b.kind === 'base')!;
+  const bx = ((home.x0 + home.x1 + 1) / 2) * CELL_SIZE;
+  const by = ((home.y0 + home.y1 + 1) / 2) * CELL_SIZE;
+  const gap = def.map === 'city' ? 16 : 20;
+  const n = def.squads.length;
+  def.squads.forEach((q, i) => spawnSquad(w, q.kind, q.name, bx + (i - (n - 1) / 2) * gap, by));
+
+  home.materials = def.materials + diff.baseMaterials;
+  home.ammo = def.ammo + diff.baseAmmo;
+  const trucks = def.trucks.map((t) => {
+    const site = t.at === 'base' ? home : t.at === 'depot' ? w.bases.find((b) => b.kind === 'depot')! : w.bases.find((b) => b.name === t.at)!;
+    // Parked off-centre so it does not sit on the command post.
+    const off = site === home ? 3 * CELL_SIZE : 0;
+    return spawnTruck(w, ((site.x0 + site.x1 + 1) / 2) * CELL_SIZE + off, ((site.y0 + site.y1 + 1) / 2) * CELL_SIZE + off, t.ammo, t.materials).id;
+  });
+  scatterHorde(w, opts.zombies ?? Math.round(def.zombies * diff.cityZombies), bx, by, def.clearRadiusM);
+  startMission(w, def, trucks);
   return w;
 }
 
 /**
- * Porto Velário sandbox (v0.5, in progress): the 2 km city, four squads at the waterfront base, a
- * truck at each depot and the horde spread over the city. No objectives yet.
+ * Porto Velário sandbox: the 2 km city, four squads at the waterfront base, a truck at each depot
+ * and the horde spread over the city. No objectives.
  */
 export function cityWar(seed: number, opts: ScenarioOptions = {}): World {
   const map = generateCityMap(seed);
@@ -69,16 +78,7 @@ export function cityWar(seed: number, opts: ScenarioOptions = {}): World {
     if (d.kind !== 'depot') continue;
     spawnTruck(w, ((d.x0 + d.x1 + 1) / 2) * CELL_SIZE, ((d.y0 + d.y1 + 1) / 2) * CELL_SIZE, SLICE.truckAmmo, SLICE.truckMaterials);
   }
-  const count = opts.zombies ?? Math.round(6000 * diff.cityZombies);
-  const minDist2 = 250 * 250;
-  let placed = 0;
-  for (let attempts = 0; placed < count && attempts < count * 50; attempts++) {
-    const x = w.rng.range(0, w.grid.widthM);
-    const y = w.rng.range(0, w.grid.heightM);
-    if (!w.grid.isWalkableAt(x, y)) continue;
-    if ((x - bx) * (x - bx) + (y - by) * (y - by) < minDist2) continue;
-    if (w.zombies.spawn(x, y, rollZombieKind(w), ZombieState.Wandering) >= 0) placed++;
-  }
+  scatterHorde(w, opts.zombies ?? Math.round(6000 * diff.cityZombies), bx, by, 250);
   return w;
 }
 
@@ -92,5 +92,5 @@ export function openField(seed: number, cells = 64): World {
 export function createScenario(id: ScenarioId, seed: number, opts?: ScenarioOptions): World {
   if (id === 'open_field') return openField(seed);
   if (id === 'city_war') return cityWar(seed, opts);
-  return lastConvoy(seed, opts);
+  return buildMission(id, seed, opts);
 }

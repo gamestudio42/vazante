@@ -50,8 +50,11 @@ import {
   STANCES,
   STRUCTURES,
   STRUCTURE_KINDS,
+  MISSION_IDS,
   TICK_HZ,
   type Frame,
+  type MissionView,
+  type ObjectiveView,
   type RiskPolicy,
   type SimSpeed,
   type Stance,
@@ -283,47 +286,83 @@ function DayClock({ tick }: { tick: number }) {
 
 function MissionPanel({ frame }: { frame: Frame }) {
   const m = frame.mission!;
-  const base = frame.bases.find((b) => b.kind === 'base');
-  const depot = frame.bases.find((b) => b.kind === 'depot');
-  const hp = m.commandPostHp / m.commandPostMaxHp;
-  let waveLine = t('mission.waves.locked');
-  if (m.phase === 'defend' || m.phase === 'won') {
-    if (m.waveState === 'warning') waveLine = t('mission.waves.warning').replace('{n}', String(m.wave + 1)).replace('{s}', String(m.secondsToWave));
-    else if (m.waveState === 'active') waveLine = t('mission.waves.active').replace('{n}', String(m.wave)).replace('{z}', String(m.waveZombies));
-    else waveLine = t('mission.waves.calm').replace('{n}', String(m.wave));
-  }
-  const waveDone = m.phase === 'won';
-  const defending = m.phase === 'defend';
+  const hp = m.commandPostMaxHp > 0 ? m.commandPostHp / m.commandPostMaxHp : 0;
   return (
     <div className="mission panel">
       <PanelHead icon={Flag}>{t('mission.title')}</PanelHead>
-      <Objective done={m.cargoDelivered} active={!m.cargoDelivered}>
-        {t('mission.fetch').replace('{depot}', depot?.name ?? '').replace('{base}', base?.name ?? '')}
-      </Objective>
-      <Objective done={waveDone} active={defending}>
-        {t('mission.defend').replace('{w}', String(m.waves))}
-        <div className={`wave ${m.waveState === 'warning' && defending ? 'warn' : m.waveState === 'active' && defending ? 'danger' : 'muted'}`}>
-          {m.waveState === 'warning' && defending && <Siren size={12} />}
-          {waveLine}
+      {m.objectives.map((o, i) => (
+        <Objective key={i} done={o.state === 'done'} active={o.state === 'active'}>
+          {objectiveText(m, o, i)}
+          {o.kind === 'waves' && <WaveLine m={m} o={o} />}
+          {o.state === 'active' && o.progress >= 0 && (
+            <div className="obj-meter">
+              <Meter value={o.progress} kind="wave" thin />
+              <span className="muted">{progressText(o)}</span>
+            </div>
+          )}
+          {o.state === 'active' && (o.kind === 'hold' || o.kind === 'evacuate') && <div className="hint muted">{t(`obj.${o.kind}.hint`)}</div>}
+        </Objective>
+      ))}
+      {m.evacuated > 0 && (
+        <div className="mrow">
+          <Stat icon={Users} title={t('mission.evacuated')}>
+            {t('mission.evacuated')} <b>{m.evacuated}</b>
+          </Stat>
         </div>
-        <div className="pips waves">
-          {Array.from({ length: m.waves }, (_, i) => (
-            <span key={i} className={i < m.wave - (m.waveState === 'active' ? 1 : 0) || waveDone ? 'done' : i === m.wave - 1 && m.waveState === 'active' ? 'now' : ''} />
-          ))}
-        </div>
-      </Objective>
-      <div className="mrow">
-        <Stat icon={Users} title={t('mission.civilians')}>
-          {t('mission.civilians')} <b>{m.civilians}</b>/{m.civiliansMax}
-        </Stat>
-      </div>
-      <div className="mrow">
-        <Stat icon={ShieldAlert} title={t('mission.post')}>
-          {t('mission.post')} <b>{Math.round(hp * 100)}%</b>
-        </Stat>
-      </div>
-      <Meter value={hp} kind="post" />
+      )}
+      {m.civiliansMax > 0 && (
+        <>
+          <div className="mrow">
+            <Stat icon={Users} title={t('mission.civilians')}>
+              {t('mission.civilians')} <b>{m.civilians}</b>/{m.civiliansMax}
+            </Stat>
+          </div>
+          <div className="mrow">
+            <Stat icon={ShieldAlert} title={t('mission.post')}>
+              {t('mission.post')} <b>{Math.round(hp * 100)}%</b>
+            </Stat>
+          </div>
+          <Meter value={hp} kind="post" />
+        </>
+      )}
     </div>
+  );
+}
+
+function objectiveText(m: MissionView, o: ObjectiveView, i: number): string {
+  let key: string = `obj.${o.kind}`;
+  // A delivery after an evacuation carries people, not cargo.
+  if (o.kind === 'deliver' && m.objectives.slice(0, i).some((x) => x.kind === 'evacuate')) key = 'obj.deliver.evac';
+  return t(key).replace('{place}', o.place).replace('{from}', o.from).replace('{n}', String(o.total)).replace('{w}', String(o.total));
+}
+
+function progressText(o: ObjectiveView): string {
+  if (o.kind === 'hold') return `${Math.max(0, Math.ceil(o.total * (1 - o.progress)))} s`;
+  if (o.kind === 'evacuate') return `${Math.floor(o.total * o.progress)}/${o.total}`;
+  return `${Math.round(o.progress * 100)}%`;
+}
+
+function WaveLine({ m, o }: { m: MissionView; o: ObjectiveView }) {
+  const active = o.state === 'active';
+  const done = o.state === 'done';
+  let line = t('mission.waves.locked');
+  if (done) line = t('mission.waves.calm').replace('{n}', String(o.total));
+  else if (active && m.waveState === 'warning') line = t('mission.waves.warning').replace('{n}', String(m.wave + 1)).replace('{s}', String(m.secondsToWave));
+  else if (active && m.waveState === 'active') line = t('mission.waves.active').replace('{n}', String(m.wave)).replace('{z}', String(m.waveZombies));
+  else if (active) line = t('mission.waves.calm').replace('{n}', String(m.wave));
+  const wave = active ? m.wave : done ? o.total : 0;
+  return (
+    <>
+      <div className={`wave ${active && m.waveState === 'warning' ? 'warn' : active && m.waveState === 'active' ? 'danger' : 'muted'}`}>
+        {active && m.waveState === 'warning' && <Siren size={12} />}
+        {line}
+      </div>
+      <div className="pips waves">
+        {Array.from({ length: o.total }, (_, i) => (
+          <span key={i} className={done || i < wave - (active && m.waveState === 'active' ? 1 : 0) ? 'done' : active && i === wave - 1 && m.waveState === 'active' ? 'now' : ''} />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -800,21 +839,27 @@ function DirectHud({ frame }: { frame: Frame }) {
 function Summary({ frame, shell, seed }: { frame: Frame; shell: Shell; seed: number }) {
   const m = frame.mission!;
   const won = m.phase === 'won';
+  useEffect(() => {
+    if (won) shell.completeMission(m.id);
+  }, [won, m.id, shell]);
   const lost = frame.soldiers.length / SOLDIER_STRIDE - frame.stats.soldiersAlive;
-  const restart = (next: boolean) => shell.restart(seed + (next ? 1 : 0), true);
-  const rows: [LucideIcon, string, ReactNode][] = [
-    [Users, t('summary.civilians'), `${m.civilians}/${m.civiliansMax}`],
-    [Package, t('summary.cargo'), m.cargoDelivered ? t('summary.yes') : t('summary.no')],
-    [Siren, t('summary.waves'), `${m.wave}/${m.waves}`],
+  const done = m.objectives.filter((o) => o.state === 'done').length;
+  const waves = m.objectives.find((o) => o.kind === 'waves');
+  const next = MISSION_IDS[MISSION_IDS.indexOf(m.id) + 1];
+  const rows: [LucideIcon, string, ReactNode][] = [[Flag, t('summary.objectives'), `${done}/${m.objectives.length}`]];
+  if (m.civiliansMax > 0) rows.push([Users, t('summary.civilians'), `${m.civilians}/${m.civiliansMax}`]);
+  if (m.evacuated > 0 || m.objectives.some((o) => o.kind === 'evacuate')) rows.push([Package, t('summary.evacuated'), m.evacuated]);
+  if (waves) rows.push([Siren, t('summary.waves'), `${waves.state === 'done' ? waves.total : waves.state === 'active' ? m.wave : 0}/${waves.total}`]);
+  rows.push(
     [Skull, t('summary.casualties'), lost],
     [Crosshair, t('summary.killed'), frame.stats.zombiesKilled],
     [Clock, t('summary.time'), fmt(frame.tick)],
     [Shield, t('diff.title'), t(`diff.${frame.difficulty}`)],
-  ];
+  );
   return (
     <div className="summary">
       <div className={`panel card ${won ? 'won' : 'lost'}`}>
-        <div className="summary-kicker">{t('mission.title')}</div>
+        <div className="summary-kicker">{t(`brief.${m.id}.title`)}</div>
         <h1 className={won ? 'won' : 'lost'}>{won ? t('summary.won') : t('summary.lost')}</h1>
         {!won && <p className="muted">{t(`loss.${m.reason}`)}</p>}
         <div className="summary-grid">
@@ -828,10 +873,16 @@ function Summary({ frame, shell, seed }: { frame: Frame; shell: Shell; seed: num
         </div>
         <div className="row end">
           <button onClick={() => shell.restart(seed, false)}>{t('pause.mainMenu')}</button>
-          <button onClick={() => restart(false)}>{t('summary.retry')}</button>
-          <button className="primary" onClick={() => restart(true)}>
-            {t('summary.next')} <ArrowRight size={14} />
-          </button>
+          <button onClick={() => shell.restart(seed, true)}>{t('summary.retry')}</button>
+          {won && next ? (
+            <button className="primary" onClick={() => shell.openMission(next)}>
+              {t('summary.nextMission')} <ArrowRight size={14} />
+            </button>
+          ) : (
+            <button className="primary" onClick={() => shell.restart(seed + 1, true)}>
+              {t('summary.next')} <ArrowRight size={14} />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -839,6 +890,8 @@ function Summary({ frame, shell, seed }: { frame: Frame; shell: Shell; seed: num
 }
 
 function alertText(a: GameClient['state']['alerts'][number]): string {
+  // Pressure groups arrive as wave 0.
+  if (a.type === 'wave_started' && !a.value) return t('alert.pressure');
   const base = t(`alert.${a.type}`)
     .replace('{n}', String(a.value ?? ''))
     .replace('{s}', a.reason ?? '');
@@ -858,6 +911,9 @@ function alertText(a: GameClient['state']['alerts'][number]): string {
     case 'wave_warning':
     case 'wave_started':
     case 'mission_won':
+    case 'objective_done':
+    case 'civilians_boarded':
+    case 'civilians_delivered':
       return base;
     default:
       return a.reason ? `${base} (${t(`reason.${a.reason}`)})` : base;

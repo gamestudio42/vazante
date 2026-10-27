@@ -3,7 +3,7 @@ import { DAY, TICK_HZ } from '@vazante/shared';
 import { describe, expect, it } from 'vitest';
 import { MusicDirector } from '../src/music.ts';
 
-function frame(waveState: MissionView['waveState'], tick = 0, phase: MissionView['phase'] = 'defend'): Frame {
+function frame(waveState: MissionView['waveState'], tick = 0, phase: MissionView['phase'] = 'active'): Frame {
   return { tick, mission: { waveState, phase } as MissionView } as Frame;
 }
 

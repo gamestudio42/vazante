@@ -1,0 +1,1 @@
+{"root":["./tools/bench.ts","./tools/headless-sim.ts","./tools/prepare-audio.ts","./tools/prepare-models.ts","./tools/zz-flowbench.ts","./vitest.config.ts","./vitest.setup.ts","./playwright.config.ts","./e2e/flow.spec.ts","./e2e/helpers.ts","./e2e/play.spec.ts"],"version":"5.9.3"}

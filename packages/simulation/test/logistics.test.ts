@@ -126,6 +126,6 @@ describe('trucks and convoys', () => {
     e.enqueue({ type: 'convoy', vehicle: truck.id, to: base.id, policy: 'push_through' });
     e.runTicks(1200);
     expect(base.ammo).toBe(before + 4000);
-    expect(w.mission!.phase).toBe('defend');
+    expect(w.mission!.stage).toBe(1);
   });
 });

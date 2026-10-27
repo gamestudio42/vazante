@@ -1,36 +1,106 @@
-import { Blocked, CELL_SIZE, DIFFICULTY, DISTRICT, Ground, SLICE, STRUCTURES, TICK_HZ, ZombieState } from '@vazante/shared';
-import type { Mission } from '../entities.ts';
+import {
+  Blocked,
+  CELL_SIZE,
+  DIFFICULTY,
+  DISTRICT,
+  Ground,
+  MISSIONS,
+  PRESSURE_SPAWN_M,
+  SLICE,
+  STRUCTURES,
+  TICK_HZ,
+  ZONE_PAD_M,
+  ZombieState,
+  type MissionDef,
+  type Pressure,
+  type ZoneRef,
+} from '@vazante/shared';
+import type { Mission, MissionZone } from '../entities.ts';
 import { rollZombieKind } from '../spawn.ts';
 import { isActiveSoldier, type World } from '../world.ts';
 
-/** Place the command post at the centre of the base and start the "O Último Comboio" objectives. */
-export function startSliceMission(w: World, baseId: number, truckId: number): Mission {
-  const base = w.baseById(baseId)!;
+/**
+ * Start a campaign mission on a world whose squads and trucks are already placed: the command
+ * post at the base centre (when the mission has one), the zones resolved on this map, and only the
+ * district holding the base under control.
+ */
+export function startMission(w: World, def: MissionDef, trucks: number[]): Mission {
+  const base = w.bases.find((b) => b.kind === 'base')!;
   const cx = Math.floor((base.x0 + base.x1) / 2);
   const cy = Math.floor((base.y0 + base.y1) / 2);
   const cell = w.grid.idx(cx, cy);
-  const id = w.allocId();
-  w.addStructure({ id, kind: 'command_post', cell, base: w.bases.indexOf(base), hp: STRUCTURES.command_post.hp, work: 0, built: true, open: false, target: -1, fireAcc: 0 });
-  w.grid.blocked[cell] |= Blocked.StructureWall;
-  w.grid.structHeight[cell] = Math.round(STRUCTURES.command_post.height * 10);
-  w.flowDirty = true;
+  let commandPost = 0;
+  if (def.commandPost) {
+    commandPost = w.allocId();
+    w.addStructure({ id: commandPost, kind: 'command_post', cell, base: w.bases.indexOf(base), hp: STRUCTURES.command_post.hp, work: 0, built: true, open: false, target: -1, fireAcc: 0 });
+    w.grid.blocked[cell] |= Blocked.StructureWall;
+    w.grid.structHeight[cell] = Math.round(STRUCTURES.command_post.height * 10);
+    w.flowDirty = true;
+  }
   const m: Mission = {
-    phase: 'fetch',
+    id: def.id,
+    phase: 'active',
+    stage: 0,
+    progress: 0,
+    pressureAt: 0,
     wave: 0,
     waveState: 'none',
     nextAt: 0,
-    civilians: SLICE.civilians,
-    commandPost: id,
-    base: baseId,
-    truck: truckId,
-    cargoDelivered: false,
+    civilians: def.commandPost ? SLICE.civilians : 0,
+    commandPost,
+    base: base.id,
+    trucks,
+    zones: def.zones.map((z) => resolveZone(w, z, base)),
+    evacuated: 0,
     reason: '',
   };
   w.mission = m;
-  // The city has fallen: only the district holding the base starts under control.
   const home = w.grid.district[cell];
   for (const d of w.districts) w.districtControl[d.id] = d.id === home ? 100 : 0;
+  enterStage(w, m);
   return m;
+}
+
+function resolveZone(w: World, ref: ZoneRef, base: { x0: number; y0: number; x1: number; y1: number }): MissionZone {
+  if ('site' in ref) {
+    const s = w.bases.find((b) => b.name === ref.site);
+    if (!s) throw new Error(`mission zone: no site ${ref.site}`);
+    return { name: s.name, x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1 };
+  }
+  // The street cell over the river nearest the base but at least minM away, and a square around it.
+  const g = w.grid;
+  const bx = (base.x0 + base.x1) / 2;
+  const by = (base.y0 + base.y1) / 2;
+  const min = ref.bridge.minM / CELL_SIZE;
+  let best = -1;
+  let bd = Infinity;
+  for (let y = 2; y < g.height - 2; y++) {
+    for (let x = 2; x < g.width - 2; x++) {
+      if (g.ground[g.idx(x, y)] !== Ground.Street || !overRiver(w, x, y)) continue;
+      const d = (x - bx) * (x - bx) + (y - by) * (y - by);
+      if (d >= min * min && d < bd) {
+        bd = d;
+        best = g.idx(x, y);
+      }
+    }
+  }
+  if (best < 0) throw new Error('mission zone: no bridge on this map');
+  const x = best % g.width;
+  const y = (best - x) / g.width;
+  const r = 6;
+  return { name: 'Ponte da Ribeira', x0: Math.max(0, x - r), y0: Math.max(0, y - r), x1: Math.min(g.width - 1, x + r), y1: Math.min(g.height - 1, y + r) };
+}
+
+/** A street cell with water on both sides along a row or a column: a bridge deck. */
+function overRiver(w: World, x: number, y: number): boolean {
+  const g = w.grid;
+  const water = (xx: number, yy: number) => xx >= 0 && yy >= 0 && xx < g.width && yy < g.height && g.ground[g.idx(xx, yy)] === Ground.Water;
+  const side = (dx: number, dy: number) => {
+    for (let k = 1; k <= 8; k++) if (water(x + dx * k, y + dy * k)) return true;
+    return false;
+  };
+  // The street must run across the water: both sides wet across, dry along.
+  return (side(0, -1) && side(0, 1) && !water(x - 1, y) && !water(x + 1, y)) || (side(-1, 0) && side(1, 0) && !water(x, y - 1) && !water(x, y + 1));
 }
 
 function end(w: World, m: Mission, won: boolean, reason = ''): void {
@@ -47,22 +117,10 @@ export function drivenAlive(w: World): number {
   return n;
 }
 
-/** Spawn a wave along street cells far from the base, all chasing the base. */
-function spawnWave(w: World, m: Mission, count: number): void {
+/** Place `count` driven zombies around a street cell drawn from `candidates`. */
+function spawnGroup(w: World, candidates: number[], count: number): [number, number] | null {
+  if (candidates.length === 0) return null;
   const g = w.grid;
-  const base = w.baseById(m.base)!;
-  const bx = ((base.x0 + base.x1 + 1) / 2) * CELL_SIZE;
-  const by = ((base.y0 + base.y1 + 1) / 2) * CELL_SIZE;
-  const min2 = SLICE.spawnMinDistM * SLICE.spawnMinDistM;
-  // One entry point per wave, chosen among far street cells, so the attack has a direction.
-  const candidates: number[] = [];
-  for (let c = 0; c < g.size; c++) {
-    if (g.ground[c] !== Ground.Street || !g.isWalkable(c)) continue;
-    const dx = g.cellCenterX(c) - bx;
-    const dy = g.cellCenterY(c) - by;
-    if (dx * dx + dy * dy >= min2) candidates.push(c);
-  }
-  if (candidates.length === 0) return;
   const origin = candidates[w.rng.int(0, candidates.length - 1)];
   const ox = g.cellCenterX(origin);
   const oy = g.cellCenterY(origin);
@@ -76,43 +134,167 @@ function spawnWave(w: World, m: Mission, count: number): void {
     w.zombies.driven[s] = 1;
     placed++;
   }
-  w.emit({ type: 'wave_started', value: m.wave, x: ox, y: oy });
+  return [ox, oy];
+}
+
+/** Walkable street cells at a distance from (x, y) in metres between `min` and `max`. */
+function streetsAround(w: World, x: number, y: number, min: number, max: number): number[] {
+  const g = w.grid;
+  const out: number[] = [];
+  const min2 = min * min;
+  const max2 = max * max;
+  for (let c = 0; c < g.size; c++) {
+    if (g.ground[c] !== Ground.Street || !g.isWalkable(c)) continue;
+    const dx = g.cellCenterX(c) - x;
+    const dy = g.cellCenterY(c) - y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= min2 && d2 <= max2) out.push(c);
+  }
+  return out;
+}
+
+/** A wave: one entry point far from the base, so the attack has a direction. */
+function spawnWave(w: World, m: Mission, count: number): void {
+  const base = w.baseById(m.base)!;
+  const bx = ((base.x0 + base.x1 + 1) / 2) * CELL_SIZE;
+  const by = ((base.y0 + base.y1 + 1) / 2) * CELL_SIZE;
+  const at = spawnGroup(w, streetsAround(w, bx, by, SLICE.spawnMinDistM, Infinity), count);
+  if (at) w.emit({ type: 'wave_started', value: m.wave, x: at[0], y: at[1] });
+}
+
+function zoneCentre(z: MissionZone): [number, number] {
+  return [((z.x0 + z.x1 + 1) / 2) * CELL_SIZE, ((z.y0 + z.y1 + 1) / 2) * CELL_SIZE];
+}
+
+function pressure(w: World, m: Mission, zone: MissionZone, p: Pressure): void {
+  if (m.pressureAt === 0 || w.tick < m.pressureAt) return;
+  m.pressureAt = w.tick + p.everyS * TICK_HZ;
+  const [x, y] = zoneCentre(zone);
+  const at = spawnGroup(w, streetsAround(w, x, y, PRESSURE_SPAWN_M.min, PRESSURE_SPAWN_M.max), Math.round(p.size * DIFFICULTY[w.difficulty].waveSize));
+  if (at) w.emit({ type: 'wave_started', value: 0, x: at[0], y: at[1] });
+}
+
+/** Any active soldier inside the zone (grown by ZONE_PAD_M). */
+export function zoneHeld(w: World, z: MissionZone): boolean {
+  const x0 = z.x0 * CELL_SIZE - ZONE_PAD_M;
+  const y0 = z.y0 * CELL_SIZE - ZONE_PAD_M;
+  const x1 = (z.x1 + 1) * CELL_SIZE + ZONE_PAD_M;
+  const y1 = (z.y1 + 1) * CELL_SIZE + ZONE_PAD_M;
+  return w.soldiers.some((s) => isActiveSoldier(s) && s.x >= x0 && s.x <= x1 && s.y >= y0 && s.y <= y1);
+}
+
+function inZone(z: MissionZone, x: number, y: number): boolean {
+  const cx = Math.floor(x / CELL_SIZE);
+  const cy = Math.floor(y / CELL_SIZE);
+  return cx >= z.x0 && cx <= z.x1 && cy >= z.y0 && cy <= z.y1;
+}
+
+/** Set up the stage the mission just entered. */
+function enterStage(w: World, m: Mission): void {
+  const st = MISSIONS[m.id].stages[m.stage];
+  m.progress = 0;
+  m.pressureAt = 0;
+  if (st.kind === 'waves') {
+    m.wave = 0;
+    m.waveState = 'calm';
+    m.nextAt = w.tick + SLICE.calmS * TICK_HZ;
+  } else if ((st.kind === 'hold' || st.kind === 'evacuate') && st.pressure) m.pressureAt = w.tick + st.pressure.everyS * TICK_HZ;
+}
+
+function advance(w: World, m: Mission): void {
+  w.emit({ type: 'objective_done', value: m.stage });
+  m.stage++;
+  if (m.stage >= MISSIONS[m.id].stages.length) {
+    end(w, m, true);
+    return;
+  }
+  enterStage(w, m);
+}
+
+/** A truck the remaining stages still need. */
+function truckNeeded(def: MissionDef, stage: number, truck: number): boolean {
+  for (let i = stage; i < def.stages.length; i++) {
+    const st = def.stages[i];
+    if ((st.kind === 'deliver' || st.kind === 'evacuate') && st.truck === truck) return true;
+  }
+  return false;
 }
 
 export function stepMission(w: World): void {
   const m = w.mission;
-  if (!m || m.phase === 'won' || m.phase === 'lost') return;
-  const cp = w.structure(m.commandPost);
-  if (!cp) {
-    m.civilians = 0;
-    end(w, m, false, 'command_post_destroyed');
-    return;
+  if (!m || m.phase !== 'active') return;
+  const def = MISSIONS[m.id];
+  if (m.commandPost) {
+    const cp = w.structure(m.commandPost);
+    if (!cp) {
+      m.civilians = 0;
+      end(w, m, false, 'command_post_destroyed');
+      return;
+    }
+    m.civilians = Math.ceil((SLICE.civilians * cp.hp) / STRUCTURES.command_post.hp);
   }
-  m.civilians = Math.ceil((SLICE.civilians * cp.hp) / STRUCTURES.command_post.hp);
   if (!w.soldiers.some(isActiveSoldier)) {
     end(w, m, false, 'no_defenders');
     return;
   }
-
-  if (m.phase === 'fetch') {
-    const truck = w.vehicle(m.truck);
-    if (!truck || truck.state === 'destroyed') {
-      end(w, m, false, 'cargo_lost');
+  for (let i = 0; i < m.trucks.length; i++) {
+    const v = w.vehicle(m.trucks[i]);
+    if ((!v || v.state === 'destroyed') && truckNeeded(def, m.stage, i)) {
+      end(w, m, false, m.evacuated > 0 || def.stages.slice(0, m.stage).some((s) => s.kind === 'evacuate') ? 'evacuees_lost' : 'cargo_lost');
       return;
     }
-    if (w.events.some((e) => e.type === 'cargo_delivered' && e.source === m.truck && e.target === m.base)) {
-      m.cargoDelivered = true;
-      m.phase = 'defend';
-      m.waveState = 'calm';
-      m.nextAt = w.tick + SLICE.calmS * TICK_HZ;
-    }
-    return;
   }
 
-  // Defend: calm → warning → active → calm …
+  const st = def.stages[m.stage];
+  switch (st.kind) {
+    case 'deliver': {
+      const id = m.trucks[st.truck];
+      for (const e of w.events) {
+        if (e.source !== id || e.target !== m.base) continue;
+        if (e.type === 'civilians_delivered') m.evacuated += e.value ?? 0;
+        if (e.type === 'cargo_delivered' || e.type === 'civilians_delivered') {
+          advance(w, m);
+          return;
+        }
+      }
+      return;
+    }
+    case 'reach':
+      if (zoneHeld(w, m.zones[st.zone])) advance(w, m);
+      return;
+    case 'hold': {
+      const z = m.zones[st.zone];
+      if (st.pressure) pressure(w, m, z, st.pressure);
+      if (zoneHeld(w, z) && ++m.progress >= st.seconds * TICK_HZ) advance(w, m);
+      return;
+    }
+    case 'evacuate': {
+      const z = m.zones[st.zone];
+      if (st.pressure) pressure(w, m, z, st.pressure);
+      const v = w.vehicle(m.trucks[st.truck])!;
+      if (v.state === 'idle' && inZone(z, v.x, v.y) && zoneHeld(w, z) && ++m.progress >= st.seconds * TICK_HZ) {
+        v.passengers = st.civilians;
+        w.emit({ type: 'civilians_boarded', source: v.id, x: v.x, y: v.y, value: st.civilians });
+        advance(w, m);
+      }
+      return;
+    }
+    case 'retake': {
+      const d = w.districts.find((x) => x.name === st.district);
+      if (d && w.districtControl[d.id] > st.control) advance(w, m);
+      return;
+    }
+    case 'waves':
+      stepWaves(w, m, st.waves);
+      return;
+  }
+}
+
+/** Calm → warning → active → calm …; the stage ends after the calm that follows the last wave. */
+function stepWaves(w: World, m: Mission, waves: readonly number[]): void {
   if (m.waveState === 'calm' && w.tick >= m.nextAt) {
-    if (m.wave >= SLICE.waves.length) {
-      end(w, m, true);
+    if (m.wave >= waves.length) {
+      advance(w, m);
       return;
     }
     const warn = Math.max(5, w.rng.int(SLICE.warningMinS, SLICE.warningMaxS) + DIFFICULTY[w.difficulty].warningBonusS);
@@ -122,10 +304,10 @@ export function stepMission(w: World): void {
   } else if (m.waveState === 'warning' && w.tick >= m.nextAt) {
     m.wave++;
     m.waveState = 'active';
-    spawnWave(w, m, Math.round(SLICE.waves[m.wave - 1] * DIFFICULTY[w.difficulty].waveSize));
+    spawnWave(w, m, Math.round(waves[m.wave - 1] * DIFFICULTY[w.difficulty].waveSize));
   } else if (m.waveState === 'active' && w.tick % 10 === 0 && drivenAlive(w) === 0) {
     m.waveState = 'calm';
-    m.nextAt = w.tick + (m.wave >= SLICE.waves.length ? 1 : SLICE.calmS * TICK_HZ);
+    m.nextAt = w.tick + (m.wave >= waves.length ? 1 : SLICE.calmS * TICK_HZ);
   }
 }
 

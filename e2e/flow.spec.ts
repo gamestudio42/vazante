@@ -117,3 +117,24 @@ test('difficulty chosen on the briefing rebuilds the waiting scenario', async ({
   expect(await tick(page)).toBe(0);
   expect(errors).toEqual([]);
 });
+
+test('campaign: the first mission is open, the others unlock in order', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?seed=1');
+  await page.evaluate(() => localStorage.clear());
+  await page.goto('/?seed=1');
+  await page.getByRole('button', { name: /Campanha/ }).click({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: /Hospital São Lucas/ })).toBeDisabled();
+  await page.evaluate(() => localStorage.setItem('vazante.settings', JSON.stringify({ completed: ['last_convoy'] })));
+  await page.goto('/?seed=1');
+  await page.getByRole('button', { name: /Campanha/ }).click({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: /A Ponte/ })).toBeDisabled();
+  await page.getByRole('button', { name: /Hospital São Lucas/ }).click();
+  await page.waitForURL(/scenario=hospital/);
+  await expect(page.getByRole('heading', { name: 'Hospital São Lucas' })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('checkbox', { name: 'Tutorial guiado' }).uncheck();
+  await page.getByRole('button', { name: 'Começar' }).click();
+  await expect(page.getByText('Chegue ao local: Hospital São Lucas')).toBeVisible();
+  expect((await frame(page)).mission?.id).toBe('hospital');
+  expect(errors).toEqual([]);
+});

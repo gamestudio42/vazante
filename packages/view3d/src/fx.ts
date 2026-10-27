@@ -155,3 +155,53 @@ export class OrderMarkers {
     }
   }
 }
+
+/** The active mission area: a pulsing amber frame on the ground with a faint fill. */
+export class ZoneMarker {
+  readonly group = new THREE.Group();
+  private readonly fill: THREE.Mesh;
+  private readonly edges: THREE.Mesh[] = [];
+  private key = '';
+
+  constructor(color: number) {
+    const plane = new THREE.PlaneGeometry(1, 1);
+    plane.rotateX(-Math.PI / 2);
+    plane.translate(0.5, 0, 0.5);
+    this.fill = new THREE.Mesh(plane, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.1, depthWrite: false, fog: false }));
+    const edgeMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false, fog: false });
+    for (let i = 0; i < 4; i++) this.edges.push(new THREE.Mesh(plane, edgeMat));
+    this.group.add(this.fill, ...this.edges);
+    this.group.position.y = 0.12;
+    this.group.renderOrder = 2;
+    this.group.visible = false;
+  }
+
+  /** Show the area (metres) or hide it with null. Rebuilds only when the area changes. */
+  set(area: { x0: number; y0: number; x1: number; y1: number } | null): void {
+    this.group.visible = area !== null;
+    if (!area) return;
+    const key = `${area.x0},${area.y0},${area.x1},${area.y1}`;
+    if (key === this.key) return;
+    this.key = key;
+    const w = area.x1 - area.x0;
+    const h = area.y1 - area.y0;
+    this.fill.position.set(area.x0, 0, area.y0);
+    this.fill.scale.set(w, 1, h);
+    const t = 1.2;
+    const rects: [number, number, number, number][] = [
+      [area.x0, area.y0, w, t],
+      [area.x0, area.y1 - t, w, t],
+      [area.x0, area.y0, t, h],
+      [area.x1 - t, area.y0, t, h],
+    ];
+    rects.forEach(([x, y, sw, sh], i) => {
+      this.edges[i].position.set(x, 0, y);
+      this.edges[i].scale.set(sw, 1, sh);
+    });
+  }
+
+  update(t: number): void {
+    if (!this.group.visible) return;
+    (this.fill.material as THREE.MeshBasicMaterial).opacity = 0.08 + 0.06 * (0.5 + 0.5 * Math.sin(t * 3));
+  }
+}

@@ -1,4 +1,4 @@
-import type { Formation, RiskPolicy, SoldierActivity, SoldierCondition, SquadKind, SquadOrder, Stance, StructureKind, VehicleState, WeaponId } from '@vazante/shared';
+import type { Formation, MissionId, RiskPolicy, SoldierActivity, SoldierCondition, SquadKind, SquadOrder, Stance, StructureKind, VehicleState, WeaponId } from '@vazante/shared';
 
 export interface DirectInput {
   mx: number;
@@ -126,19 +126,41 @@ export interface Vehicle {
   blockedT: number;
   rerouted: boolean;
   blockReported: boolean;
+  /** Civilians aboard. */
+  passengers: number;
+}
+
+/** A mission area in cells. */
+export interface MissionZone {
+  name: string;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
 }
 
 export interface Mission {
-  phase: 'fetch' | 'defend' | 'won' | 'lost';
-  /** Waves started so far. */
+  id: MissionId;
+  phase: 'active' | 'won' | 'lost';
+  /** Index of the current stage in the mission definition. */
+  stage: number;
+  /** Ticks of progress in a timed stage (hold, evacuate). */
+  progress: number;
+  /** Tick of the next pressure group in the current stage (0 = none). */
+  pressureAt: number;
+  /** Waves started so far in the current waves stage. */
   wave: number;
   waveState: 'none' | 'warning' | 'active' | 'calm';
   /** Tick at which the current warning or calm ends. */
   nextAt: number;
   civilians: number;
+  /** Command post structure id (0 = none). */
   commandPost: number;
   base: number;
-  truck: number;
-  cargoDelivered: boolean;
+  /** Mission trucks by index in the definition (vehicle ids). */
+  trucks: number[];
+  zones: MissionZone[];
+  /** Civilians brought back to the base. */
+  evacuated: number;
   reason: string;
 }

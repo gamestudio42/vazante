@@ -71,6 +71,13 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
         ctx.lineWidth = 1;
         ctx.strokeRect(s.x0 * cs * k + 0.5, s.y0 * cs * k + 0.5, (s.x1 - s.x0 + 1) * cs * k, (s.y1 - s.y0 + 1) * cs * k);
       }
+      // The mission area the current objective is about, blinking so it reads at a glance.
+      for (const z of f.mission?.zones ?? []) {
+        if (!z.active) continue;
+        ctx.strokeStyle = `rgba(240,176,63,${0.55 + 0.45 * Math.sin(now / 160)})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(z.x0 * cs * k - 2, z.y0 * cs * k - 2, (z.x1 - z.x0 + 1) * cs * k + 4, (z.y1 - z.y0 + 1) * cs * k + 4);
+      }
       dotPixels.fill(0);
       const zs = f.zombies;
       for (let i = 0; i < zs.length; i += ZOMBIE_STRIDE) {

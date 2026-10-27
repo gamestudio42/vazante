@@ -1,4 +1,4 @@
-import type { DifficultyId } from '@vazante/shared';
+import type { DifficultyId, MissionId } from '@vazante/shared';
 import type { Locale } from './i18n.ts';
 
 export interface Settings {
@@ -13,10 +13,12 @@ export interface Settings {
   difficulty: DifficultyId;
   /** The tutorial was finished or skipped once. */
   tutorialSeen: boolean;
+  /** Campaign missions won at least once. */
+  completed: MissionId[];
 }
 
 const KEY = 'vazante.settings';
-const DEFAULTS: Settings = { volume: 0.8, musicVolume: 0.7, locale: 'pt-BR', uiScale: 1, autosaveS: 120, edgePan: false, difficulty: 'veteran', tutorialSeen: false };
+const DEFAULTS: Settings = { volume: 0.8, musicVolume: 0.7, locale: 'pt-BR', uiScale: 1, autosaveS: 120, edgePan: false, difficulty: 'veteran', tutorialSeen: false, completed: [] };
 
 export function loadSettings(): Settings {
   try {

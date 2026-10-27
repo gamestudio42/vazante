@@ -8,3 +8,4 @@ export * from './logistics.ts';
 export * from './mission.ts';
 export * from './tactics.ts';
 export * from './difficulty.ts';
+export * from './missions.ts';

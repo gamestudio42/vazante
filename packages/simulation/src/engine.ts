@@ -11,11 +11,8 @@ import {
   type SquadView,
   type StructureView,
   type VehicleView,
-  type MissionView,
   type DistrictView,
-  SLICE,
   DISTRICT,
-  TICK_HZ,
   TRUCK,
   SAVE_FORMAT,
   SAVE_VERSION,
@@ -30,7 +27,8 @@ import { stepHorde } from './systems/horde.ts';
 import { stepInfection } from './systems/infection.ts';
 import { stepResupply, stepVehicles } from './systems/logistics.ts';
 import { stepMorale } from './systems/morale.ts';
-import { districtCounts, drivenAlive, stepDistricts, stepMission } from './systems/mission.ts';
+import { districtCounts, stepDistricts, stepMission } from './systems/mission.ts';
+import { missionView } from './systems/missionView.ts';
 import { restoreWorld, snapshotWorld } from './snapshot.ts';
 import { decayNoise } from './systems/noise.ts';
 import { stepUnits } from './systems/units.ts';
@@ -244,26 +242,10 @@ export class SimulationEngine {
       state: v.state,
       policy: v.policy,
       dest: v.dest,
+      passengers: v.passengers,
       path: v.path.slice(v.pathIdx * 2),
     }));
-    const m = w.mission;
-    const cp = m ? w.structure(m.commandPost) : undefined;
-    const mission: MissionView | null = m
-      ? {
-          phase: m.phase,
-          wave: m.wave,
-          waves: SLICE.waves.length,
-          waveState: m.waveState,
-          secondsToWave: m.waveState === 'warning' ? Math.max(0, Math.ceil((m.nextAt - w.tick) / TICK_HZ)) : 0,
-          waveZombies: m.waveState === 'active' ? drivenAlive(w) : 0,
-          civilians: m.civilians,
-          civiliansMax: SLICE.civilians,
-          commandPostHp: cp ? cp.hp : 0,
-          commandPostMaxHp: STRUCTURES.command_post.hp,
-          cargoDelivered: m.cargoDelivered,
-          reason: m.reason,
-        }
-      : null;
+    const mission = w.mission ? missionView(w, w.mission) : null;
     const counts = districtCounts(w);
     const districts: DistrictView[] = w.districts.map((d) => {
       const control = w.districtControl[d.id];
@@ -318,11 +300,14 @@ export class SimulationEngine {
     h.bytes(w.districtControl);
     if (w.mission) {
       const m = w.mission;
-      h.byte(1).str(m.phase).u32(m.wave).str(m.waveState).u32(m.nextAt).u32(m.civilians).u32(m.commandPost).u32(m.base).u32(m.truck).byte(m.cargoDelivered ? 1 : 0).str(m.reason);
+      h.byte(1).str(m.id).str(m.phase).u32(m.stage).u32(m.progress).u32(m.pressureAt).u32(m.wave).str(m.waveState).u32(m.nextAt).u32(m.civilians).u32(m.commandPost).u32(m.base);
+      for (const t of m.trucks) h.u32(t);
+      for (const z of m.zones) h.str(z.name).u32(z.x0).u32(z.y0).u32(z.x1).u32(z.y1);
+      h.u32(m.evacuated).str(m.reason);
     } else h.byte(0);
     for (const v of w.vehicles) {
       h.u32(v.id).f64Value(v.x).f64Value(v.y).f64Value(v.hx).f64Value(v.hy).f64Value(v.hp).u32(v.cargoAmmo).u32(v.cargoMaterials);
-      h.str(v.state).str(v.policy).u32(v.dest).u32(v.origin).u32(v.pathIdx).u32(v.path.length).u32(v.blockedT).byte(v.rerouted ? 1 : 0).byte(v.blockReported ? 1 : 0);
+      h.str(v.state).str(v.policy).u32(v.dest).u32(v.origin).u32(v.pathIdx).u32(v.path.length).u32(v.blockedT).byte(v.rerouted ? 1 : 0).byte(v.blockReported ? 1 : 0).u32(v.passengers);
       for (const p of v.path) h.f64Value(p);
     }
     for (const st of w.structures) {

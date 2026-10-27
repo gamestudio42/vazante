@@ -72,8 +72,8 @@ Direct control: one soldier, the same battle.
 ## Play
 
 Open **[gamestudio42.github.io/vazante](https://gamestudio42.github.io/vazante/)**. Choose
-**Nova partida** for the O Último Comboio mission or **Porto Velário** for the full city,
-pick a difficulty and start.
+**Campanha** for the four missions (each win opens the next), **Nova partida** for the first one
+or **Porto Velário** for the full city sandbox, pick a difficulty and start.
 The interface is in Portuguese by default; English is in Settings.
 
 | Action                     | Shortcut                                        |

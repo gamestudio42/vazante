@@ -1,4 +1,4 @@
-import { TICK_HZ, type DifficultyId, type SaveMeta, type SimSpeed } from '@vazante/shared';
+import { MISSION_IDS, TICK_HZ, type DifficultyId, type MissionId, type SaveMeta, type SimSpeed } from '@vazante/shared';
 import type { AudioDirector } from '@vazante/audio';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
@@ -9,7 +9,7 @@ import { Tutorial } from './tutorial.ts';
 import { deleteSave, download, exportSave, getSave, importSave, listSaves, putSave } from './storage.ts';
 
 export type Screen = 'menu' | 'briefing' | 'playing' | 'paused';
-export type Panel = null | 'settings' | 'load';
+export type Panel = null | 'settings' | 'load' | 'campaign';
 
 /** Desktop hooks exposed by the Electron preload; absent in the browser. */
 interface DesktopBridge {
@@ -102,11 +102,32 @@ export class Shell {
 
   /** Porto Velário, the 2 km city of v0.5 (sandbox while it is built). */
   openCity(): void {
+    this.openScenario('city_war');
+  }
+
+  /** A campaign mission: a fresh page on its map, straight to the briefing. */
+  openMission(id: MissionId): void {
+    this.openScenario(id);
+  }
+
+  private openScenario(id: string): void {
     const p = new URLSearchParams(location.search);
-    p.set('scenario', 'city_war');
+    p.set('scenario', id);
     p.set('play', '1');
     p.delete('load');
     location.search = p.toString();
+  }
+
+  /** The first mission is always open; each win opens the next. `?unlock=1` opens them all. */
+  missionUnlocked(id: MissionId): boolean {
+    const i = MISSION_IDS.indexOf(id);
+    if (i <= 0 || new URLSearchParams(location.search).has('unlock')) return true;
+    return this.settings.completed.includes(MISSION_IDS[i - 1]);
+  }
+
+  completeMission(id: MissionId): void {
+    if (this.settings.completed.includes(id)) return;
+    this.applySettings({ ...this.settings, completed: [...this.settings.completed, id] });
   }
 
   get scenario(): string {

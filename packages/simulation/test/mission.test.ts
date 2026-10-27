@@ -11,7 +11,7 @@ function slice(seed = 3): SimulationEngine {
 function deliver(e: SimulationEngine): void {
   const w = e.world;
   const m = w.mission!;
-  const truck = w.vehicle(m.truck)!;
+  const truck = w.vehicle(m.trucks[0])!;
   const base = w.baseById(m.base)!;
   truck.x = ((base.x0 + base.x1) / 2) * 4 + 6;
   truck.y = ((base.y0 + base.y1) / 2) * 4 + 6;
@@ -27,9 +27,10 @@ function killDriven(e: SimulationEngine): void {
 }
 
 describe('O Último Comboio', () => {
-  it('starts in the fetch phase with the post short of ammo', () => {
+  it('starts on the delivery stage with the post short of ammo', () => {
     const w = slice().world;
-    expect(w.mission!.phase).toBe('fetch');
+    expect(w.mission!.phase).toBe('active');
+    expect(w.mission!.stage).toBe(0);
     expect(w.bases.find((b) => b.kind === 'base')!.ammo).toBe(SLICE.baseAmmo);
     expect(w.vehicles[0].cargoAmmo).toBe(SLICE.truckAmmo);
   });
@@ -47,10 +48,10 @@ describe('O Último Comboio', () => {
     const e = slice();
     const w = e.world;
     deliver(e);
-    expect(w.mission!.phase).toBe('defend');
+    expect(w.mission!.stage).toBe(1);
     const warnings: number[] = [];
     let lastWarnTick = -1;
-    for (let t = 0; t < 20000 && w.mission!.phase === 'defend'; t++) {
+    for (let t = 0; t < 20000 && w.mission!.phase === 'active'; t++) {
       e.tick();
       for (const ev of e.frame(false).events) {
         if (ev.type === 'wave_warning') {

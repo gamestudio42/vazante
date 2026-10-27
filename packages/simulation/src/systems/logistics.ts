@@ -73,6 +73,7 @@ export function spawnTruck(w: World, x: number, y: number, cargoAmmo = 0, cargoM
     blockedT: 0,
     rerouted: false,
     blockReported: false,
+    passengers: 0,
   };
   w.vehicles.push(v);
   return v;
@@ -188,6 +189,10 @@ function arrive(w: World, v: Vehicle): void {
   v.pathIdx = 0;
   v.dest = 0;
   if (!site || w.siteAt(v.x, v.y) !== site) return;
+  if (v.passengers > 0 && site.kind === 'base') {
+    w.emit({ type: 'civilians_delivered', source: v.id, target: site.id, x: v.x, y: v.y, value: v.passengers });
+    v.passengers = 0;
+  }
   const ammo = v.cargoAmmo;
   const materials = v.cargoMaterials;
   if (ammo === 0 && materials === 0) return;

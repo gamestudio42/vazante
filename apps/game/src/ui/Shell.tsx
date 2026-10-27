@@ -1,11 +1,11 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { Building2, Check, ChevronRight, Download, FolderOpen, GraduationCap, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
-import { DIFFICULTY_IDS, TICK_HZ, type SaveMeta } from '@vazante/shared';
+import { Building2, Check, ChevronRight, CircleCheck, Lock, Map as MapIcon, Download, FolderOpen, GraduationCap, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
+import { DIFFICULTY_IDS, MISSION_IDS, TICK_HZ, type MissionId, type SaveMeta } from '@vazante/shared';
 import { t, type Locale } from '../i18n.ts';
 import type { Settings } from '../settings.ts';
 import type { Shell } from '../shell.ts';
 
-/** Menus that cover the game: main menu, briefing, pause, settings, load. */
+/** Menus that cover the game: main menu, campaign, briefing, pause, settings, load. */
 export function ShellOverlay({ shell, seed }: { shell: Shell; seed: number }) {
   useSyncExternalStore(shell.subscribe, () => shell.version);
   const { screen, panel } = shell;
@@ -13,6 +13,7 @@ export function ShellOverlay({ shell, seed }: { shell: Shell; seed: number }) {
     <>
       {panel === 'settings' && <SettingsPanel shell={shell} />}
       {panel === 'load' && <LoadPanel shell={shell} />}
+      {panel === 'campaign' && <CampaignPanel shell={shell} />}
       {!panel && screen === 'menu' && <MainMenu shell={shell} seed={seed} />}
       {!panel && screen === 'briefing' && <Briefing shell={shell} />}
       {!panel && screen === 'paused' && <PauseMenu shell={shell} />}
@@ -47,6 +48,14 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
         <button className={latest ? '' : 'primary'} onClick={() => shell.newGame()}>
           <Plus size={16} />
           {t('menu.new')}
+        </button>
+        <button onClick={() => shell.openPanel('campaign')}>
+          <MapIcon size={16} />
+          {t('menu.campaign')}
+          <span className="muted">
+            {' '}
+            · {shell.settings.completed.length}/{MISSION_IDS.length}
+          </span>
         </button>
         <button onClick={() => shell.openCity()}>
           <Building2 size={16} />
@@ -86,17 +95,19 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
 
 function Briefing({ shell }: { shell: Shell }) {
   const city = shell.scenario === 'city_war';
+  const id = (MISSION_IDS as readonly string[]).includes(shell.scenario) ? (shell.scenario as MissionId) : 'last_convoy';
+  const kicker = city ? t('menu.experimental') : t('campaign.mission').replace('{n}', String(MISSION_IDS.indexOf(id) + 1)).replace('{t}', String(MISSION_IDS.length));
   return (
     <div className="modal">
       <div className="panel card briefing">
-        <div className="summary-kicker">{t(city ? 'menu.experimental' : 'menu.subtitle')}</div>
-        <h1>{t(city ? 'brief.city.title' : 'brief.title')}</h1>
-        {t(city ? 'brief.city.body' : 'brief.body')
+        <div className="summary-kicker">{kicker}</div>
+        <h1>{t(city ? 'brief.city.title' : `brief.${id}.title`)}</h1>
+        {t(city ? 'brief.city.body' : `brief.${id}.body`)
           .split('\n\n')
           .map((p, i) => (
             <p key={i}>{p}</p>
           ))}
-        {!city && <p className="muted tips">{t('brief.tips')}</p>}
+        {!city && <p className="muted tips">{t(`brief.${id}.tips`)}</p>}
         <div className="difficulty" role="radiogroup" aria-label={t('diff.title')}>
           {DIFFICULTY_IDS.map((d) => {
             const Icon = DIFF_ICON[d];
@@ -197,6 +208,43 @@ function PauseMenu({ shell }: { shell: Shell }) {
         </button>
         <div className="muted hint">{t('pause.quickHint')}</div>
       </nav>
+    </div>
+  );
+}
+
+function CampaignPanel({ shell }: { shell: Shell }) {
+  return (
+    <div className="modal">
+      <div className="panel card campaign">
+        <h2>
+          <MapIcon size={16} />
+          {t('menu.campaign')}
+        </h2>
+        <ol className="missions">
+          {MISSION_IDS.map((id, i) => {
+            const open = shell.missionUnlocked(id);
+            const won = shell.settings.completed.includes(id);
+            return (
+              <li key={id}>
+                <button className={`mission-row ${won ? 'won' : ''}`} disabled={!open} onClick={() => shell.openMission(id)}>
+                  <span className="mission-n">{i + 1}</span>
+                  <span className="mission-text">
+                    <b>{t(`brief.${id}.title`)}</b>
+                    <span className="muted">{open ? t(`brief.${id}.tag`) : t('campaign.locked')}</span>
+                  </span>
+                  {won ? <CircleCheck size={16} className="ok" /> : open ? <ChevronRight size={16} /> : <Lock size={14} />}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <div className="row end">
+          <button className="primary" onClick={() => shell.openPanel(null)}>
+            <Undo2 size={14} />
+            {t('menu.back')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

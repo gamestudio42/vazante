@@ -31,6 +31,9 @@ const ALERT_TYPES = new Set<SimEvent['type']>([
   'district_held',
   'mission_won',
   'mission_lost',
+  'civilians_boarded',
+  'civilians_delivered',
+  'objective_done',
 ]);
 
 export interface ClientState {

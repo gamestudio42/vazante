@@ -20,7 +20,7 @@ import { buildCity, buildDistrictOverlay, hash } from './city.ts';
 import { LightPools } from './lights.ts';
 import { FireAndSmoke } from './smoke.ts';
 import { buildProps } from './props.ts';
-import { DecalLayer, OrderMarkers, Particles } from './fx.ts';
+import { DecalLayer, OrderMarkers, Particles, ZoneMarker } from './fx.ts';
 import { cityUniforms, toon } from './materials.ts';
 import { PALETTE } from './palette.ts';
 import { PixelPost } from './post.ts';
@@ -97,6 +97,7 @@ export class GameRenderer {
   private readonly particles = new Particles(1200);
   private readonly fire = new FireAndSmoke();
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
+  private readonly zone = new ZoneMarker(PALETTE.zone);
   readonly structures: StructureLayer;
   readonly vehicles = new VehicleLayer();
   private readonly corpses: Corpse[] = [];
@@ -192,7 +193,7 @@ export class GameRenderer {
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
     this.districts = buildDistrictOverlay(map);
-    this.scene.add(this.districts);
+    this.scene.add(this.districts, this.zone.group);
 
     const bodyMat = toon({ vertexColors: false });
     this.soldiers = new CharacterBatch(MAX_SOLDIERS, bodyMat, true);
@@ -273,6 +274,9 @@ export class GameRenderer {
     }
     this.structures.update(f.structures);
     this.vehicles.push(f.vehicles);
+    const zone = f.mission?.zones.find((x) => x.active);
+    const cs = this.map.cellSize;
+    this.zone.set(zone ? { x0: zone.x0 * cs, y0: zone.y0 * cs, x1: (zone.x1 + 1) * cs, y1: (zone.y1 + 1) * cs } : null);
     this.prev = this.curr;
     this.curr = f;
     this.currAt = nowMs;
@@ -457,6 +461,7 @@ export class GameRenderer {
     this.fire.smokeShade = 1 - 0.6 * this.night;
     this.fire.update(dtS);
     this.orders.update(dtS, this.unitScale());
+    this.zone.update(t);
     this.updateTimeOfDay(f ? f.tick + this.alpha(nowMs) : 0);
     this.lights.beginDynamic();
     if (f) this.drawFlashlights(f, this.alpha(nowMs));

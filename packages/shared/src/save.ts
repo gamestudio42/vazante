@@ -1,6 +1,6 @@
 export const SAVE_FORMAT = 'vazante-save';
 /** Bump when the save layout changes. Rule changes are caught by the hash check instead. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 /** A full copy of the simulation state at one tick. */
 export interface SaveGame {
