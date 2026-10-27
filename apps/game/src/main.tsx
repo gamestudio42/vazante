@@ -11,6 +11,12 @@ import { getSave } from './storage.ts';
 import { probe } from './probe.ts';
 import { runFrameBench } from './bench.ts';
 import { App } from './ui/App.tsx';
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
+import '@fontsource/barlow-condensed/500.css';
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700.css';
 import './styles.css';
 
 const params = new URLSearchParams(location.search);

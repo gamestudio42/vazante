@@ -9,11 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/barlow": "5.3.0",
+    "@fontsource/barlow-condensed": "5.3.0",
     "@vazante/audio": "workspace:*",
     "@vazante/kernel": "workspace:*",
     "@vazante/shared": "workspace:*",
     "@vazante/simulation": "workspace:*",
     "@vazante/view3d": "workspace:*",
+    "lucide-react": "1.61.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

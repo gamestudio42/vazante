@@ -1,4 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react';
+import { Download, FolderOpen, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Trash2, Undo2, Upload } from 'lucide-react';
 import { TICK_HZ, type SaveMeta } from '@vazante/shared';
 import { t, type Locale } from '../i18n.ts';
 import type { Settings } from '../settings.ts';
@@ -29,25 +30,44 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
   return (
     <div className="menu-screen">
       <div className="menu-title">
+        <div className="menu-kicker">
+          <span className="hazard" />
+          {t('menu.subtitle')}
+        </div>
         <h1>{t('app.title')}</h1>
-        <div className="muted">{t('menu.subtitle')}</div>
       </div>
       <nav className="menu panel">
         {latest && (
           <button className="primary" onClick={() => void shell.loadSlot(latest.slot)}>
+            <Play size={16} />
             {t('menu.continue')}
             <span className="muted"> · {slotName(latest)}</span>
           </button>
         )}
         <button className={latest ? '' : 'primary'} onClick={() => shell.newGame()}>
+          <Plus size={16} />
           {t('menu.new')}
         </button>
-        <button onClick={() => shell.openPanel('load')}>{t('menu.load')}</button>
-        <button onClick={() => shell.openPanel('settings')}>{t('menu.settings')}</button>
-        {shell.desktop && <button onClick={() => shell.desktop!.quit()}>{t('menu.quit')}</button>}
+        <button onClick={() => shell.openPanel('load')}>
+          <FolderOpen size={16} />
+          {t('menu.load')}
+        </button>
+        <button onClick={() => shell.openPanel('settings')}>
+          <Gear size={16} />
+          {t('menu.settings')}
+        </button>
+        {shell.desktop && (
+          <button onClick={() => shell.desktop!.quit()}>
+            <LogOut size={16} />
+            {t('menu.quit')}
+          </button>
+        )}
         <div className="row muted city">
           {t('menu.city')} #{seed}
-          <button onClick={() => shell.restart(seed + 1, false)}>{t('menu.newCity')}</button>
+          <button onClick={() => shell.restart(seed + 1, false)}>
+            <RefreshCw size={12} />
+            {t('menu.newCity')}
+          </button>
         </div>
       </nav>
       <div className="menu-version muted">{t(shell.desktop ? 'menu.versionDesktop' : 'menu.version')}</div>
@@ -59,6 +79,7 @@ function Briefing({ shell }: { shell: Shell }) {
   return (
     <div className="modal">
       <div className="panel card briefing">
+        <div className="summary-kicker">{t('menu.subtitle')}</div>
         <h1>{t('brief.title')}</h1>
         {t('brief.body')
           .split('\n\n')
@@ -67,7 +88,8 @@ function Briefing({ shell }: { shell: Shell }) {
           ))}
         <p className="muted tips">{t('brief.tips')}</p>
         <div className="row end">
-          <button className="primary" autoFocus onClick={() => shell.start()}>
+          <button className="primary big" autoFocus onClick={() => shell.start()}>
+            <Play size={16} />
             {t('brief.start')}
           </button>
         </div>
@@ -82,12 +104,25 @@ function PauseMenu({ shell }: { shell: Shell }) {
       <nav className="menu panel">
         <h2>{t('pause.title')}</h2>
         <button className="primary" autoFocus onClick={() => shell.resume()}>
+          <Play size={16} />
           {t('pause.resume')}
         </button>
-        <button onClick={() => void shell.saveNew()}>{t('pause.save')}</button>
-        <button onClick={() => shell.openPanel('load')}>{t('menu.load')}</button>
-        <button onClick={() => shell.openPanel('settings')}>{t('menu.settings')}</button>
-        <button onClick={() => shell.mainMenu()}>{t('pause.mainMenu')}</button>
+        <button onClick={() => void shell.saveNew()}>
+          <Save size={16} />
+          {t('pause.save')}
+        </button>
+        <button onClick={() => shell.openPanel('load')}>
+          <FolderOpen size={16} />
+          {t('menu.load')}
+        </button>
+        <button onClick={() => shell.openPanel('settings')}>
+          <Gear size={16} />
+          {t('menu.settings')}
+        </button>
+        <button onClick={() => shell.mainMenu()}>
+          <LogOut size={16} />
+          {t('pause.mainMenu')}
+        </button>
         <div className="muted hint">{t('pause.quickHint')}</div>
       </nav>
     </div>
@@ -100,7 +135,10 @@ function SettingsPanel({ shell }: { shell: Shell }) {
   return (
     <div className="modal">
       <div className="panel card settings">
-        <h2>{t('settings.title')}</h2>
+        <h2>
+          <Gear size={16} />
+          {t('settings.title')}
+        </h2>
         <label>
           <span>{t('settings.volume')}</span>
           <input type="range" min={0} max={1} step={0.05} value={s.volume} onChange={(e) => set({ volume: Number(e.target.value) })} />
@@ -143,6 +181,7 @@ function SettingsPanel({ shell }: { shell: Shell }) {
         </label>
         <div className="row end">
           <button className="primary" onClick={() => shell.openPanel(null)}>
+            <Undo2 size={14} />
             {t('menu.back')}
           </button>
         </div>
@@ -156,7 +195,10 @@ function LoadPanel({ shell }: { shell: Shell }) {
   return (
     <div className="modal">
       <div className="panel card saves">
-        <h2>{t('load.title')}</h2>
+        <h2>
+          <Save size={16} />
+          {t('load.title')}
+        </h2>
         {shell.saves.length === 0 && <p className="muted">{t('load.empty')}</p>}
         <div className="save-list">
           {shell.saves.map((m) => (
@@ -171,8 +213,14 @@ function LoadPanel({ shell }: { shell: Shell }) {
                 <button className="primary" onClick={() => void shell.loadSlot(m.slot)}>
                   {t('load.load')}
                 </button>
-                <button onClick={() => void shell.exportSlot(m.slot)}>{t('load.export')}</button>
-                <button onClick={() => void shell.deleteSlot(m.slot)}>{t('load.delete')}</button>
+                <button onClick={() => void shell.exportSlot(m.slot)}>
+                  <Download size={13} />
+                  {t('load.export')}
+                </button>
+                <button className="danger" onClick={() => void shell.deleteSlot(m.slot)}>
+                  <Trash2 size={13} />
+                  {t('load.delete')}
+                </button>
               </div>
             </div>
           ))}
@@ -188,8 +236,12 @@ function LoadPanel({ shell }: { shell: Shell }) {
               if (f) void shell.importFile(f);
             }}
           />
-          <button onClick={() => file.current?.click()}>{t('load.import')}</button>
+          <button onClick={() => file.current?.click()}>
+            <Upload size={13} />
+            {t('load.import')}
+          </button>
           <button className="primary" onClick={() => shell.openPanel(null)}>
+            <Undo2 size={14} />
             {t('menu.back')}
           </button>
         </div>
