@@ -6,7 +6,8 @@ export type ViewBand = 'tactical' | 'transition' | 'strategic';
 const TACTICAL_SPAN = 220;
 const STRATEGIC_SPAN = 480;
 const MIN_SPAN = 30;
-const TACTICAL_TILT = (55 * Math.PI) / 180;
+/** Elevation of the tactical camera: low enough that facades, walls and units read in 3D. */
+const TACTICAL_TILT = (40 * Math.PI) / 180;
 const STRATEGIC_TILT = Math.PI / 2 - 0.0001;
 const DISTANCE = 1200;
 
@@ -21,8 +22,11 @@ export class CameraRig {
   focusY: number;
   span: number;
   targetSpan: number;
-  yaw = 0;
-  targetYaw = 0;
+  /** Diagonal by default: the classic three-quarter view, with two facades of every building visible. */
+  yaw = Math.PI / 4;
+  targetYaw = Math.PI / 4;
+  /** Height of the internal render target in pixels; the ortho camera snaps to its texel grid. */
+  pixelsHigh = 270;
   direct: { x: number; y: number; yaw: number } | null = null;
   private aspect = 16 / 9;
   private savedFocus: [number, number] | null = null;
@@ -50,6 +54,10 @@ export class CameraRig {
     if (this.span <= TACTICAL_SPAN) return 'tactical';
     if (this.span >= STRATEGIC_SPAN) return 'strategic';
     return 'transition';
+  }
+
+  get tilt(): number {
+    return TACTICAL_TILT + (STRATEGIC_TILT - TACTICAL_TILT) * this.strategicBlend;
   }
 
   /** 0 at tactical, 1 at strategic. */
@@ -90,6 +98,8 @@ export class CameraRig {
   pan(dxScreen: number, dyScreen: number): void {
     const c = Math.cos(this.yaw);
     const s = Math.sin(this.yaw);
+    // A screen metre up the view covers more ground the lower the camera looks.
+    dyScreen /= Math.sin(this.tilt);
     // Screen right is (cos, -sin) and screen down is (sin, cos) on the simulation plane.
     this.focusX += dxScreen * c + dyScreen * s;
     this.focusY += -dxScreen * s + dyScreen * c;
@@ -137,7 +147,7 @@ export class CameraRig {
       return;
     }
 
-    const tilt = TACTICAL_TILT + (STRATEGIC_TILT - TACTICAL_TILT) * this.strategicBlend;
+    const tilt = this.tilt;
     const halfH = this.span / 2;
     const halfW = halfH * this.aspect;
     const cam = this.ortho;
@@ -156,9 +166,25 @@ export class CameraRig {
     // Screen-up points toward the yawed north.
     cam.up.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     cam.lookAt(fxs, 0, fys);
+    // Snap the position to whole texels in the camera plane so static geometry lands on the same
+    // pixels every frame: without it the low-resolution image crawls and shimmers while panning.
+    // Only while the camera is not turning; a rotation changes every pixel anyway.
+    if (Math.abs(this.targetYaw - this.yaw) < 1e-3) {
+      const texel = this.span / this.pixelsHigh;
+      cam.updateMatrixWorld();
+      const e = cam.matrixWorld.elements;
+      this.right.set(e[0], e[1], e[2]);
+      this.upv.set(e[4], e[5], e[6]);
+      const r = cam.position.dot(this.right);
+      const u = cam.position.dot(this.upv);
+      cam.position.addScaledVector(this.right, Math.round(r / texel) * texel - r).addScaledVector(this.upv, Math.round(u / texel) * texel - u);
+    }
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
   }
+
+  private readonly right = new THREE.Vector3();
+  private readonly upv = new THREE.Vector3();
 
   /** Metres per CSS pixel at the focus, for panning. */
   metresPerPixel(viewportHeightPx: number): number {

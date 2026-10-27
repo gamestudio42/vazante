@@ -39,14 +39,21 @@ function geometryFor(kind: StructureKind, cs: number): THREE.BufferGeometry {
       return merge([...posts, leaf]);
     }
     case 'command_post': {
-      // Fortified block with a radio mast.
-      const body = new THREE.BoxGeometry(w, h * 0.55, w);
-      body.translate(0, (h * 0.55) / 2, 0);
-      const top = new THREE.BoxGeometry(w * 0.6, h * 0.2, w * 0.6);
-      top.translate(0, h * 0.65, 0);
-      const mast = new THREE.BoxGeometry(0.12, h * 0.6, 0.12);
-      mast.translate(w * 0.2, h * 0.75 + h * 0.3 - 0.4, w * 0.2);
-      return merge([body, top, mast]);
+      // Watchtower: a sandbagged bunker at the foot, legs up to a parapet platform, a roof on
+      // posts and a radio mast. Height h (8 m) is the roof.
+      const box = (sx: number, sy: number, sz: number, x: number, y: number, z: number) => new THREE.BoxGeometry(sx, sy, sz).translate(x, y, z);
+      const parts: THREE.BufferGeometry[] = [];
+      const deck = h * 0.55;
+      const i = w / 2 - 0.25;
+      parts.push(box(w, 1.6, w, 0, 0.8, 0));
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(box(0.35, deck, 0.35, sx * i, deck / 2, sz * i));
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(box(0.15, h - deck, 0.15, sx * i, deck + (h - deck) / 2, sz * i));
+      parts.push(box(w, 0.3, w, 0, deck, 0));
+      parts.push(box(w, 1.0, 0.45, 0, deck + 0.65, -i), box(w, 1.0, 0.45, 0, deck + 0.65, i));
+      parts.push(box(0.45, 1.0, w - 0.9, -i, deck + 0.65, 0), box(0.45, 1.0, w - 0.9, i, deck + 0.65, 0));
+      parts.push(box(w + 0.5, 0.25, w + 0.5, 0, h, 0));
+      parts.push(box(0.1, 3.2, 0.1, i * 0.6, h + 1.6, i * 0.6));
+      return merge(parts);
     }
     case 'mg_nest': {
       const parts: THREE.BufferGeometry[] = [];

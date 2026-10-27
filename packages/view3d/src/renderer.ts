@@ -234,6 +234,7 @@ export class GameRenderer {
     this.renderer.setSize(w, h, false);
     this.post.setSize(w, h);
     this.rig.setAspect(w / h);
+    this.rig.pixelsHigh = h;
   }
 
   /** Visual acknowledgement of a move order. */
@@ -556,7 +557,7 @@ export class GameRenderer {
     const d = this.rig.direct;
     const fx = d ? d.x : this.rig.focusX;
     const fy = d ? d.y : this.rig.focusY;
-    const half = d ? 70 : Math.min(this.rig.span * 0.75 + 20, 450);
+    const half = d ? 70 : Math.min(this.rig.span * 0.95 + 20, 520);
     this.sun.position.set(fx - 220, 400 * this.sunHeight, fy - 300);
     this.sun.target.position.set(fx, 0, fy);
     const cam = this.sun.shadow.camera;

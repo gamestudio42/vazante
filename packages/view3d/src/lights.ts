@@ -6,21 +6,26 @@ function poolTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = c.height = size;
   const g = c.getContext('2d')!;
-  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  grad.addColorStop(0, 'rgba(255,255,255,1)');
-  grad.addColorStop(0.35, 'rgba(255,255,255,0.55)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, size, size);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
+  // Intensity in the colour channels (the pool multiplies what it lands on): a bright core and an
+  // inverse-square-like tail that reaches zero at the rim.
+  const img = g.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const r = Math.hypot(x + 0.5 - size / 2, y + 0.5 - size / 2) / (size / 2);
+      const k = r >= 1 ? 0 : (1 - r * r) ** 2 / (1 + 6 * r * r);
+      const v = Math.round(255 * k);
+      img.data.set([v, v, v, 255], (y * size + x) * 4);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return new THREE.CanvasTexture(c);
 }
 
 /**
- * Fake lights for the night: additive pools on the ground under street lamps, floodlights at bases
- * and depots, and flashlight beams in front of soldiers. Cheap at any count (one instanced draw),
- * unlike real point lights, and they read well through the pixel post-process.
+ * Fake lights for the night: pools on the ground under street lamps, floodlights at bases and
+ * depots, and flashlight beams in front of soldiers. Each pool multiplies the colour already on
+ * screen (dst + dst * light), so asphalt stays asphalt and grass stays green under a lamp instead
+ * of being washed grey. Cheap at any count (one instanced draw), unlike real point lights.
  */
 export class LightPools {
   readonly mesh: THREE.InstancedMesh;
@@ -40,11 +45,13 @@ export class LightPools {
     this.material = new THREE.MeshBasicMaterial({
       map: poolTexture(),
       transparent: true,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.DstColorFactor,
+      blendDst: THREE.OneFactor,
       depthWrite: false,
       fog: false,
       toneMapped: false,
-      opacity: 0,
     });
     this.mesh = new THREE.InstancedMesh(geo, this.material, capacity);
     this.mesh.count = 0;
@@ -85,7 +92,8 @@ export class LightPools {
     this.mesh.count = this.n;
     this.mesh.instanceMatrix.needsUpdate = true;
     if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
-    this.material.opacity = night * 0.7;
+    // The scene target is half float, so a pool can brighten a dark street several times over.
+    this.material.color.setScalar(night * 6);
     this.mesh.visible = night > 0.01;
   }
 }

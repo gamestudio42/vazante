@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
 /**
- * Low-resolution composite: depth-edge outline, light colour grade, posterize with ordered dither, vignette.
+ * Low-resolution composite: depth-edge outline, bloom and a soft shoulder for light above 1.0, colour
+ * grade, posterize with ordered dither, vignette.
  * The scene renders into `target` at internal resolution; the quad writes to the canvas at the same size,
  * and CSS upscales it with nearest filtering.
  */
@@ -16,6 +17,8 @@ export class PixelPost {
     this.target = new THREE.WebGLRenderTarget(1, 1, {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
+      // Half float: lights can push past 1.0 and the composite tone-maps and blooms the excess.
+      type: THREE.HalfFloatType,
       depthTexture: new THREE.DepthTexture(1, 1),
     });
     this.material = new THREE.ShaderMaterial({
@@ -54,6 +57,11 @@ export class PixelPost {
           return ortho > 0.5 ? -orthographicDepthToViewZ(d, near, far) : -perspectiveDepthToViewZ(d, near, far);
         }
 
+        // Only what lights pushed past white feeds the bloom.
+        vec3 excess(vec2 uv) {
+          return max(texture2D(tColor, uv).rgb - 0.85, 0.0);
+        }
+
         float bayer4(vec2 p) {
           int x = int(mod(p.x, 4.0));
           int y = int(mod(p.y, 4.0));
@@ -79,6 +87,17 @@ export class PixelPost {
           float farther = max(max(zl - zc, zr - zc), max(zu - zc, zd - zc));
           float edge = step(thr, farther) * (1.0 - step(thr, nearer) * 0.5);
           vec3 c = col.rgb;
+          // Bloom: two rings of taps around the pixel (cheap at this resolution).
+          vec3 glow = vec3(0.0);
+          for (int k = 0; k < 8; k++) {
+            float a = float(k) * 0.785398;
+            vec2 d = vec2(cos(a), sin(a)) * px;
+            glow += excess(vUv + d * 2.0) * 0.6 + excess(vUv + d * 5.0) * 0.3;
+          }
+          c += glow * 0.16;
+          // Soft shoulder: keep everything below 0.8 as is, roll the rest off toward white.
+          vec3 hi = max(c - 0.8, 0.0);
+          c = min(c, 0.8) + 0.2 * (1.0 - exp(-hi * 4.0));
           // Grade: gentle contrast and saturation.
           float luma = dot(c, vec3(0.299, 0.587, 0.114));
           c = mix(vec3(luma), c, 1.1);

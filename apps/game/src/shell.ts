@@ -89,7 +89,9 @@ export class Shell {
     const base = this.view.map.sites.find((x) => x.kind === 'base');
     const cs = this.view.map.cellSize;
     if (base) this.view.rig.centerOn(((base.x0 + base.x1 + 1) / 2) * cs, ((base.y0 + base.y1 + 1) / 2) * cs);
-    this.view.rig.targetYaw = Math.round(this.view.rig.targetYaw / (Math.PI / 4)) * (Math.PI / 4);
+    // Settle on the nearest diagonal: the three-quarter view shows two facades of every building.
+    const q = Math.PI / 2;
+    this.view.rig.targetYaw = Math.round((this.view.rig.targetYaw - Math.PI / 4) / q) * q + Math.PI / 4;
     this.screen = 'briefing';
     this.panel = null;
     this.changed();

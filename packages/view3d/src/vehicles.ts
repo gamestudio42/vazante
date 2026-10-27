@@ -5,25 +5,55 @@ import { PALETTE } from './palette.ts';
 
 const CAP = 64;
 
-/** Box truck: cab at the front (local -z), flat bed with crates; length 6 m, width 2.4 m. */
+/**
+ * Military cargo truck, front at local -z, about 6.4 m long and 2.4 m wide: bonnet, cab with a dark
+ * windscreen, a bed under a canvas tilt with a rounded roof, six wheels and a front bumper.
+ */
 function truckParts(): { geo: THREE.BufferGeometry; color: number }[] {
-  const cab = new THREE.BoxGeometry(2.3, 2.2, 1.8);
-  cab.translate(0, 1.5, -2.1);
-  const bed = new THREE.BoxGeometry(2.4, 0.5, 4.2);
-  bed.translate(0, 0.85, 0.8);
-  const cargo = new THREE.BoxGeometry(2.1, 1.3, 3.6);
-  cargo.translate(0, 1.75, 0.9);
-  const wheels = new THREE.BoxGeometry(2.6, 0.8, 0.8);
-  const w2 = wheels.clone();
-  wheels.translate(0, 0.4, -1.9);
-  w2.translate(0, 0.4, 1.8);
+  const merge = (...geos: THREE.BufferGeometry[]) => mergeSimple(geos);
+  const box = (w: number, h: number, d: number, x: number, y: number, z: number) => new THREE.BoxGeometry(w, h, d).translate(x, y, z);
+
+  const bonnet = box(2.0, 0.9, 1.3, 0, 1.25, -2.65);
+  const cab = box(2.3, 1.5, 1.5, 0, 1.75, -1.4);
+  const chassis = box(2.2, 0.35, 6.0, 0, 0.75, 0.0);
+  const bed = box(2.4, 0.55, 4.0, 0, 1.15, 1.25);
+  const tiltWalls = box(2.35, 1.2, 3.9, 0, 2.0, 1.25);
+  const roof = new THREE.CylinderGeometry(1.175, 1.175, 3.9, 10, 1, false, -Math.PI / 2, Math.PI);
+  roof.rotateX(Math.PI / 2);
+  roof.scale(1, 0.35, 1);
+  roof.translate(0, 2.6, 1.25);
+  const glass = box(2.05, 0.65, 0.08, 0, 2.05, -2.17);
+  const sideGlass = merge(box(0.06, 0.55, 0.8, -1.16, 2.05, -1.45), box(0.06, 0.55, 0.8, 1.16, 2.05, -1.45));
+  const bumper = merge(box(2.5, 0.3, 0.25, 0, 0.8, -3.35), box(0.25, 0.18, 0.12, -0.75, 1.3, -3.32), box(0.25, 0.18, 0.12, 0.75, 1.3, -3.32));
+  const wheel = new THREE.CylinderGeometry(0.55, 0.55, 0.45, 10);
+  wheel.rotateZ(Math.PI / 2);
+  const wheels: THREE.BufferGeometry[] = [];
+  for (const z of [-2.3, 0.9, 2.15]) for (const x of [-1.0, 1.0]) wheels.push(wheel.clone().translate(x, 0.55, z));
   return [
-    { geo: cab, color: PALETTE.truckCab },
-    { geo: bed, color: PALETTE.truck },
-    { geo: cargo, color: PALETTE.cargo },
-    { geo: wheels, color: PALETTE.boots },
-    { geo: w2, color: PALETTE.boots },
+    { geo: merge(bonnet, cab), color: PALETTE.truckCab },
+    { geo: merge(chassis, bed), color: PALETTE.truck },
+    { geo: merge(tiltWalls, roof), color: PALETTE.cargo },
+    { geo: merge(glass, sideGlass), color: 0x1b2228 },
+    { geo: merge(bumper, ...wheels), color: PALETTE.boots },
   ];
+}
+
+/** Concatenate non-indexed copies of simple geometries (position and normal only). */
+function mergeSimple(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const parts = geos.map((g) => (g.index ? g.toNonIndexed() : g));
+  const count = parts.reduce((n, g) => n + g.attributes.position.count, 0);
+  const pos = new Float32Array(count * 3);
+  const nor = new Float32Array(count * 3);
+  let o = 0;
+  for (const g of parts) {
+    pos.set(g.attributes.position.array as Float32Array, o * 3);
+    nor.set(g.attributes.normal.array as Float32Array, o * 3);
+    o += g.attributes.position.count;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  return out;
 }
 
 /** Trucks, interpolated between simulation frames; selection ring and remaining route. */
