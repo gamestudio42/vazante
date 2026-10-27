@@ -25,6 +25,8 @@ export class InputController {
   private mouse = { x: 0, y: 0 };
   private directYaw = 0;
   private directId: number | null = null;
+  /** The simulation has acknowledged the current direct control (frames lag one or two ticks behind). */
+  private directConfirmed = false;
   private fire = false;
   private reload = false;
   private lastDirectSend = 0;
@@ -66,7 +68,11 @@ export class InputController {
     document.addEventListener('mouseleave', () => (this.mouseInside = false));
     document.addEventListener('mouseenter', () => (this.mouseInside = true));
     client.onFrame((f) => {
-      if (this.directId !== null && f.directSoldier !== this.directId) this.leaveDirectLocal();
+      // Leave only when the simulation drops control it had granted (soldier died, turned), not
+      // in the ticks before it has seen the request.
+      if (this.directId === null) return;
+      if (f.directSoldier === this.directId) this.directConfirmed = true;
+      else if (this.directConfirmed) this.leaveDirectLocal();
     });
   }
 
@@ -471,6 +477,7 @@ export class InputController {
       const cond = f.soldiers[o + SoldierField.Condition];
       if (q.members.includes(id) && cond <= 1) {
         this.directId = id;
+        this.directConfirmed = false;
         this.directYaw = Math.atan2(f.soldiers[o + SoldierField.FacingY], f.soldiers[o + SoldierField.FacingX]);
         this.client.send({ type: 'set_direct_control', soldier: id });
         this.feedback('toggle');

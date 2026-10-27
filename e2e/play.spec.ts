@@ -81,3 +81,21 @@ test('clicking the minimap moves the camera', async ({ page }) => {
   await expect.poll(focus).not.toBeCloseTo(before, 0);
   expect(errors).toEqual([]);
 });
+
+test('TAB takes direct control on the first press, fires, and TAB gives it back (M4.2)', async ({ page }) => {
+  const errors = watchErrors(page);
+  await startGame(page);
+  await page.getByText('Alfa').first().click();
+  await page.keyboard.press('Tab');
+  await expect.poll(async () => (await frame(page)).directSoldier).not.toBeNull();
+  await expect(page.locator('.crosshair')).toBeVisible();
+  const shots = (await frame(page)).stats.shotsFired;
+  await page.mouse.move(640, 300);
+  await page.mouse.down();
+  await expect.poll(async () => (await frame(page)).stats.shotsFired).toBeGreaterThan(shots);
+  await page.mouse.up();
+  await page.keyboard.press('Tab');
+  await expect.poll(async () => (await frame(page)).directSoldier).toBeNull();
+  await expect(page.locator('.crosshair')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
