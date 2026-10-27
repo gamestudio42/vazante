@@ -1,5 +1,6 @@
 import { SLICE } from './mission.ts';
 import type { SquadKind } from './units.ts';
+import { BASIC_ZOMBIE_KINDS, ZOMBIES } from './zombies.ts';
 
 /**
  * Campaign missions as data. A mission is a map, the forces it starts with and a list of stages
@@ -45,6 +46,8 @@ export interface MissionDef {
   zones: readonly ZoneRef[];
   /** Wandering zombies over the map at veteran difficulty. */
   zombies: number;
+  /** Zombie kinds that spawn, in ZOMBIES order (3 = common, runner, brute). */
+  zombieKinds: number;
   /** Zombies keep at least this far from the base at the start. */
   clearRadiusM: number;
   /** Base stock at veteran difficulty. */
@@ -66,6 +69,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     trucks: [{ at: 'depot', ammo: SLICE.truckAmmo, materials: SLICE.truckMaterials }],
     zones: [],
     zombies: 200,
+    zombieKinds: BASIC_ZOMBIE_KINDS,
     clearRadiusM: 150,
     materials: SLICE.baseMaterials,
     ammo: SLICE.baseAmmo,
@@ -86,6 +90,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     trucks: [{ at: 'base', ammo: 0, materials: 0 }],
     zones: [{ site: 'Hospital São Lucas' }],
     zombies: 3000,
+    zombieKinds: ZOMBIES.length,
     clearRadiusM: 250,
     materials: 320,
     ammo: 1200,
@@ -107,6 +112,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     trucks: [{ at: 'base', ammo: 3000, materials: 320 }],
     zones: [{ bridge: { minM: 350 } }],
     zombies: 3000,
+    zombieKinds: ZOMBIES.length,
     clearRadiusM: 250,
     materials: 320,
     ammo: 1200,
@@ -128,6 +134,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     trucks: [{ at: 'Estação Ferroviária', ammo: 5000, materials: 300 }],
     zones: [],
     zombies: 3500,
+    zombieKinds: ZOMBIES.length,
     clearRadiusM: 250,
     materials: 400,
     ammo: 1500,

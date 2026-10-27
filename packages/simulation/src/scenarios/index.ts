@@ -38,6 +38,7 @@ export function buildMission(id: MissionId, seed: number, opts: ScenarioOptions 
   const map = def.map === 'city' ? generateCityMap(seed) : generateSliceMap(seed);
   const w = new World(seed, map.grid, map.buildings, map.districts, map.sites, ZOMBIE_POOL_CAPACITY);
   w.difficulty = opts.difficulty ?? 'veteran';
+  w.zombieKinds = def.zombieKinds;
   const diff = DIFFICULTY[w.difficulty];
   const home = w.bases.find((b) => b.kind === 'base')!;
   const bx = ((home.x0 + home.x1 + 1) / 2) * CELL_SIZE;

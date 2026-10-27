@@ -7,6 +7,7 @@ import {
   ZOMBIE_POOL_CAPACITY,
   ZOMBIE_STRIDE,
   ZombieField,
+  ZombieKind,
   ZombieState,
   clockHours,
   daylight,
@@ -20,7 +21,7 @@ import { buildCity, buildDistrictOverlay, hash } from './city.ts';
 import { LightPools } from './lights.ts';
 import { FireAndSmoke } from './smoke.ts';
 import { buildProps } from './props.ts';
-import { DecalLayer, OrderMarkers, Particles, ZoneMarker } from './fx.ts';
+import { DecalLayer, OrderMarkers, Particles, Pulses, ZoneMarker } from './fx.ts';
 import { cityUniforms, toon } from './materials.ts';
 import { PALETTE } from './palette.ts';
 import { PixelPost } from './post.ts';
@@ -98,6 +99,9 @@ export class GameRenderer {
   private readonly fire = new FireAndSmoke();
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
+  private readonly pulses = new Pulses(PALETTE.scream);
+  /** Until when (seconds) each zombie slot holds the scream pose. */
+  private readonly zScream = new Float32Array(ZOMBIE_POOL_CAPACITY);
   readonly structures: StructureLayer;
   readonly vehicles = new VehicleLayer();
   private readonly corpses: Corpse[] = [];
@@ -130,6 +134,7 @@ export class GameRenderer {
   private readonly zSpeed = new Float32Array(ZOMBIE_POOL_CAPACITY);
   private readonly zYaw = new Float32Array(ZOMBIE_POOL_CAPACITY);
   private readonly zColors: (CharacterColors | undefined)[] = [];
+  private readonly zColorKind = new Uint8Array(ZOMBIE_POOL_CAPACITY);
   private readonly sDrawX = new Float32Array(MAX_SOLDIER_ID);
   private readonly sDrawY = new Float32Array(MAX_SOLDIER_ID);
   private readonly sPhase = new Float32Array(MAX_SOLDIER_ID);
@@ -193,7 +198,7 @@ export class GameRenderer {
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
     this.districts = buildDistrictOverlay(map);
-    this.scene.add(this.districts, this.zone.group);
+    this.scene.add(this.districts, this.zone.group, this.pulses.group);
 
     const bodyMat = toon({ vertexColors: false });
     this.soldiers = new CharacterBatch(MAX_SOLDIERS, bodyMat, true);
@@ -310,9 +315,24 @@ export class GameRenderer {
         this.blood.add(e.x, e.y!, 0.7 + Math.random() * 0.8, Math.random() * Math.PI, 1 + Math.random() * 0.8);
         this.particles.emit(e.x, e.y!, 1.2, 8, { speed: 3, up: 2, life: 0.5, size: 0.2, color: PALETTE.bloodFresh });
         const slot = e.target ?? 0;
-        this.addCorpse(e.x, e.y!, this.zYaw[slot] + Math.PI, this.zombieScale(slot), this.zombieColors(slot), nowMs);
+        const kind = e.value ?? 0;
+        this.addCorpse(e.x, e.y!, this.zYaw[slot] + Math.PI, kindScale(kind), this.zombieColors(slot, kind), nowMs);
         return;
       }
+      case 'zombie_burst':
+        if (e.x === undefined) return;
+        this.particles.emit(e.x, e.y!, 1.0, 36, { speed: 6, up: 4, life: 0.9, size: 0.3, color: PALETTE.bile, gravity: 9 });
+        this.particles.emit(e.x, e.y!, 1.0, 14, { speed: 4, up: 3, life: 0.7, size: 0.22, color: PALETTE.bloodFresh, gravity: 9 });
+        this.fire.explode(e.x, e.y!, 0.6);
+        this.flashes.push({ x: e.x, y: e.y!, t: 0.25, life: 0.25 });
+        this.blood.add(e.x, e.y!, 3.2, Math.random() * Math.PI, 1.2);
+        this.shakeAt(e.x, e.y!, 0.35);
+        return;
+      case 'zombie_scream':
+        if (e.x === undefined) return;
+        this.pulses.add(e.x, e.y!, 18);
+        if (e.source !== undefined) this.zScream[e.source] = nowMs / 1000 + 1.4;
+        return;
       case 'soldier_hit':
       case 'soldier_bitten':
         if (e.x === undefined) return;
@@ -462,6 +482,7 @@ export class GameRenderer {
     this.fire.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
+    this.pulses.update(dtS);
     this.updateTimeOfDay(f ? f.tick + this.alpha(nowMs) : 0);
     this.lights.beginDynamic();
     if (f) this.drawFlashlights(f, this.alpha(nowMs));
@@ -604,9 +625,10 @@ export class GameRenderer {
     return c;
   }
 
-  private zombieColors(slot: number): CharacterColors {
+  /** Colours per slot, rebuilt when the slot is reused by another kind. */
+  private zombieColors(slot: number, kind: number): CharacterColors {
     let c = this.zColors[slot];
-    if (!c) {
+    if (!c || this.zColorKind[slot] !== kind) {
       const h = hash(slot * 977 + 13);
       const shirt = new THREE.Color(PALETTE.zombieClothes[h % PALETTE.zombieClothes.length]);
       c = {
@@ -615,23 +637,20 @@ export class GameRenderer {
         legs: new THREE.Color(PALETTE.zombieClothes[(h >> 3) % PALETTE.zombieClothes.length]).multiplyScalar(0.7),
         skin: new THREE.Color(PALETTE.zombieSkin[(h >> 7) % PALETTE.zombieSkin.length]),
       };
+      if (kind === ZombieKind.Bloater) {
+        // Swollen and bare: the skin is the whole silhouette.
+        c.skin.setHex(PALETTE.bloaterSkin);
+        c.torso = c.skin.clone();
+        c.arms = c.skin.clone();
+      } else if (kind === ZombieKind.Screamer) {
+        c.skin.setHex(PALETTE.screamerSkin);
+        c.arms = c.skin.clone();
+        c.torso.multiplyScalar(0.45);
+      }
       this.zColors[slot] = c;
+      this.zColorKind[slot] = kind;
     }
     return c;
-  }
-
-  private zombieScale(slot: number): number {
-    const z = this.curr?.zombies;
-    let kind = 0;
-    if (z) {
-      for (let i = 0; i < z.length; i += ZOMBIE_STRIDE) {
-        if (z[i + ZombieField.Slot] === slot) {
-          kind = Math.floor(z[i + ZombieField.KindState] / 16);
-          break;
-        }
-      }
-    }
-    return kindScale(kind);
   }
 
   private drawSoldiers(f: Frame, a: number, dt: number, t: number): void {
@@ -788,7 +807,12 @@ export class GameRenderer {
       const amount = Math.min(1, this.zSpeed[slot] / 2);
       Object.assign(p, IDLE_POSE);
       const shamble = Math.sin(t * 2.3 + slot * 0.7);
-      if (state === ZombieState.Attacking) {
+      if (this.zScream[slot] > t) {
+        // Gritador: arms thrown up, head back.
+        p.armL = 2.7;
+        p.armR = 2.6;
+        p.lean = -0.25;
+      } else if (state === ZombieState.Attacking) {
         const swing = Math.sin(t * 9 + slot);
         p.armL = 1.3 + swing * 0.6;
         p.armR = 1.3 - swing * 0.6;
@@ -821,9 +845,9 @@ export class GameRenderer {
           const c = crowd.clip(run ? 'Run' : 'Walk');
           row = clipRow(c, ((this.zPhase[slot] * STRIDE_M) / (Math.PI * 2) / (run ? ZOMBIE_RUN_M : ZOMBIE_WALK_M)) * c.duration);
         } else row = clipRow(crowd.clip('Idle'), t * 0.7 + slot * 0.29);
-        if (crowd.add(x, y, climb, yaw, boost * kindScale(kind), row, this.zombieColors(slot).torso)) continue;
+        if (crowd.add(x, y, climb, yaw, boost * kindScale(kind), row, this.zombieColors(slot, kind).torso)) continue;
       }
-      this.zombies.add(x, y, yaw, boost * kindScale(kind), w, this.zombieColors(slot), climb);
+      this.zombies.add(x, y, yaw, boost * kindScale(kind), w, this.zombieColors(slot, kind), climb);
     }
     this.zombies.end();
     crowd?.end();
@@ -1071,5 +1095,5 @@ export class GameRenderer {
 }
 
 function kindScale(kind: number): number {
-  return kind === 2 ? 1.3 : kind === 1 ? 0.95 : 1;
+  return kind === ZombieKind.Brute ? 1.3 : kind === ZombieKind.Bloater ? 1.22 : kind === ZombieKind.Runner ? 0.95 : kind === ZombieKind.Screamer ? 0.92 : 1;
 }

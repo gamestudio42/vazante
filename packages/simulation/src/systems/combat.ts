@@ -25,6 +25,7 @@ import {
 } from '@vazante/shared';
 import type { Soldier } from '../entities.ts';
 import { isActiveSoldier, type World } from '../world.ts';
+import { killZombie } from './infected.ts';
 import { distToSite } from './logistics.ts';
 
 /** cos(45°): `hold` only engages inside the 90° arc in front of the formation. */
@@ -234,9 +235,7 @@ function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: numb
   if (hits > 0) {
     z.hp[slot] -= wpn.damage * hits;
     if (z.hp[slot] <= 0) {
-      z.kill(slot);
-      w.stats.zombiesKilled++;
-      w.emit({ type: 'zombie_killed', source: s.id, target: slot, x: zx, y: zy });
+      killZombie(w, slot, s.id);
     } else {
       // Suppression: the hit knocks the zombie back on its heels.
       const t = z.kind[slot] === ZombieKind.Brute ? Math.round(STAGGER_TICKS[s.weapon] * BRUTE_STAGGER_FACTOR) : STAGGER_TICKS[s.weapon];

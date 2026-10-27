@@ -156,6 +156,48 @@ export class OrderMarkers {
   }
 }
 
+/** Expanding rings on the ground: a Gritador's scream. Pooled like the order markers. */
+export class Pulses {
+  readonly group = new THREE.Group();
+  private readonly items: { mesh: THREE.Mesh; age: number; size: number }[] = [];
+  private readonly pool: THREE.Mesh[] = [];
+  private readonly geo: THREE.RingGeometry;
+  private readonly mat: THREE.MeshBasicMaterial;
+
+  constructor(color: number) {
+    this.geo = new THREE.RingGeometry(0.92, 1, 40);
+    this.geo.rotateX(-Math.PI / 2);
+    this.mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, fog: false });
+    // One mesh in the scene from the start so the warm-up compiles the material.
+    this.add(0, 0, 0);
+  }
+
+  add(x: number, y: number, size: number): void {
+    const mesh = this.pool.pop() ?? new THREE.Mesh(this.geo, this.mat.clone());
+    mesh.position.set(x, 0.1, y);
+    mesh.scale.setScalar(0.001);
+    this.group.add(mesh);
+    this.items.push({ mesh, age: 0, size });
+  }
+
+  update(dt: number): void {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const it = this.items[i];
+      it.age += dt;
+      const k = it.age / 1.1;
+      if (k >= 1) {
+        this.group.remove(it.mesh);
+        this.pool.push(it.mesh);
+        this.items.splice(i, 1);
+        continue;
+      }
+      const r = Math.max(0.001, it.size * (1 - (1 - k) * (1 - k)));
+      it.mesh.scale.set(r, 1, r);
+      (it.mesh.material as THREE.MeshBasicMaterial).opacity = 0.7 * (1 - k);
+    }
+  }
+}
+
 /** The active mission area: a pulsing amber frame on the ground with a faint fill. */
 export class ZoneMarker {
   readonly group = new THREE.Group();

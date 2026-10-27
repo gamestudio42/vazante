@@ -1,4 +1,4 @@
-import { CELL_SIZE, SoldierActivity, ZombieKind, ZombieState, type Command } from '@vazante/shared';
+import { CELL_SIZE, SoldierActivity, ZOMBIES, ZombieKind, ZombieState, type Command } from '@vazante/shared';
 import { demolishStructure, placeStructure, toggleGate } from './systems/construction.ts';
 import { releaseDirect } from './systems/lifecycle.ts';
 import { loadCargo, orderConvoy, stopVehicle } from './systems/logistics.ts';
@@ -123,12 +123,13 @@ export function applyCommand(w: World, cmd: Command): string | null {
 
     case 'debug_spawn': {
       const n = Math.max(1, Math.min(500, Math.floor(cmd.count)));
+      const kind = cmd.kind !== undefined && cmd.kind >= 0 && cmd.kind < ZOMBIES.length ? (Math.floor(cmd.kind) as ZombieKind) : ZombieKind.Common;
       let placed = 0;
       for (let i = 0; i < n * 20 && placed < n; i++) {
         const x = cmd.at.x + w.rng.range(-5, 5) * CELL_SIZE;
         const y = cmd.at.y + w.rng.range(-5, 5) * CELL_SIZE;
         if (!w.grid.isWalkableAt(x, y)) continue;
-        if (w.zombies.spawn(x, y, ZombieKind.Common, ZombieState.Chasing) < 0) break;
+        if (w.zombies.spawn(x, y, kind, ZombieState.Chasing) < 0) break;
         placed++;
       }
       return placed > 0 ? null : 'no_space';

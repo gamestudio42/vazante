@@ -69,11 +69,13 @@ export function spawnSquad(w: World, kind: SquadKind, name: string, x: number, y
   return q;
 }
 
-/** Pick a zombie kind by the balance shares. */
+/** Pick a zombie kind by the balance shares, among the kinds this world's roster allows. */
 export function rollZombieKind(w: World): ZombieKind {
-  const r = w.rng.next();
+  let total = 0;
+  for (let k = 0; k < w.zombieKinds; k++) total += ZOMBIES[k].share;
+  const r = w.rng.next() * total;
   let acc = 0;
-  for (let k = 0; k < ZOMBIES.length; k++) {
+  for (let k = 0; k < w.zombieKinds; k++) {
     acc += ZOMBIES[k].share;
     if (r < acc) return k as ZombieKind;
   }

@@ -20,7 +20,7 @@ export type Command =
   | { type: 'stop_vehicle'; vehicle: number }
   | { type: 'set_policy'; vehicle: number; policy: RiskPolicy }
   /** Development helper: spawn a group of zombies around a point. */
-  | { type: 'debug_spawn'; at: Vec2; count: number };
+  | { type: 'debug_spawn'; at: Vec2; count: number; kind?: number };
 
 export type CommandType = Command['type'];
 

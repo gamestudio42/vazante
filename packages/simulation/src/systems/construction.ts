@@ -18,6 +18,7 @@ import {
 import type { Squad, Structure } from '../entities.ts';
 import { planMove } from './units.ts';
 import { isActiveSoldier, type World } from '../world.ts';
+import { killZombie } from './infected.ts';
 
 export function placementContext(w: World): PlacementContext {
   const g = w.grid;
@@ -274,9 +275,7 @@ export function stepEmplacements(w: World): void {
       if (hit) {
         z.hp[t] -= MG_NEST.damage;
         if (z.hp[t] <= 0) {
-          z.kill(t);
-          w.stats.zombiesKilled++;
-          w.emit({ type: 'zombie_killed', source: 0, target: t, x: tx, y: ty });
+          killZombie(w, t, 0);
           st.target = -1;
         }
       }

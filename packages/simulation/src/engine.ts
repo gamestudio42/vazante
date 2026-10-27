@@ -21,6 +21,7 @@ import {
 import { applyCommand } from './commands.ts';
 import { SCENARIO_IDS, createScenario, type ScenarioId, type ScenarioOptions } from './scenarios/index.ts';
 import { stepCombat } from './systems/combat.ts';
+import { stepInfected } from './systems/infected.ts';
 import { buildTicks, stepConstruction, stepEmplacements } from './systems/construction.ts';
 import { stepFlow } from './systems/flow.ts';
 import { stepHorde } from './systems/horde.ts';
@@ -43,6 +44,7 @@ const STEPS: readonly (readonly [string, (w: World) => void])[] = [
   ['vehicles', stepVehicles],
   ['hash', (w) => w.rebuildZombieHash()],
   ['combat', stepCombat],
+  ['infected', stepInfected],
   ['morale', stepMorale],
   ['emplacements', stepEmplacements],
   ['infection', stepInfection],
@@ -292,7 +294,7 @@ export class SimulationEngine {
     const h = new Fnv1a();
     h.u32(w.tick).u32(w.nextId).u32(w.stats.zombiesKilled).u32(w.stats.shotsFired);
     for (const v of w.rng.getState()) h.u32(v);
-    h.u32(w.directSoldier ?? 0).str(w.difficulty);
+    h.u32(w.directSoldier ?? 0).str(w.difficulty).u32(w.zombieKinds);
     h.bytes(w.grid.blocked).bytes(w.grid.noise).bytes(w.grid.flow).bytes(w.grid.structHeight).bytes(w.grid.pile);
     h.byte(w.flowDirty ? 1 : 0).byte(w.flowJob.active ? 1 : 0).u32(w.flowJob.d).u32(w.flowJob.pending);
     if (w.flowJob.active) h.bytes(w.flowJob.dist);

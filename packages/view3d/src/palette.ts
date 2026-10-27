@@ -41,6 +41,11 @@ export const PALETTE = {
   selection: 0xffffff,
   orderMarker: 0x8fe08a,
   zone: 0xf0b03f,
+  /** Inchado skin and the bile of its burst; Gritador skin; the scream ring. */
+  bloaterSkin: 0x8f9c55,
+  bile: 0xa9b84a,
+  screamerSkin: 0xd3cab8,
+  scream: 0xff5a3c,
   path: 0xd8f0c8,
   directRing: 0xff5a3c,
   hesco: 0xb59a6a,

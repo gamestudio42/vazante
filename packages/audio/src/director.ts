@@ -292,6 +292,12 @@ export class AudioDirector {
       case 'zombie_killed':
         if (this.throttle('kill', 0.05)) this.splat(e.x!, e.y!, true);
         return;
+      case 'zombie_burst':
+        if (this.throttle('burst', 0.08)) this.burst(e.x!, e.y!);
+        return;
+      case 'zombie_scream':
+        if (this.throttle('zscream', 0.3)) this.shriek(e.x!, e.y!);
+        return;
       case 'soldier_hit':
         if (this.throttle('hit', 0.08)) this.splat(e.x!, e.y!, false);
         return;
@@ -589,6 +595,24 @@ export class AudioDirector {
     if (this.sample(out, 'dry', t, 0.8)) return;
     this.noiseBurst(out, t, 'highpass', 4000, 1, 0.5, 0.001, 0.02);
     this.noiseBurst(out, t + 0.18, 'highpass', 4000, 1, 0.5, 0.001, 0.02);
+  }
+
+  /** Inchado: a wet, muffled blast. */
+  private burst(x: number, y: number): void {
+    const out = this.voice(Pri.Alert, 1.2, x, y, 0.8);
+    if (!out) return;
+    const t = this.ctx!.currentTime;
+    this.sample(out, 'explosion', t, 0.55, 1.35, 0.08);
+    if (!this.sample(out, 'splat', t + 0.02, 1, 0.7, 0.1)) this.tone(out, t, 'sine', 90, 40, 0.5, 0.01, 0.4);
+  }
+
+  /** Gritador: a pitched-up roar, heard far. */
+  private shriek(x: number, y: number): void {
+    const out = this.voice(Pri.Alert, 1.6, x, y, 0.9);
+    if (!out) return;
+    const t = this.ctx!.currentTime;
+    if (this.sample(out, 'roar', t, 0.8, 1.55, 0.08)) return;
+    this.tone(out, t, 'sawtooth', 620, 380, 0.25, 0.05, 0.9);
   }
 
   private crash(x: number, y: number): void {

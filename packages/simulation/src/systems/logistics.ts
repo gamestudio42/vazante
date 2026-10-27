@@ -14,6 +14,7 @@ import {
 import type { Base, Vehicle } from '../entities.ts';
 import { findPath } from '../navigation.ts';
 import { isActiveSoldier, type World } from '../world.ts';
+import { killZombie } from './infected.ts';
 
 // ----- Resupply -----
 
@@ -298,12 +299,6 @@ function ramZombies(w: World, v: Vehicle): void {
   });
   for (const s of hit) {
     z.hp[s] -= TRUCK.pushDamage;
-    if (z.hp[s] <= 0) {
-      const x = z.x[s];
-      const y = z.y[s];
-      z.kill(s);
-      w.stats.zombiesKilled++;
-      w.emit({ type: 'zombie_killed', source: 0, target: s, x, y });
-    }
+    if (z.hp[s] <= 0 && z.isAlive(s)) killZombie(w, s, 0);
   }
 }

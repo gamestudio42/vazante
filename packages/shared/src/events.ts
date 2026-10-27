@@ -2,6 +2,8 @@ export type SimEventType =
   | 'command_rejected'
   | 'shot'
   | 'zombie_killed'
+  | 'zombie_scream'
+  | 'zombie_burst'
   | 'soldier_hit'
   | 'soldier_bitten'
   | 'soldier_died'
