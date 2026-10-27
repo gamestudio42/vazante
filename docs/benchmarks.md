@@ -45,6 +45,33 @@ The horde pass that followed removed the per-zombie allocations (closures, tuple
 | v0.1 sim budget | mean tick under 4 ms at 4x | ✅ 0.9 ms |
 | v0.5 sim budget | 8,000 agents, mean tick under 12 ms | ✅ 9.65 ms on a busy machine before the horde pass |
 
+## 2026-10-27: after squad tactics, v0.5 city and the render pass
+
+Marcel's laptop, i7-13620H, ANGLE on Mesa Intel Graphics (RPL-P), desktop app at 1080×852 (Wayland), 20 s per run, build `9f67da0`.
+
+### Frames
+
+| Case | Run | FPS | p50 | p95 | Worst | Zombies | Sim tick | Hitches |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Slice | 1 | 59.95 | 16.7 ms | 16.7 ms | 33 ms | 282 | 0.38 ms | 0 |
+| Slice | 2 | 59.95 | 16.7 ms | 16.7 ms | 33 ms | 282 | 0.45 ms | 0 |
+| Porto Velário (2 km) | 1 | 59.2 | 16.7 ms | 16.7 ms | 50 ms | 6,132 | 10.5 ms (first run after the build) | 1 |
+| Porto Velário (2 km) | 2 | 59.25 | 16.7 ms | 16.7 ms | 104 ms (at 1 s) | 6,133 | 4.5 ms | 3 |
+| Porto Velário (2 km) | 3 | 59.9 | 16.7 ms | 16.7 ms | 50 ms | 6,132 | 3.4 ms | 1 |
+
+Before the render pass (chunked instancing, off-screen culling, pixel-buffer minimap) the city ran at 49 fps with p95 33 ms; the slice was already at 59. No long tasks and no shader compiles while recording; the remaining hitches are missed vsyncs with little render time behind them (compositor).
+
+### Simulation (`pnpm bench`, 1,200 ticks)
+
+| Case | Mean | p95 | Worst |
+| --- | --- | --- | --- |
+| Slice | 0.52 ms | 1.59 | 5.4 |
+| 4,000 | 1.23 ms | 1.72 | 5.6 |
+| 8,000 | 2.58 ms | 3.10 | 3.6 |
+| Porto Velário 8,000 | 3.89 ms | 5.88 | 6.3 |
+
+Gates: v0.5 simulation (8,000 agents, mean under 12 ms) passes with a wide margin; v0.5 frames (60 fps) passes on the city with 6,000 zombies in the world, of which a few hundred are on screen in the benchmark view. A dense on-screen horde of 5,000 is still to be measured.
+
 ## Build machine (cloud container, for comparison)
 
 Intel Xeon @ 2.10 GHz, Node 22.22, after the horde pass:
