@@ -1,6 +1,7 @@
 import type { Frame, SimEvent } from '@vazante/shared';
 import { ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
 import { MusicDirector } from './music.ts';
+import { SampleBank, type SampleFamily } from './samples.ts';
 
 /** Where the player is listening from: the camera focus (map views) or the controlled soldier. */
 export interface Listener {
@@ -34,10 +35,14 @@ interface Voice {
 
 const VOICE_CAP = 24;
 
+/** Weapon id on a shot event to its sample family; turrets and unknown weapons use the rifle. */
+const SHOT_FAMILY: Record<string, SampleFamily> = { rifle: 'rifle', lmg: 'lmg', shotgun: 'shotgun' };
+
 /**
- * Procedural sound for Vazante: every effect is synthesized with Web Audio, so there are no
- * asset licences to track. Owns the mix (master limiter, buses, voice cap with priorities)
- * and turns simulation events into positioned one-shots. Purely presentational.
+ * Sound for Vazante. Owns the mix (master limiter, buses, voice cap with priorities) and turns
+ * simulation events into positioned one-shots. Effects play recorded CC0 clips from the sample
+ * bank once it has loaded, and fall back to Web Audio synthesis for anything missing, so the game
+ * is never silent offline or before the clips arrive. Purely presentational.
  */
 export class AudioDirector {
   private ctx: AudioContext | null = null;
@@ -58,9 +63,15 @@ export class AudioDirector {
   private nearest: [number, number][] = [];
   private music: MusicDirector | null = null;
   private recentShots = 0;
+  readonly samples = new SampleBank();
+  private engine: { gain: GainNode; src: AudioBufferSourceNode } | null = null;
+  private engineTarget = 0;
   volume = 0.8;
   musicVolume = 0.7;
   muted = false;
+
+  /** @param sampleBase URL prefix of the clip folder (`<base>rifle_1.ogg`); null keeps everything procedural. */
+  constructor(private readonly sampleBase: string | null = null) {}
 
   /** Current music intensity 0..1 (for the debug overlay and tests). */
   get musicIntensity(): number {
@@ -123,6 +134,21 @@ export class AudioDirector {
     this.startAmbience();
     this.music = new MusicDirector(ctx, this.master, this.noise);
     this.music.setVolume(this.musicVolume);
+    if (this.sampleBase !== null) void this.samples.load(ctx, this.sampleBase).then(() => this.startEngine());
+  }
+
+  /** Truck engine bed: one loop whose level follows the nearest moving truck. */
+  private startEngine(): void {
+    const buf = this.samples.loop('engine_loop');
+    if (!buf || !this.ctx) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+    src.connect(gain).connect(this.sfx);
+    src.start();
+    this.engine = { gain, src };
   }
 
   private bus(gain: number): GainNode {
@@ -217,6 +243,14 @@ export class AudioDirector {
     }
     this.nearZombies = near;
     this.threat = threat;
+    let engine = 0;
+    const ref = this.listener.direct ? 12 : Math.max(18, this.listener.span * 0.3);
+    for (const v of f.vehicles) {
+      if (v.state !== 'moving') continue;
+      const d = Math.hypot(v.x - this.listener.x, v.y - this.listener.y) / ref;
+      engine = Math.max(engine, 0.5 / (1 + d * d));
+    }
+    this.engineTarget = engine;
     if (this.music) this.music.target = MusicDirector.targetFor(f, threat, this.recentShots);
   }
 
@@ -237,6 +271,10 @@ export class AudioDirector {
       this.groanTimer = 0.25 + Math.random() * (3 / Math.sqrt(near + 1));
     }
     for (let i = this.voices.length - 1; i >= 0; i--) if (this.voices[i].end < t) this.voices.splice(i, 1);
+    if (this.engine) {
+      this.engine.gain.gain.setTargetAtTime(this.engineTarget, t, 0.3);
+      this.engine.src.playbackRate.setTargetAtTime(0.85 + this.engineTarget * 0.4, t, 0.5);
+    }
     this.recentShots *= Math.exp(-dt / 3);
     this.music?.update(dt);
   }
@@ -249,7 +287,7 @@ export class AudioDirector {
     switch (e.type) {
       case 'shot':
         this.recentShots++;
-        if (this.throttle('shot', 0.03)) this.gunshot(e.x!, e.y!, (e.value ?? 0) > 0);
+        if (this.throttle('shot', 0.03)) this.gunshot(e.x!, e.y!, (e.value ?? 0) > 0, e.reason);
         return;
       case 'zombie_killed':
         if (this.throttle('kill', 0.05)) this.splat(e.x!, e.y!, true);
@@ -258,6 +296,7 @@ export class AudioDirector {
         if (this.throttle('hit', 0.08)) this.splat(e.x!, e.y!, false);
         return;
       case 'soldier_bitten':
+        this.bite(e.x!, e.y!);
         this.scream(e.x!, e.y!, 0);
         this.radio(false);
         return;
@@ -392,6 +431,27 @@ export class AudioDirector {
     return out;
   }
 
+  /**
+   * Play a take from a sample family into a voice at time t. Returns false when the family has not
+   * loaded, so the caller can synthesize instead. `rate` also shifts pitch, ±`spread` at random.
+   */
+  private sample(out: AudioNode, family: SampleFamily, t: number, gain = 1, rate = 1, spread = 0.05): boolean {
+    const buf = this.samples.pick(family);
+    if (!buf) return false;
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * spread);
+    if (gain === 1) src.connect(out);
+    else {
+      const g = ctx.createGain();
+      g.gain.value = gain;
+      src.connect(g).connect(out);
+    }
+    src.start(t);
+    return true;
+  }
+
   private env(target: AudioParam, t: number, peak: number, attack: number, decay: number): void {
     target.setValueAtTime(0.0001, t);
     target.exponentialRampToValueAtTime(peak, t + attack);
@@ -426,10 +486,16 @@ export class AudioDirector {
 
   // ----- Sound recipes -----
 
-  private gunshot(x: number, y: number, hit: boolean): void {
+  private gunshot(x: number, y: number, hit: boolean, weapon?: string): void {
+    // The voice slot is held for the crack only; the recorded tail rings on outside the cap.
     const out = this.voice(Pri.Shot, 0.5, x, y, 0.9);
     if (!out) return;
     const t = this.ctx!.currentTime;
+    const family = SHOT_FAMILY[weapon ?? ''] ?? 'rifle';
+    if (this.sample(out, family, t, 0.8, family === 'lmg' ? 0.92 : 1)) {
+      if (hit && this.samples.has('splat')) this.sample(out, 'splat', t + 0.04, 0.25, 1.1, 0.1);
+      return;
+    }
     const p = 0.92 + Math.random() * 0.16;
     this.noiseBurst(out, t, 'bandpass', 1700 * p, 0.8, 0.9, 0.001, 0.09);
     this.tone(out, t, 'sine', 150 * p, 45, 0.8, 0.002, 0.12);
@@ -441,6 +507,10 @@ export class AudioDirector {
     const out = this.voice(Pri.Impact, 0.6, x, y, 0.7);
     if (!out) return;
     const t = this.ctx!.currentTime;
+    if (this.sample(out, kill ? 'splat' : 'punch', t, 0.8, 1, 0.1)) {
+      if (kill && Math.random() < 0.4) this.sample(out, 'break', t + 0.03, 0.5, 1, 0.1);
+      return;
+    }
     this.noiseBurst(out, t, 'lowpass', 1100, 2, 0.5, 0.003, 0.08);
     this.tone(out, t, 'sine', 220, 70, 0.4, 0.003, 0.12);
     if (kill) this.tone(out, t + 0.12, 'sine', 90, 40, 0.35, 0.005, 0.2); // body hits the ground
@@ -451,6 +521,7 @@ export class AudioDirector {
     if (!out) return;
     const ctx = this.ctx!;
     const t = ctx.currentTime;
+    if (this.sample(out, loud && this.samples.has('roar') ? 'roar' : 'groan', t, 1, 0.95, 0.12)) return;
     const dur = 0.7 + Math.random() * 0.9;
     const base = 70 + Math.random() * 60;
     const o = ctx.createOscillator();
@@ -489,14 +560,23 @@ export class AudioDirector {
     const out = this.voice(Pri.Alert, 1, x, y, 0.8);
     if (!out) return;
     const t = this.ctx!.currentTime;
+    if (this.sample(out, 'scream', t, 0.9, severity ? 0.9 : 1, 0.06)) return;
     this.tone(out, t, 'sawtooth', 520, severity ? 180 : 300, 0.25, 0.02, severity ? 0.7 : 0.35);
     this.noiseBurst(out, t, 'bandpass', 1400, 2, 0.2, 0.01, 0.3);
+  }
+
+  /** Teeth into flesh; only recorded, the scream that follows carries it without the bank. */
+  private bite(x: number, y: number): void {
+    if (!this.samples.has('bite')) return;
+    const out = this.voice(Pri.Alert, 0.5, x, y, 0.8);
+    if (out) this.sample(out, 'bite', this.ctx!.currentTime, 1, 1, 0.1);
   }
 
   private reload(x: number, y: number): void {
     const out = this.voice(Pri.Unit, 0.8, x, y, 0.6);
     if (!out) return;
     const t = this.ctx!.currentTime;
+    if (this.sample(out, 'reload', t, 0.7)) return;
     this.noiseBurst(out, t, 'highpass', 3000, 1, 0.4, 0.001, 0.03); // mag out
     this.noiseBurst(out, t + 0.35, 'highpass', 2500, 1, 0.5, 0.001, 0.04); // mag in
     this.noiseBurst(out, t + 0.55, 'bandpass', 1800, 3, 0.5, 0.001, 0.05); // bolt
@@ -506,6 +586,7 @@ export class AudioDirector {
     const out = this.voice(Pri.Alert, 0.4, x, y, 0.7);
     if (!out) return;
     const t = this.ctx!.currentTime;
+    if (this.sample(out, 'dry', t, 0.8)) return;
     this.noiseBurst(out, t, 'highpass', 4000, 1, 0.5, 0.001, 0.02);
     this.noiseBurst(out, t + 0.18, 'highpass', 4000, 1, 0.5, 0.001, 0.02);
   }
@@ -514,6 +595,10 @@ export class AudioDirector {
     const out = this.voice(Pri.Alert, 1.4, x, y, 1);
     if (!out) return;
     const t = this.ctx!.currentTime;
+    if (this.sample(out, 'explosion', t, 0.9, 1, 0.08)) {
+      this.sample(out, 'debris', t + 0.15, 0.4, 1, 0.1);
+      return;
+    }
     this.noiseBurst(out, t, 'lowpass', 500, 0.7, 0.9, 0.005, 0.9);
     this.tone(out, t, 'sine', 70, 30, 0.8, 0.005, 0.6);
     for (let i = 0; i < 4; i++) this.noiseBurst(out, t + 0.15 + i * 0.12 + Math.random() * 0.05, 'bandpass', 1500 + Math.random() * 1500, 2, 0.2, 0.002, 0.08);
@@ -560,6 +645,7 @@ export class AudioDirector {
     if (!out) return;
     const t = this.ctx!.currentTime;
     this.noiseBurst(out, t, 'bandpass', 260, 1.2, 0.6, 0.6, 2.2);
+    for (let i = 0; i < 3; i++) this.sample(out, 'roar', t + 0.2 + i * 0.35, 0.5, 0.8 + i * 0.07, 0.05);
     for (let i = 0; i < 5; i++) this.tone(out, t + i * 0.15, 'sawtooth', 70 + i * 13, 55 + i * 9, 0.08, 0.5, 1.8);
     if (x !== undefined && y !== undefined) for (let i = 0; i < 3; i++) this.groan(x + i, y, true);
   }
@@ -568,6 +654,7 @@ export class AudioDirector {
     const out = this.voice(Pri.Impact, 0.3, x, y, 0.6);
     if (!out) return;
     const t = this.ctx!.currentTime;
+    if (this.sample(out, 'metal', t, 0.8, 0.9, 0.08)) return;
     this.tone(out, t, 'sine', 120, 60, 0.6, 0.002, 0.12);
     this.noiseBurst(out, t, 'bandpass', 600, 2, 0.3, 0.002, 0.08);
   }
@@ -586,7 +673,7 @@ export class AudioDirector {
     const out = this.voice(Pri.Alert, 0.5, undefined, undefined, 0.35);
     if (!out) return;
     const t = this.ctx!.currentTime;
-    this.noiseBurst(out, t, 'bandpass', 2200, 1.5, 0.3, 0.002, 0.06);
+    if (!this.sample(out, 'static', t, 0.6, 1, 0.1)) this.noiseBurst(out, t, 'bandpass', 2200, 1.5, 0.3, 0.002, 0.06);
     const [a, b] = good ? [1100, 1480] : [880, 620];
     this.tone(out, t + 0.07, 'square', a, a, 0.12, 0.003, 0.06);
     this.tone(out, t + 0.15, 'square', b, b, 0.12, 0.003, 0.08);

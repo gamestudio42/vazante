@@ -13,6 +13,7 @@
     "sim": "tsx tools/headless-sim.ts",
     "bench": "node tools/run-bundled.mjs tools/bench.ts",
     "models": "tsx tools/prepare-models.ts",
+    "audio": "tsx tools/prepare-audio.ts",
     "e2e": "playwright test",
     "desktop": "pnpm --filter @vazante/desktop start"
   },

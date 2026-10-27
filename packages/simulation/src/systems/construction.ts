@@ -280,7 +280,7 @@ export function stepEmplacements(w: World): void {
           st.target = -1;
         }
       }
-      w.emit({ type: 'shot', source: 0, x, y, x2: tx, y2: ty, value: hit ? 1 : 0 });
+      w.emit({ type: 'shot', source: 0, x, y, x2: tx, y2: ty, value: hit ? 1 : 0, reason: 'lmg' });
     }
     w.grid.stampNoise(x, y, NOISE_SHOT, NOISE_SHOT_RADIUS_M);
   }

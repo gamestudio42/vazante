@@ -64,7 +64,7 @@ async function start(client: GameClient, map: NonNullable<GameClient['state']['m
   const base = map.sites.find((s) => s.kind === 'base');
   if (base) view.rig.centerOn(((base.x0 + base.x1 + 1) / 2) * map.cellSize, ((base.y0 + base.y1 + 1) / 2) * map.cellSize);
   const input = new InputController(canvas, client, view);
-  const audio = new AudioDirector();
+  const audio = new AudioDirector(`${import.meta.env.BASE_URL}audio/`);
   const unlock = () => audio.unlock();
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown', unlock);

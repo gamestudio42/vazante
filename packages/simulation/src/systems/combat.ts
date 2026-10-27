@@ -217,7 +217,7 @@ function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: numb
   w.grid.stampNoise(s.x, s.y, NOISE_SHOT, NOISE_SHOT_RADIUS_M);
   if (slot < 0) {
     const [ex, ey] = rayEnd(w, s.x, s.y, s.fx, s.fy, wpn.range);
-    w.emit({ type: 'shot', source: s.id, x: s.x, y: s.y, x2: ex, y2: ey, value: 0 });
+    w.emit({ type: 'shot', source: s.id, x: s.x, y: s.y, x2: ex, y2: ey, value: 0, reason: s.weapon });
     return;
   }
   const z = w.zombies;
@@ -243,7 +243,7 @@ function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: numb
       if (z.stagger[slot] < t) z.stagger[slot] = t;
     }
   }
-  w.emit({ type: 'shot', source: s.id, x: s.x, y: s.y, x2: zx, y2: zy, value: hits });
+  w.emit({ type: 'shot', source: s.id, x: s.x, y: s.y, x2: zx, y2: zy, value: hits, reason: s.weapon });
 }
 
 function rayEnd(w: World, x: number, y: number, dx: number, dy: number, range: number): [number, number] {

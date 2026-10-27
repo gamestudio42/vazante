@@ -27,7 +27,9 @@
 
 Then the guided tutorial (nine steps over the real mission, each advancing on the player's action; on by default for a first game and from the main menu) and three difficulty levels on the briefing. UX / UI: 8 → 8.5; game loop: 6 → 6.5.
 
-Next, in order: measure fps after the graphics pass; recorded CC0 audio; v0.5; licensed building and vehicle art; remote repository and CI.
+Then recorded audio: 53 CC0 clips (rifle, LMG stand-in, shotgun, reloads, dry fire, flesh and metal impacts, ten groans, roars, bites, screams, explosions, radio static, a truck engine loop that follows the nearest moving truck), loaded after the first gesture with the procedural recipes as fallback; shot events now carry the weapon. Audio: 6.5 → 7.5. Gaps left there: radio voice barks, reverb zones, a real LMG recording.
+
+Next, in order: dense-horde render test and sector LOD for the city; licensed building and vehicle art; remote repository and CI.
 
 ## Verdict
 
