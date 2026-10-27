@@ -2,6 +2,8 @@
 
 A real-time strategy and survival game against a city-sized zombie horde: plan on the operations map, zoom into any street to fight, or take direct control of a soldier, all in **one persistent simulation**. Names, city, art and code are original.
 
+**Play in the browser:** https://gamestudio42.github.io/vazante/ (built from `main` by `.github/workflows/pages.yml`).
+
 Browser first (TypeScript, Three.js, simulation in a Web Worker). Desktop builds for Steam, Flatpak, Snap and AppImage come through Electron (milestone M8).
 
 ## Quick start
