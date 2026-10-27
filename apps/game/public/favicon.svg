@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vazante">
+  <rect width="64" height="64" rx="12" fill="#0d1013"/>
+  <path d="M12 14h10l10 22 10-22h10L36 48h-8z" fill="#f0b03f"/>
+  <path d="M10 54c5-3 9-3 14 0s9 3 14 0 9-3 14 0" fill="none" stroke="#6fb6db" stroke-width="3" stroke-linecap="round"/>
+</svg>
