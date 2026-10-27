@@ -1264,6 +1264,7 @@ button.big {
   border-left: 3px solid var(--accent);
   pointer-events: auto;
   animation: tut-in 0.25s ease-out;
+  z-index: 41;
 }
 .tutorial.done {
   border-left-color: var(--ok);
@@ -1481,4 +1482,81 @@ input[type='checkbox'] {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ----- Tutorial spotlight ----- */
+.tut-spot {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+.tut-box {
+  position: fixed;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.28), 0 0 18px rgba(240, 176, 63, 0.55);
+  animation: tut-glow 1.1s ease-in-out infinite alternate;
+}
+.tut-box + .tut-box {
+  box-shadow: 0 0 18px rgba(240, 176, 63, 0.55);
+}
+@keyframes tut-glow {
+  from {
+    border-color: rgba(240, 176, 63, 0.45);
+  }
+}
+.tut-mark {
+  position: fixed;
+  width: 0;
+  height: 0;
+}
+.tut-ring {
+  position: absolute;
+  left: -26px;
+  top: -26px;
+  width: 52px;
+  height: 52px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  animation: tut-ring 1.2s ease-out infinite;
+}
+@keyframes tut-ring {
+  from {
+    transform: scale(0.45);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+.tut-arrow {
+  position: absolute;
+  left: -9px;
+  top: -62px;
+  border: 9px solid transparent;
+  border-top: 14px solid var(--accent);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+  animation: tut-bob 0.8s ease-in-out infinite alternate;
+}
+@keyframes tut-bob {
+  to {
+    transform: translateY(8px);
+  }
+}
+.tutorial kbd {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 0 5px;
+  margin: 0 1px;
+  font: 600 11px/1.6 inherit;
+  text-align: center;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+}
+.tutorial .tut-em {
+  color: var(--accent);
+  font-weight: 600;
 }

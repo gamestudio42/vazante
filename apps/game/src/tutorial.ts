@@ -1,4 +1,4 @@
-import type { Frame } from '@vazante/shared';
+import { CELL_SIZE as CELL, type Frame } from '@vazante/shared';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
 
@@ -6,6 +6,21 @@ import type { GameClient } from './client.ts';
 interface Step {
   id: string;
   done?: (ctx: StepContext) => boolean;
+  /** Interface the step talks about: CSS selectors, first match each. */
+  ui?: readonly string[];
+  /** Places in the world the step talks about. */
+  world?: (f: Frame) => [number, number][];
+}
+
+
+function baseAt(f: Frame): [number, number][] {
+  const b = f.bases.find((x) => x.kind === 'base');
+  return b ? [[((b.x0 + b.x1 + 1) / 2) * CELL, ((b.y0 + b.y1 + 1) / 2) * CELL]] : [];
+}
+
+function firstSquad(f: Frame): [number, number][] {
+  const q = f.squads.find((x) => x.alive > 0);
+  return q ? [[q.anchorX, q.anchorY]] : [];
 }
 
 interface StepContext {
@@ -25,15 +40,20 @@ interface StepStart {
 }
 
 const STEPS: readonly Step[] = [
-  { id: 'camera', done: ({ view, start }) => Math.hypot(view.rig.focusX - start.focusX, view.rig.focusY - start.focusY) > 25 || Math.abs(view.rig.span / start.span - 1) > 0.2 },
-  { id: 'select', done: ({ client }) => client.state.selected.length > 0 },
-  { id: 'move', done: ({ frame }) => frame.squads.some((q) => q.order.kind === 'move') },
-  { id: 'stance', done: ({ frame, start }) => stances(frame) !== start.stances },
-  { id: 'build', done: ({ frame, start }) => frame.structures.length > start.structures },
-  { id: 'truck', done: ({ frame }) => frame.vehicles.some((v) => v.state === 'moving') },
-  { id: 'direct', done: ({ frame }) => frame.directSoldier !== null },
-  { id: 'morale' },
-  { id: 'end' },
+  { id: 'camera', ui: ['.minimap'], done: ({ view, start }) => Math.hypot(view.rig.focusX - start.focusX, view.rig.focusY - start.focusY) > 25 || Math.abs(view.rig.span / start.span - 1) > 0.2 },
+  { id: 'select', ui: ['.squads.panel .squad:not(.vehicle)'], world: firstSquad, done: ({ client }) => client.state.selected.length > 0 },
+  { id: 'move', world: firstSquad, done: ({ frame }) => frame.squads.some((q) => q.order.kind === 'move') },
+  { id: 'stance', ui: ['.selection .cmds'], done: ({ frame, start }) => stances(frame) !== start.stances },
+  { id: 'build', ui: ['.build.panel'], world: baseAt, done: ({ frame, start }) => frame.structures.length > start.structures },
+  {
+    id: 'truck',
+    ui: ['.squad.vehicle'],
+    world: (f) => [...f.vehicles.filter((v) => v.state !== 'destroyed').slice(0, 1).map((v): [number, number] => [v.x, v.y]), ...baseAt(f)],
+    done: ({ frame }) => frame.vehicles.some((v) => v.state === 'moving'),
+  },
+  { id: 'direct', ui: ['.selection .cmd.primary'], done: ({ frame }) => frame.directSoldier !== null },
+  { id: 'morale', ui: ['.squads.panel .bars.morale'] },
+  { id: 'end', ui: ['.mission.panel'] },
 ];
 
 function stances(f: Frame): string {
@@ -79,6 +99,14 @@ export class Tutorial {
 
   get completed(): boolean {
     return this.doneAt > 0;
+  }
+
+  /** What to highlight for the current step: interface selectors and screen points of world places. */
+  focus(cssW: number, cssH: number): { ui: readonly string[]; points: { x: number; y: number }[] } {
+    const s = STEPS[this.step];
+    const f = this.client.state.frame;
+    const points = f && s.world ? s.world(f).map(([x, y]) => this.view.worldToScreen(x, y, cssW, cssH, 0)) : [];
+    return { ui: this.active && !this.completed ? (s.ui ?? []) : [], points: this.active && !this.completed ? points : [] };
   }
 
   begin(): void {

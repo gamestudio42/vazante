@@ -1,4 +1,4 @@
-import { useRef, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Building2, Check, ChevronRight, CircleCheck, Lock, Map as MapIcon, Download, FolderOpen, GraduationCap, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { DIFFICULTY_IDS, MISSION_IDS, TICK_HZ, type MissionId, type SaveMeta } from '@vazante/shared';
 import { t, type Locale } from '../i18n.ts';
@@ -141,12 +141,76 @@ function Briefing({ shell }: { shell: Shell }) {
 const DIFF_ICON = { recruit: Shield, veteran: Check, nightmare: Skull } as const;
 
 /** One hint at a time over the running game; never blocks the map. */
+/** `[K]` becomes a key cap and `**text**` a highlight, so the card shows what to press and where. */
+function emphasise(text: string): ReactNode {
+  return text.split(/(\[[^\]]+\]|\*\*[^*]+\*\*)/).map((part, i) => {
+    if (part.startsWith('[') && part.endsWith(']')) return <kbd key={i}>{part.slice(1, -1)}</kbd>;
+    if (part.startsWith('**') && part.endsWith('**')) return <b key={i} className="tut-em">{part.slice(2, -2)}</b>;
+    return <Fragment key={i}>{part}</Fragment>;
+  });
+}
+
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Pulsing outlines around the interface the current step talks about, and markers over the
+ * places in the world it means. Positions are re-read every frame, so they follow the camera
+ * and panels that move or resize.
+ */
+function TutorialSpotlight({ shell }: { shell: Shell }) {
+  const [boxes, setBoxes] = useState<Box[]>([]);
+  const [points, setPoints] = useState<{ x: number; y: number }[]>([]);
+  useEffect(() => {
+    let raf = 0;
+    let last = '';
+    const loop = () => {
+      raf = requestAnimationFrame(loop);
+      const f = shell.tutorial.focus(innerWidth, innerHeight);
+      const bs: Box[] = [];
+      for (const sel of f.ui) {
+        const el = document.querySelector(sel);
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) bs.push({ x: r.left, y: r.top, w: r.width, h: r.height });
+      }
+      const ps = f.points.filter((p) => p.x > -40 && p.y > -40 && p.x < innerWidth + 40 && p.y < innerHeight + 40);
+      const key = JSON.stringify([bs.map((b) => [b.x, b.y, b.w, b.h].map(Math.round)), ps.map((p) => [Math.round(p.x), Math.round(p.y)])]);
+      if (key === last) return;
+      last = key;
+      setBoxes(bs);
+      setPoints(ps);
+    };
+    loop();
+    return () => cancelAnimationFrame(raf);
+  }, [shell]);
+  return (
+    <div className="tut-spot" aria-hidden="true">
+      {boxes.map((b, i) => (
+        <div key={i} className="tut-box" style={{ left: b.x - 4, top: b.y - 4, width: b.w + 8, height: b.h + 8 }} />
+      ))}
+      {points.map((p, i) => (
+        <div key={i} className="tut-mark" style={{ left: p.x, top: p.y }}>
+          <span className="tut-ring" />
+          <span className="tut-arrow" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TutorialCard({ shell }: { shell: Shell }) {
   const tut = shell.tutorial;
   useSyncExternalStore(tut.subscribe, () => tut.version);
   if (!tut.active || shell.screen !== 'playing') return null;
   const last = tut.step === tut.total - 1;
   return (
+    <>
+    <TutorialSpotlight shell={shell} />
     <div className={`tutorial panel ${tut.completed ? 'done' : ''}`} role="status">
       <div className="row between tut-head">
         <span className="tut-kicker">
@@ -161,7 +225,7 @@ export function TutorialCard({ shell }: { shell: Shell }) {
         {tut.completed && <Check size={16} />}
         {t(`tut.${tut.id}.h`)}
       </h3>
-      <p>{t(`tut.${tut.id}`)}</p>
+      <p>{emphasise(t(`tut.${tut.id}`))}</p>
       <div className="row end">
         {tut.manual ? (
           <button className="primary" onClick={() => tut.next()}>
@@ -178,6 +242,7 @@ export function TutorialCard({ shell }: { shell: Shell }) {
         )}
       </div>
     </div>
+    </>
   );
 }
 
