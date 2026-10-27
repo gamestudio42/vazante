@@ -669,8 +669,10 @@ export class GameRenderer {
       const squad = s[o + SoldierField.Squad];
       const act = s[o + SoldierField.Activity];
       const [x, y] = this.soldierPos(i, a);
-      const fx = s[o + SoldierField.FacingX];
-      const fy = s[o + SoldierField.FacingY];
+      // The controlled soldier faces where the mouse points now, not where the last frame said.
+      const local = f.directSoldier === id ? this.rig.direct : null;
+      const fx = local ? Math.cos(local.yaw) : s[o + SoldierField.FacingX];
+      const fy = local ? Math.sin(local.yaw) : s[o + SoldierField.FacingY];
       const sid = id % MAX_SOLDIER_ID;
       if (!this.sSeen[sid]) {
         this.sSeen[sid] = 1;

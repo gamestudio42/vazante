@@ -41,4 +41,21 @@ describe('direct control', () => {
     expect(e.world.directSoldier).toBeNull();
     expect(s.direct).toBeNull();
   });
+
+  it('fires on the first tick of a press and walks faster than the squad', () => {
+    const e = fieldEngine();
+    const q = addSquad(e, 'guard', 128, 128);
+    const s = soldiersOf(e, q.id)[0];
+    e.enqueue({ type: 'set_direct_control', soldier: s.id });
+    e.runTicks(3);
+    const shots = e.world.stats.shotsFired;
+    e.enqueue({ type: 'direct_input', soldier: s.id, move: { x: 0, y: 0 }, aim: { x: 0, y: -1 }, fire: true, reload: false });
+    e.tick();
+    expect(e.world.stats.shotsFired).toBe(shots + 1);
+    e.enqueue({ type: 'direct_input', soldier: s.id, move: { x: 1, y: 0 }, aim: { x: 1, y: 0 }, fire: false, reload: false });
+    e.tick();
+    const x0 = s.x;
+    e.runTicks(10);
+    expect(s.x - x0).toBeGreaterThan(q.speed * 1.2);
+  });
 });

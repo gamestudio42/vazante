@@ -4,6 +4,7 @@ import {
   CELL_SIZE,
   DIRECT_AIM_CORRIDOR_M,
   DIRECT_CONTROL_ACCURACY_BONUS,
+  DIRECT_FIRE_RATE_FACTOR,
   NOISE_SHOT,
   NOISE_SHOT_RADIUS_M,
   RETARGET_INTERVAL_TICKS,
@@ -173,11 +174,14 @@ function stepDirectFire(w: World, s: Soldier, wpn: WeaponStats): void {
     startReload(w, s, wpn);
     return;
   }
+  // The trigger recharges while released, so the first press fires at once and tapping can
+  // never beat the weapon's (faster, player-aimed) rate.
+  const rate = wpn.shotsPerSecond * DIRECT_FIRE_RATE_FACTOR;
   if (!inp.fire) {
-    s.fireAcc = 0;
+    s.fireAcc = Math.min(1, s.fireAcc + rate * TICK_DT);
     return;
   }
-  s.fireAcc += wpn.shotsPerSecond * TICK_DT;
+  s.fireAcc += rate * TICK_DT;
   while (s.fireAcc >= 1) {
     s.fireAcc -= 1;
     if (s.mag === 0) {

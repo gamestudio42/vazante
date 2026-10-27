@@ -1,4 +1,4 @@
-import { COVER_INTERVAL_TICKS, COVER_SEARCH_CELLS, DIR16_X, DIR16_Y, FORMATION_SPACING_M, SoldierActivity, TICK_DT, type Formation } from '@vazante/shared';
+import { COVER_INTERVAL_TICKS, COVER_SEARCH_CELLS, DIRECT_SPEED_FACTOR, DIR16_X, DIR16_Y, FORMATION_SPACING_M, SoldierActivity, TICK_DT, type Formation } from '@vazante/shared';
 import type { Soldier, Squad } from '../entities.ts';
 import { findPath } from '../navigation.ts';
 import { isActiveSoldier, type World } from '../world.ts';
@@ -232,7 +232,7 @@ function flee(w: World, speed: number, s: Soldier): void {
 function stepDirect(w: World, s: Soldier): void {
   const inp = s.direct!;
   const q = w.squad(s.squad);
-  const speed = q ? q.speed : 3;
+  const speed = (q ? q.speed : 3) * DIRECT_SPEED_FACTOR;
   const m = moveWithCollision(w.grid, s.x, s.y, inp.mx * speed * TICK_DT, inp.my * speed * TICK_DT);
   s.moving = Math.abs(m.x - s.x) + Math.abs(m.y - s.y) > 0.01;
   s.x = m.x;

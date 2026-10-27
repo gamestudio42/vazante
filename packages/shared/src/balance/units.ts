@@ -39,6 +39,8 @@ export const FORMATION_SPACING_M = 2;
 /** Soldier sight radius (reveal) in metres. */
 export const SOLDIER_SIGHT_M = 40;
 /** Direct-control speed multiplier (sprint-like responsiveness). */
-export const DIRECT_SPEED_FACTOR = 1.0;
+export const DIRECT_SPEED_FACTOR = 1.35;
+/** Player-aimed fire is faster than the squad AI's measured rate. */
+export const DIRECT_FIRE_RATE_FACTOR = 1.75;
 /** Soldiers within this distance of their slot count as "in formation". */
 export const SLOT_TOLERANCE_M = 0.75;
