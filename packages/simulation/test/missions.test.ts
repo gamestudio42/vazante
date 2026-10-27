@@ -123,20 +123,25 @@ describe('campaign missions', () => {
     events(e, 50, () => killDriven(e));
     expect(m.progress).toBe(held);
     teleportSquads(e, zx, zy);
-    const seen = events(e, 240 * TICK_HZ, () => killDriven(e));
+    const seen = events(e, 300 * TICK_HZ, () => killDriven(e));
     expect(seen).toContain('wave_started');
     expect(m.phase).toBe('won');
   });
 
-  it('Retomar a Ribeira: raising the district control starts the final waves', () => {
+  it('Retomar a Ribeira: three points inside the district held in turn, then the final waves', () => {
     const e = mission('retake');
     const w = e.world;
     const m = w.mission!;
     const d = w.districts.find((x) => x.name === 'Ribeira')!;
-    expect(w.districtControl[d.id]).toBeLessThan(66);
-    w.districtControl[d.id] = 90;
-    e.tick();
-    expect(m.stage).toBe(1);
+    expect(m.zones.length).toBe(3);
+    for (let i = 0; i < 3; i++) {
+      const [zx, zy] = centre(m.zones[i]);
+      expect(w.grid.district[w.grid.idx(Math.floor(zx / CELL_SIZE), Math.floor(zy / CELL_SIZE))]).toBe(d.id);
+      expect(m.stage).toBe(i);
+      teleportSquads(e, zx, zy);
+      events(e, 61 * TICK_HZ, () => killDriven(e));
+    }
+    expect(m.stage).toBe(3);
     const seen = events(e, 200 * TICK_HZ, () => killDriven(e));
     expect(seen.filter((t) => t === 'wave_started').length).toBeGreaterThan(0);
   });

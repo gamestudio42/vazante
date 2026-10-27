@@ -40,6 +40,7 @@ function objective(w: World, m: Mission, st: StageDef, i: number): ObjectiveView
     }
     case 'waves':
       o.total = st.waves.length;
+      if (st.zone !== undefined) o.place = m.zones[st.zone].name;
       break;
   }
   return o;
@@ -49,7 +50,7 @@ export function missionView(w: World, m: Mission): MissionView {
   const def = MISSIONS[m.id];
   const st = def.stages[Math.min(m.stage, def.stages.length - 1)];
   const cp = m.commandPost ? w.structure(m.commandPost) : undefined;
-  const activeZone = m.phase === 'active' && (st.kind === 'reach' || st.kind === 'hold' || st.kind === 'evacuate') ? st.zone : -1;
+  const activeZone = m.phase === 'active' && (st.kind === 'reach' || st.kind === 'hold' || st.kind === 'evacuate' || st.kind === 'waves') ? (st.zone ?? -1) : -1;
   return {
     id: m.id,
     phase: m.phase,

@@ -102,6 +102,8 @@ export function stepHorde(w: World): void {
         z.state[s] = ZombieState.Wandering;
         z.target[s] = 0;
         z.wanderT[s] = 0;
+        // Cut off from every defender: a wave zombie stops counting as part of its wave.
+        if (here === FLOW_UNREACHABLE) z.driven[s] = 0;
       } else if (here === 0) {
         const n = nearest(active, x, y);
         if (n) {

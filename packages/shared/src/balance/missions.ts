@@ -1,44 +1,63 @@
-import { SLICE } from './mission.ts';
-import type { SquadKind } from './units.ts';
-import { BASIC_ZOMBIE_KINDS, ZOMBIES } from './zombies.ts';
+import { SLICE } from "./mission.ts";
+import type { SquadKind } from "./units.ts";
+import { BASIC_ZOMBIE_KINDS, ZOMBIES } from "./zombies.ts";
 
 /**
  * Campaign missions as data. A mission is a map, the forces it starts with and a list of stages
  * played in order; `systems/mission.ts` runs any of them. Zones and districts are named, so the
  * same definition works on every seed of its map.
  */
-export type MissionId = 'last_convoy' | 'hospital' | 'bridge' | 'retake';
+export type MissionId = "last_convoy" | "hospital" | "bridge" | "retake";
 
-export const MISSION_IDS: readonly MissionId[] = ['last_convoy', 'hospital', 'bridge', 'retake'];
+export const MISSION_IDS: readonly MissionId[] = [
+  "last_convoy",
+  "hospital",
+  "bridge",
+  "retake",
+];
 
-/** Where a zone is: a base or depot by name, or the nearest river bridge at least `minM` from the base. */
-export type ZoneRef = { site: string } | { bridge: { minM: number } };
+/**
+ * Where a zone is: a base or depot by name, the nearest river bridge at least `minM` from the
+ * base, or the street nearest a point of a district (`at` as fractions of its rectangle).
+ */
+export type ZoneRef =
+  | { site: string }
+  | { bridge: { minM: number } }
+  | { district: string; at: readonly [number, number]; name: string };
 
-/** Driven zombies sent at the defenders while a stage runs: `size` every `everyS` seconds. */
+/** Driven zombies sent at the defenders while a stage runs: `size` every `everyS` seconds, each group `grow` bigger than the last. */
 export interface Pressure {
   everyS: number;
   size: number;
+  grow?: number;
 }
 
 export type StageDef =
   /** Bring truck `truck` to the base (cargo or evacuees). Losing it fails the mission. */
-  | { kind: 'deliver'; truck: number }
+  | { kind: "deliver"; truck: number }
   /** Any soldier inside the zone. */
-  | { kind: 'reach'; zone: number }
+  | { kind: "reach"; zone: number }
   /** Soldiers inside the zone for `seconds` (the clock only runs while held). */
-  | { kind: 'hold'; zone: number; seconds: number; pressure?: Pressure }
+  | { kind: "hold"; zone: number; seconds: number; pressure?: Pressure }
   /** Truck parked in the zone with soldiers guarding it boards `civilians` over `seconds`. */
-  | { kind: 'evacuate'; zone: number; truck: number; seconds: number; civilians: number; pressure?: Pressure }
-  /** Warned waves of driven zombies; the stage ends when the last one is cleared. */
-  | { kind: 'waves'; waves: readonly number[] }
+  | {
+      kind: "evacuate";
+      zone: number;
+      truck: number;
+      seconds: number;
+      civilians: number;
+      pressure?: Pressure;
+    }
+  /** Warned waves of driven zombies, aimed at the base or at a zone; the stage ends when the last one is cleared. */
+  | { kind: "waves"; waves: readonly number[]; zone?: number }
   /** Raise a district's control above `control`. */
-  | { kind: 'retake'; district: string; control: number };
+  | { kind: "retake"; district: string; control: number };
 
-export type StageKind = StageDef['kind'];
+export type StageKind = StageDef["kind"];
 
 export interface MissionDef {
   id: MissionId;
-  map: 'slice' | 'city';
+  map: "slice" | "city";
   /** Squads at the base, left to right. */
   squads: readonly { kind: SquadKind; name: string }[];
   /** Trucks: parked at a site by name ('base' = the player's base), with cargo. */
@@ -60,13 +79,15 @@ export interface MissionDef {
 
 export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
   last_convoy: {
-    id: 'last_convoy',
-    map: 'slice',
+    id: "last_convoy",
+    map: "slice",
     squads: [
-      { kind: 'slice', name: 'Alfa' },
-      { kind: 'slice', name: 'Bravo' },
+      { kind: "slice", name: "Alfa" },
+      { kind: "slice", name: "Bravo" },
     ],
-    trucks: [{ at: 'depot', ammo: SLICE.truckAmmo, materials: SLICE.truckMaterials }],
+    trucks: [
+      { at: "depot", ammo: SLICE.truckAmmo, materials: SLICE.truckMaterials },
+    ],
     zones: [],
     zombies: 200,
     zombieKinds: BASIC_ZOMBIE_KINDS,
@@ -75,20 +96,20 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     ammo: SLICE.baseAmmo,
     commandPost: true,
     stages: [
-      { kind: 'deliver', truck: 0 },
-      { kind: 'waves', waves: SLICE.waves },
+      { kind: "deliver", truck: 0 },
+      { kind: "waves", waves: SLICE.waves },
     ],
   },
   hospital: {
-    id: 'hospital',
-    map: 'city',
+    id: "hospital",
+    map: "city",
     squads: [
-      { kind: 'slice', name: 'Alfa' },
-      { kind: 'police', name: 'Bravo' },
-      { kind: 'marines', name: 'Charlie' },
+      { kind: "slice", name: "Alfa" },
+      { kind: "police", name: "Bravo" },
+      { kind: "marines", name: "Charlie" },
     ],
-    trucks: [{ at: 'base', ammo: 0, materials: 0 }],
-    zones: [{ site: 'Hospital São Lucas' }],
+    trucks: [{ at: "base", ammo: 0, materials: 0 }],
+    zones: [{ site: "Hospital São Lucas" }],
     zombies: 3000,
     zombieKinds: ZOMBIES.length,
     clearRadiusM: 250,
@@ -96,20 +117,27 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     ammo: 1200,
     commandPost: true,
     stages: [
-      { kind: 'reach', zone: 0 },
-      { kind: 'evacuate', zone: 0, truck: 0, seconds: 60, civilians: 30, pressure: { everyS: 25, size: 50 } },
-      { kind: 'deliver', truck: 0 },
+      { kind: "reach", zone: 0 },
+      {
+        kind: "evacuate",
+        zone: 0,
+        truck: 0,
+        seconds: 60,
+        civilians: 30,
+        pressure: { everyS: 25, size: 50 },
+      },
+      { kind: "deliver", truck: 0 },
     ],
   },
   bridge: {
-    id: 'bridge',
-    map: 'city',
+    id: "bridge",
+    map: "city",
     squads: [
-      { kind: 'marines', name: 'Alfa' },
-      { kind: 'engineers', name: 'Bravo' },
-      { kind: 'police', name: 'Charlie' },
+      { kind: "slice", name: "Alfa" },
+      { kind: "engineers", name: "Bravo" },
+      { kind: "police", name: "Charlie" },
     ],
-    trucks: [{ at: 'base', ammo: 3000, materials: 320 }],
+    trucks: [{ at: "base", ammo: 3000, materials: 320 }],
     zones: [{ bridge: { minM: 350 } }],
     zombies: 3000,
     zombieKinds: ZOMBIES.length,
@@ -118,30 +146,56 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     ammo: 1200,
     commandPost: false,
     stages: [
-      { kind: 'reach', zone: 0 },
-      { kind: 'hold', zone: 0, seconds: 240, pressure: { everyS: 40, size: 90 } },
+      { kind: "reach", zone: 0 },
+      {
+        kind: "hold",
+        zone: 0,
+        seconds: 300,
+        pressure: { everyS: 25, size: 120, grow: 0.2 },
+      },
     ],
   },
   retake: {
-    id: 'retake',
-    map: 'city',
+    id: "retake",
+    map: "city",
     squads: [
-      { kind: 'marines', name: 'Alfa' },
-      { kind: 'engineers', name: 'Bravo' },
-      { kind: 'police', name: 'Charlie' },
-      { kind: 'marines', name: 'Delta' },
+      { kind: "marines", name: "Alfa" },
+      { kind: "engineers", name: "Bravo" },
+      { kind: "police", name: "Charlie" },
+      { kind: "marines", name: "Delta" },
     ],
-    trucks: [{ at: 'Estação Ferroviária', ammo: 5000, materials: 300 }],
-    zones: [],
+    trucks: [{ at: "Estação Ferroviária", ammo: 5000, materials: 300 }],
+    zones: [
+      { district: "Ribeira", at: [0.75, 0.2], name: "Ribeira: mercado" },
+      { district: "Ribeira", at: [0.4, 0.5], name: "Ribeira: praça" },
+      { district: "Ribeira", at: [0.6, 0.8], name: "Ribeira: cais" },
+    ],
     zombies: 3500,
     zombieKinds: ZOMBIES.length,
     clearRadiusM: 250,
     materials: 400,
     ammo: 1500,
-    commandPost: true,
+    commandPost: false,
     stages: [
-      { kind: 'retake', district: 'Ribeira', control: 66 },
-      { kind: 'waves', waves: [150, 220, 300] },
+      {
+        kind: "hold",
+        zone: 0,
+        seconds: 60,
+        pressure: { everyS: 25, size: 35, grow: 0.15 },
+      },
+      {
+        kind: "hold",
+        zone: 1,
+        seconds: 60,
+        pressure: { everyS: 25, size: 45, grow: 0.15 },
+      },
+      {
+        kind: "hold",
+        zone: 2,
+        seconds: 60,
+        pressure: { everyS: 25, size: 55, grow: 0.15 },
+      },
+      { kind: "waves", waves: [180, 260, 340], zone: 2 },
     ],
   },
 };

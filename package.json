@@ -12,6 +12,7 @@
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "sim": "tsx tools/headless-sim.ts",
     "bench": "node tools/run-bundled.mjs tools/bench.ts",
+    "balance": "node tools/run-bundled.mjs tools/balance.ts",
     "models": "tsx tools/prepare-models.ts",
     "audio": "tsx tools/prepare-audio.ts",
     "e2e": "playwright test",

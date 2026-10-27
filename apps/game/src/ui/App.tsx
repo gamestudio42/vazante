@@ -335,6 +335,7 @@ function objectiveText(m: MissionView, o: ObjectiveView, i: number): string {
   let key: string = `obj.${o.kind}`;
   // A delivery after an evacuation carries people, not cargo.
   if (o.kind === 'deliver' && m.objectives.slice(0, i).some((x) => x.kind === 'evacuate')) key = 'obj.deliver.evac';
+  if (o.kind === 'waves' && o.place) key = 'obj.waves.at';
   return t(key).replace('{place}', o.place).replace('{from}', o.from).replace('{n}', String(o.total)).replace('{w}', String(o.total));
 }
 

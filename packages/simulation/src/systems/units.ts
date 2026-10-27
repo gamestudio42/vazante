@@ -12,6 +12,8 @@ const PANIC_SPEED_FACTOR = 1.2;
 /** Anchor slows down while members lag farther than this behind their slots (metres). */
 const LAG_SLOW_M = 4;
 const ARRIVE_LAG_M = 1.5;
+/** A move whose anchor ends a path farther than this from the goal plans another leg. */
+const LEG_DONE_M = 8;
 
 export function stepUnits(w: World): void {
   for (const q of w.squads) stepSquad(w, q);
@@ -99,7 +101,19 @@ function stepSquad(w: World, q: Squad): void {
         remaining = 0;
       }
     }
-    if (q.pathIdx * 2 >= q.path.length && lag < ARRIVE_LAG_M) {
+    // Long trips across the city come back as partial paths (the search is capped): at the end
+    // of one, plan the next leg from here. A leg that gains nothing means the goal is out of reach.
+    if (q.pathIdx * 2 >= q.path.length && q.order.kind === 'move' && dist2(q.ax, q.ay, q.order.to.x, q.order.to.y) > LEG_DONE_M * LEG_DONE_M) {
+      const before = dist2(q.ax, q.ay, q.order.to.x, q.order.to.y);
+      replan(w, q);
+      const end = q.path.length >= 2 ? dist2(q.path[q.path.length - 2], q.path[q.path.length - 1], q.order.kind === 'move' ? q.order.to.x : 0, q.order.kind === 'move' ? q.order.to.y : 0) : before;
+      if (end >= before - 1) {
+        q.path = [];
+        q.pathIdx = 0;
+      }
+    }
+    // Arrived when the members have caught up, or when none of them can move any closer.
+    if (q.pathIdx * 2 >= q.path.length && (lag < ARRIVE_LAG_M || members.every((s) => !s.moving))) {
       q.order = { kind: 'hold', at: { x: q.ax, y: q.ay } };
       q.path = [];
       q.pathIdx = 0;

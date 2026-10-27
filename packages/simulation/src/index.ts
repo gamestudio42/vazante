@@ -10,3 +10,4 @@ export { formationOffset, slotPosition } from './systems/units.ts';
 export type { Soldier, Squad, DirectInput, Structure, Base, Vehicle } from './entities.ts';
 export { spawnTruck, distToSite } from './systems/logistics.ts';
 export { placementContext, buildTicks } from './systems/construction.ts';
+export { drivenAlive } from './systems/mission.ts';
