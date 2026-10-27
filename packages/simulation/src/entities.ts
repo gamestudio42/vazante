@@ -75,6 +75,14 @@ export interface Squad {
   /** Any member engaging last tick, and ticks before the next contact call. */
   engaged: boolean;
   contactCd: number;
+  /** Heading to take on arrival (unit vector), from a right-drag or a group move. */
+  face?: { x: number; y: number };
+  /**
+   * Several squads ordered together hold one shared formation: this squad fills slots
+   * slotBase .. slotBase + members of slotTotal. 0 = its own formation.
+   */
+  slotBase?: number;
+  slotTotal?: number;
 }
 
 export interface Structure {

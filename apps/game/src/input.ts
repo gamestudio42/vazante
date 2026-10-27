@@ -1,7 +1,15 @@
-import { FORMATIONS, SOLDIER_STRIDE, STRUCTURE_KINDS, SoldierField, type RiskPolicy, type Stance, type StructureKind } from '@vazante/shared';
-import { BuildTool } from './build.ts';
-import type { GameRenderer } from '@vazante/view3d';
-import type { GameClient } from './client.ts';
+import {
+  FORMATIONS,
+  SOLDIER_STRIDE,
+  STRUCTURE_KINDS,
+  SoldierField,
+  type RiskPolicy,
+  type Stance,
+  type StructureKind,
+} from "@vazante/shared";
+import { BuildTool } from "./build.ts";
+import type { GameRenderer } from "@vazante/view3d";
+import type { GameClient } from "./client.ts";
 
 export interface BoxRect {
   x0: number;
@@ -10,6 +18,8 @@ export interface BoxRect {
   y1: number;
 }
 
+/** A right-drag shorter than this (pixels) is a plain click. */
+const FACE_DRAG_PX = 14;
 const PAN_SPEED_PX = 600; // CSS pixels per second
 const MOUSE_SENSITIVITY = 0.0025;
 const DIRECT_SEND_MS = 50;
@@ -30,13 +40,17 @@ export class InputController {
   private fire = false;
   private reload = false;
   private lastDirectSend = 0;
-  private lastDirectKey = '';
+  private lastDirectKey = "";
   box: BoxRect | null = null;
+  /** Right-drag from the move target: the arrow of the direction the squads will face. */
+  faceArrow: BoxRect | null = null;
+  private rightStart: { x: number; y: number } | null = null;
   /** The briefing teaches the controls; H brings the full list back. */
   helpVisible = false;
   readonly build: BuildTool;
   /** Immediate audio feedback for player actions (wired to the audio director in main). */
-  feedback: (kind: 'select' | 'order' | 'stance' | 'deny' | 'toggle') => void = () => {};
+  feedback: (kind: "select" | "order" | "stance" | "deny" | "toggle") => void =
+    () => {};
   /** Mute toggle hook (N key). */
   onToggleMute: () => void = () => {};
   /** Esc with nothing to cancel (opens or closes the pause menu). */
@@ -56,17 +70,17 @@ export class InputController {
     private readonly view: GameRenderer,
   ) {
     this.build = new BuildTool(view.map);
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-    canvas.addEventListener('mousedown', this.onMouseDown);
-    window.addEventListener('mousemove', this.onMouseMove);
-    window.addEventListener('mouseup', this.onMouseUp);
-    canvas.addEventListener('wheel', this.onWheel, { passive: false });
-    canvas.addEventListener('dblclick', this.onDblClick);
-    window.addEventListener('keydown', this.onKeyDown);
-    window.addEventListener('keyup', (e) => this.keys.delete(e.code));
-    window.addEventListener('blur', () => this.keys.clear());
-    document.addEventListener('mouseleave', () => (this.mouseInside = false));
-    document.addEventListener('mouseenter', () => (this.mouseInside = true));
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    canvas.addEventListener("mousedown", this.onMouseDown);
+    window.addEventListener("mousemove", this.onMouseMove);
+    window.addEventListener("mouseup", this.onMouseUp);
+    canvas.addEventListener("wheel", this.onWheel, { passive: false });
+    canvas.addEventListener("dblclick", this.onDblClick);
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+    window.addEventListener("blur", () => this.keys.clear());
+    document.addEventListener("mouseleave", () => (this.mouseInside = false));
+    document.addEventListener("mouseenter", () => (this.mouseInside = true));
     client.onFrame((f) => {
       // Leave only when the simulation drops control it had granted (soldier died, turned), not
       // in the ticks before it has seen the request.
@@ -115,10 +129,10 @@ export class InputController {
       if (this.mouse.y <= m) dy -= 1;
       if (this.mouse.y >= h - m) dy += 1;
     }
-    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) dy -= 1;
-    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) dy += 1;
-    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) dx -= 1;
-    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) dx += 1;
+    if (this.keys.has("KeyW") || this.keys.has("ArrowUp")) dy -= 1;
+    if (this.keys.has("KeyS") || this.keys.has("ArrowDown")) dy += 1;
+    if (this.keys.has("KeyA") || this.keys.has("ArrowLeft")) dx -= 1;
+    if (this.keys.has("KeyD") || this.keys.has("ArrowRight")) dx += 1;
     if (dx || dy) {
       const mpp = rig.metresPerPixel(this.size().h);
       rig.pan(dx * PAN_SPEED_PX * dtS * mpp, dy * PAN_SPEED_PX * dtS * mpp);
@@ -136,7 +150,8 @@ export class InputController {
     const x = e.clientX - r.left;
     const y = e.clientY - r.top;
     if (this.directId !== null) {
-      if (document.pointerLockElement !== this.canvas) this.canvas.requestPointerLock();
+      if (document.pointerLockElement !== this.canvas)
+        this.canvas.requestPointerLock();
       if (e.button === 0) this.fire = true;
       return;
     }
@@ -153,7 +168,7 @@ export class InputController {
     else if (e.button === 1) {
       e.preventDefault();
       this.panning = { x: e.clientX, y: e.clientY };
-    } else if (e.button === 2) this.orderMove(x, y);
+    } else if (e.button === 2) this.rightStart = { x, y };
   };
 
   private onMouseMove = (e: MouseEvent): void => {
@@ -161,29 +176,78 @@ export class InputController {
     this.mouse = { x: e.clientX - r.left, y: e.clientY - r.top };
     this.mouseInside = true;
     if (this.directId !== null) {
-      if (document.pointerLockElement === this.canvas) this.directYaw += e.movementX * MOUSE_SENSITIVITY;
+      if (document.pointerLockElement === this.canvas)
+        this.directYaw += e.movementX * MOUSE_SENSITIVITY;
       return;
     }
     if (this.panning) {
       const mpp = this.view.rig.metresPerPixel(r.height);
-      this.view.rig.pan(-(e.clientX - this.panning.x) * mpp, -(e.clientY - this.panning.y) * mpp);
+      this.view.rig.pan(
+        -(e.clientX - this.panning.x) * mpp,
+        -(e.clientY - this.panning.y) * mpp,
+      );
       this.panning = { x: e.clientX, y: e.clientY };
     }
     if (this.build.active) this.refreshGhost();
     if (this.dragStart) {
-      this.box = { x0: this.dragStart.x, y0: this.dragStart.y, x1: this.mouse.x, y1: this.mouse.y };
+      this.box = {
+        x0: this.dragStart.x,
+        y0: this.dragStart.y,
+        x1: this.mouse.x,
+        y1: this.mouse.y,
+      };
       this.changed();
+    }
+    const rs = this.rightStart;
+    if (rs && this.client.state.selected.length > 0) {
+      const far =
+        Math.hypot(this.mouse.x - rs.x, this.mouse.y - rs.y) >= FACE_DRAG_PX;
+      if (far || this.faceArrow) {
+        this.faceArrow = far
+          ? { x0: rs.x, y0: rs.y, x1: this.mouse.x, y1: this.mouse.y }
+          : null;
+        this.changed();
+      }
     }
   };
 
   private onMouseUp = (e: MouseEvent): void => {
     if (e.button === 0) this.fire = false;
     if (e.button === 1) this.panning = null;
+    if (e.button === 2 && this.rightStart) {
+      const rs = this.rightStart;
+      const arrow = this.faceArrow;
+      this.rightStart = null;
+      this.faceArrow = null;
+      if (arrow) this.changed();
+      if (this.directId !== null || this.build.active) return;
+      const { w, h } = this.size();
+      const a = arrow
+        ? this.view.screenToGround(arrow.x0, arrow.y0, w, h)
+        : null;
+      const b = arrow
+        ? this.view.screenToGround(arrow.x1, arrow.y1, w, h)
+        : null;
+      this.orderMove(
+        rs.x,
+        rs.y,
+        a && b ? { x: b.x - a.x, y: b.y - a.y } : undefined,
+      );
+      return;
+    }
     if (e.button === 0 && this.build.active) {
       const cells = this.build.release();
       const kind = this.build.kind!;
-      for (const c of cells) this.client.send({ type: 'build', kind, at: { x: (c.cx + 0.5) * this.view.map.cellSize, y: (c.cy + 0.5) * this.view.map.cellSize } });
-      this.feedback(cells.length ? 'order' : 'deny');
+      for (const c of cells)
+        this.client.send({
+          type: "build",
+          kind,
+          at: {
+            x: (c.cx + 0.5) * this.view.map.cellSize,
+            y: (c.cy + 0.5) * this.view.map.cellSize,
+          },
+        });
+      this.feedback(cells.length ? "order" : "deny");
       if (!e.shiftKey && cells.length) this.setBuild(null);
       else this.refreshGhost();
       return;
@@ -226,7 +290,7 @@ export class InputController {
     this.view.selectedSquads = new Set(ids);
     if (ids.length) {
       this.view.vehicles.selected = null;
-      this.feedback('select');
+      this.feedback("select");
     }
   }
 
@@ -235,7 +299,7 @@ export class InputController {
     this.view.vehicles.selected = id;
     if (id !== null) {
       this.view.selectedSquads = new Set();
-      this.feedback('select');
+      this.feedback("select");
     }
     this.changed();
   }
@@ -243,33 +307,37 @@ export class InputController {
   setVehiclePolicy(policy: RiskPolicy): void {
     const v = this.client.state.vehicle;
     if (v === null) return;
-    this.client.send({ type: 'set_policy', vehicle: v, policy });
-    this.feedback('stance');
+    this.client.send({ type: "set_policy", vehicle: v, policy });
+    this.feedback("stance");
   }
 
   stopVehicle(): void {
     const v = this.client.state.vehicle;
     if (v === null) return;
-    this.client.send({ type: 'stop_vehicle', vehicle: v });
-    this.feedback('stance');
+    this.client.send({ type: "stop_vehicle", vehicle: v });
+    this.feedback("stance");
   }
 
   loadVehicle(ammo: number, materials: number): void {
     const v = this.client.state.vehicle;
     if (v === null) return;
-    this.client.send({ type: 'load', vehicle: v, ammo, materials });
-    this.feedback('order');
+    this.client.send({ type: "load", vehicle: v, ammo, materials });
+    this.feedback("order");
   }
 
   /** Send the selected truck to a base or depot. */
   sendConvoy(to: number, policy: RiskPolicy): void {
     const v = this.client.state.vehicle;
     if (v === null) return;
-    this.client.send({ type: 'convoy', vehicle: v, to, policy });
-    this.feedback('order');
+    this.client.send({ type: "convoy", vehicle: v, to, policy });
+    this.feedback("order");
   }
 
-  private orderMove(x: number, y: number): void {
+  private orderMove(
+    x: number,
+    y: number,
+    face?: { x: number; y: number },
+  ): void {
     const sel = this.client.state.selected;
     const { w, h } = this.size();
     const p = this.view.screenToGround(x, y, w, h);
@@ -278,26 +346,36 @@ export class InputController {
       // Right click on a base or depot sends the selected truck there with its current policy.
       const f = this.client.state.frame;
       const cs = this.view.map.cellSize;
-      const site = f?.bases.find((b) => p.x >= b.x0 * cs && p.x < (b.x1 + 1) * cs && p.y >= b.y0 * cs && p.y < (b.y1 + 1) * cs);
+      const site = f?.bases.find(
+        (b) =>
+          p.x >= b.x0 * cs &&
+          p.x < (b.x1 + 1) * cs &&
+          p.y >= b.y0 * cs &&
+          p.y < (b.y1 + 1) * cs,
+      );
       const v = f?.vehicles.find((x) => x.id === veh);
       if (site && v) {
         this.sendConvoy(site.id, v.policy);
         this.view.markOrder(p.x, p.y);
-      } else this.feedback('deny');
+      } else this.feedback("deny");
       return;
     }
     if (sel.length === 0) return;
     if (!p) return;
-    this.client.send({ type: 'move', squads: sel, to: p });
+    this.client.send(
+      face
+        ? { type: "move", squads: sel, to: p, face }
+        : { type: "move", squads: sel, to: p },
+    );
     this.view.markOrder(p.x, p.y);
-    this.feedback('order');
+    this.feedback("order");
   }
 
   setStance(stance: Stance): void {
     const sel = this.client.state.selected;
     if (!sel.length) return;
-    this.client.send({ type: 'stance', squads: sel, stance });
-    this.feedback('stance');
+    this.client.send({ type: "stance", squads: sel, stance });
+    this.feedback("stance");
   }
 
   cycleFormation(): void {
@@ -305,113 +383,127 @@ export class InputController {
     const f = this.client.state.frame;
     if (!sel.length || !f) return;
     const q = f.squads.find((s) => s.id === sel[0]);
-    const next = FORMATIONS[(FORMATIONS.indexOf(q?.formation ?? 'line') + 1) % FORMATIONS.length];
-    this.client.send({ type: 'formation', squads: sel, formation: next });
-    this.feedback('stance');
+    const next =
+      FORMATIONS[
+        (FORMATIONS.indexOf(q?.formation ?? "line") + 1) % FORMATIONS.length
+      ];
+    this.client.send({ type: "formation", squads: sel, formation: next });
+    this.feedback("stance");
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLSelectElement
+    )
+      return;
     if (!this.enabled) {
-      if (e.code === 'Escape') this.onEscape();
+      if (e.code === "Escape") this.onEscape();
       return;
     }
     this.keys.add(e.code);
     const rig = this.view.rig;
     switch (e.code) {
-      case 'Tab':
+      case "Tab":
         e.preventDefault();
         this.toggleDirect();
         return;
-      case 'KeyR':
+      case "KeyR":
         if (this.directId !== null) this.reload = true;
         return;
     }
     if (this.directId !== null) return;
     switch (e.code) {
-      case 'Space':
+      case "Space":
         e.preventDefault();
-        this.client.send({ type: 'set_speed', speed: this.client.state.frame?.speed === 0 ? 1 : 0 });
+        this.client.send({
+          type: "set_speed",
+          speed: this.client.state.frame?.speed === 0 ? 1 : 0,
+        });
         break;
-      case 'F1':
-      case 'F2':
-      case 'F3':
+      case "F1":
+      case "F2":
+      case "F3":
         e.preventDefault();
-        this.client.send({ type: 'set_speed', speed: e.code === 'F1' ? 1 : e.code === 'F2' ? 2 : 4 });
+        this.client.send({
+          type: "set_speed",
+          speed: e.code === "F1" ? 1 : e.code === "F2" ? 2 : 4,
+        });
         break;
-      case 'KeyM':
+      case "KeyM":
         rig.toggleMap();
         break;
-      case 'KeyQ':
+      case "KeyQ":
         rig.rotate(-1);
         break;
-      case 'KeyE':
+      case "KeyE":
         rig.rotate(1);
         break;
-      case 'KeyZ':
-        this.setStance('hold');
+      case "KeyZ":
+        this.setStance("hold");
         break;
-      case 'KeyX':
-        this.setStance('aggressive');
+      case "KeyX":
+        this.setStance("aggressive");
         break;
-      case 'KeyC':
-        this.setStance('defensive');
+      case "KeyC":
+        this.setStance("defensive");
         break;
-      case 'KeyV':
-        this.setStance('withdraw');
+      case "KeyV":
+        this.setStance("withdraw");
         break;
-      case 'KeyF':
+      case "KeyF":
         this.cycleFormation();
         break;
-      case 'KeyB':
-        this.setBuild(this.build.active ? null : (this.build.kind ?? 'wall'));
+      case "KeyB":
+        this.setBuild(this.build.active ? null : (this.build.kind ?? "wall"));
         break;
-      case 'Digit1':
-      case 'Digit2':
-      case 'Digit3':
-      case 'Digit4':
+      case "Digit1":
+      case "Digit2":
+      case "Digit3":
+      case "Digit4":
         this.setBuild(STRUCTURE_KINDS[Number(e.code.slice(5)) - 1]);
         break;
-      case 'Escape':
+      case "Escape":
         if (this.build.active) this.setBuild(null);
         else if (this.client.state.vehicle !== null) this.selectVehicle(null);
         else if (this.client.state.selected.length > 0) this.select([]);
         else this.onEscape();
         break;
-      case 'F5':
+      case "F5":
         e.preventDefault();
         this.onQuickSave();
         break;
-      case 'F9':
+      case "F9":
         e.preventDefault();
         this.onQuickLoad();
         break;
-      case 'KeyG':
-      case 'Delete':
-      case 'Backspace': {
+      case "KeyG":
+      case "Delete":
+      case "Backspace": {
         const st = this.structureUnderCursor();
         if (!st) break;
-        if (e.code === 'KeyG') {
-          if (st.kind === 'gate') this.client.send({ type: 'toggle_gate', structure: st.id });
-        } else this.client.send({ type: 'demolish', structure: st.id });
-        this.feedback('stance');
+        if (e.code === "KeyG") {
+          if (st.kind === "gate")
+            this.client.send({ type: "toggle_gate", structure: st.id });
+        } else this.client.send({ type: "demolish", structure: st.id });
+        this.feedback("stance");
         break;
       }
-      case 'KeyN':
+      case "KeyN":
         this.onToggleMute();
         this.changed();
         break;
-      case 'KeyH':
+      case "KeyH":
         this.helpVisible = !this.helpVisible;
         this.changed();
         break;
-      case 'KeyK': {
+      case "KeyK": {
         const { w, h } = this.size();
         const p = this.view.screenToGround(this.mouse.x, this.mouse.y, w, h);
-        if (p) this.client.send({ type: 'debug_spawn', at: p, count: 30 });
+        if (p) this.client.send({ type: "debug_spawn", at: p, count: 30 });
         break;
       }
-      case 'Home': {
+      case "Home": {
         const a = this.client.state.alerts.find((x) => x.x !== undefined);
         if (a) rig.centerOn(a.x!, a.y!);
         break;
@@ -424,7 +516,7 @@ export class InputController {
   setBuild(kind: StructureKind | null): void {
     if (kind === null) this.build.cancel();
     else this.build.begin(kind);
-    this.feedback('toggle');
+    this.feedback("toggle");
     this.refreshGhost();
     this.changed();
   }
@@ -444,7 +536,8 @@ export class InputController {
     const before = `${this.build.reason}:${this.build.cells.length}`;
     this.build.hover(p.x, p.y, this.client.state.frame);
     this.view.structures.setGhosts(this.build.kind, this.build.cells);
-    if (`${this.build.reason}:${this.build.cells.length}` !== before) this.changed();
+    if (`${this.build.reason}:${this.build.cells.length}` !== before)
+      this.changed();
   }
 
   private structureUnderCursor() {
@@ -459,14 +552,14 @@ export class InputController {
 
   toggleDirect(): void {
     if (this.directId !== null) {
-      this.client.send({ type: 'set_direct_control', soldier: null });
+      this.client.send({ type: "set_direct_control", soldier: null });
       this.leaveDirectLocal();
       return;
     }
     const f = this.client.state.frame;
     const sel = this.client.state.selected;
     if (!f || sel.length === 0) {
-      this.feedback('deny');
+      this.feedback("deny");
       return;
     }
     const q = f.squads.find((s) => s.id === sel[0]);
@@ -478,9 +571,12 @@ export class InputController {
       if (q.members.includes(id) && cond <= 1) {
         this.directId = id;
         this.directConfirmed = false;
-        this.directYaw = Math.atan2(f.soldiers[o + SoldierField.FacingY], f.soldiers[o + SoldierField.FacingX]);
-        this.client.send({ type: 'set_direct_control', soldier: id });
-        this.feedback('toggle');
+        this.directYaw = Math.atan2(
+          f.soldiers[o + SoldierField.FacingY],
+          f.soldiers[o + SoldierField.FacingX],
+        );
+        this.client.send({ type: "set_direct_control", soldier: id });
+        this.feedback("toggle");
         this.canvas.requestPointerLock?.();
         this.changed();
         return;
@@ -501,17 +597,24 @@ export class InputController {
     const fy = Math.sin(this.directYaw);
     let f = 0;
     let s = 0;
-    if (this.keys.has('KeyW')) f += 1;
-    if (this.keys.has('KeyS')) f -= 1;
-    if (this.keys.has('KeyD')) s += 1;
-    if (this.keys.has('KeyA')) s -= 1;
+    if (this.keys.has("KeyW")) f += 1;
+    if (this.keys.has("KeyS")) f -= 1;
+    if (this.keys.has("KeyD")) s += 1;
+    if (this.keys.has("KeyA")) s -= 1;
     // Right of forward on the simulation plane (y points south).
     const mx = fx * f - fy * s;
     const my = fy * f + fx * s;
     const key = `${mx.toFixed(2)},${my.toFixed(2)},${fx.toFixed(3)},${fy.toFixed(3)},${this.fire},${this.reload}`;
     if (key !== this.lastDirectKey || nowMs - this.lastDirectSend > 250) {
       if (nowMs - this.lastDirectSend >= DIRECT_SEND_MS || this.reload) {
-        this.client.send({ type: 'direct_input', soldier: this.directId!, move: { x: mx, y: my }, aim: { x: fx, y: fy }, fire: this.fire, reload: this.reload });
+        this.client.send({
+          type: "direct_input",
+          soldier: this.directId!,
+          move: { x: mx, y: my },
+          aim: { x: fx, y: fy },
+          fire: this.fire,
+          reload: this.reload,
+        });
         this.lastDirectKey = key;
         this.lastDirectSend = nowMs;
         this.reload = false;
@@ -525,7 +628,10 @@ export class InputController {
     for (let i = 0; i < f.soldiers.length / SOLDIER_STRIDE; i++) {
       const o = i * SOLDIER_STRIDE;
       if (f.soldiers[o + SoldierField.Id] === this.directId) {
-        const [x, y] = this.view.soldierPos(i, this.view.alpha(performance.now()));
+        const [x, y] = this.view.soldierPos(
+          i,
+          this.view.alpha(performance.now()),
+        );
         return { x, y, yaw: this.directYaw };
       }
     }

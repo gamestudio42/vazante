@@ -351,6 +351,8 @@ export class SimulationEngine {
         h.f64Value(p.x).f64Value(p.y);
       }
       for (const m of q.members) h.u32(m);
+      if (q.slotTotal) h.u32(q.slotBase ?? 0).u32(q.slotTotal);
+      if (q.face) h.f64Value(q.face.x).f64Value(q.face.y);
     }
     return h.digest();
   }

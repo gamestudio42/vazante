@@ -4,7 +4,8 @@ import type { Formation, SimSpeed, Stance, Vec2 } from './types.ts';
 
 export type Command =
   | { type: 'set_speed'; speed: SimSpeed }
-  | { type: 'move'; squads: number[]; to: Vec2 }
+  /** `face`: the direction to face on arrival (right-drag); several squads form one formation. */
+  | { type: 'move'; squads: number[]; to: Vec2; face?: Vec2 }
   | { type: 'hold'; squads: number[] }
   | { type: 'stance'; squads: number[]; stance: Stance }
   | { type: 'formation'; squads: number[]; formation: Formation }

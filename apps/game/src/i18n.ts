@@ -136,7 +136,7 @@ const en = {
   'help.title': 'Controls',
   'help.toggle': 'H: help',
   'help.body':
-    'Pan: WASD / arrows / middle drag · Zoom: wheel · M: operations map · Q/E rotate\nSelect: click or drag · Move: right click · Stance: Z X C V · Formation: F\nSpace pause · F1 F2 F3 speed · TAB direct control · K spawn a test horde at the cursor · N sound on/off · B build · F5/F9 quick save/load · Esc menu',
+    'Pan: WASD / arrows / middle drag · Zoom: wheel · M: operations map · Q/E rotate\nSelect: click or drag · Move: right click (drag to set facing) · Stance: Z X C V · Formation: F\nSpace pause · F1 F2 F3 speed · TAB direct control (your squad follows you) · K spawn a test horde at the cursor · N sound on/off · B build · F5/F9 quick save/load · Esc menu',
   'menu.subtitle': 'Porto Velário',
   'menu.continue': 'Continue',
   'menu.new': 'New game',
@@ -427,7 +427,7 @@ const ptBR: Record<Key, string> = {
   'help.title': 'Controles',
   'help.toggle': 'H: ajuda',
   'help.body':
-    'Mover câmera: WASD / setas / botão do meio · Zoom: roda · M: mapa de operações · Q/E girar\nSelecionar: clique ou arraste · Mover: clique direito · Postura: Z X C V · Formação: F\nEspaço pausa · F1 F2 F3 velocidade · TAB controle direto · K cria uma horda de teste no cursor · N som liga/desliga · B construir · F5/F9 salvar/carregar rápido · Esc menu',
+    'Mover câmera: WASD / setas / botão do meio · Zoom: roda · M: mapa de operações · Q/E girar\nSelecionar: clique ou arraste · Mover: clique direito (arraste para a direção) · Postura: Z X C V · Formação: F\nEspaço pausa · F1 F2 F3 velocidade · TAB controle direto (seu esquadrão segue você) · K cria uma horda de teste no cursor · N som liga/desliga · B construir · F5/F9 salvar/carregar rápido · Esc menu',
   'menu.subtitle': 'Porto Velário',
   'menu.continue': 'Continuar',
   'menu.new': 'Nova partida',

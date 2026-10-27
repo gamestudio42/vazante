@@ -1,4 +1,9 @@
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import {
   ArrowRight,
   Ban,
@@ -41,7 +46,7 @@ import {
   Wrench,
   Zap,
   type LucideIcon,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   clockHours,
   daylight,
@@ -62,14 +67,14 @@ import {
   type Stance,
   type StructureKind,
   type SquadView,
-} from '@vazante/shared';
-import type { GameRenderer } from '@vazante/view3d';
-import type { GameClient } from '../client.ts';
-import type { InputController } from '../input.ts';
-import { t } from '../i18n.ts';
-import type { Shell } from '../shell.ts';
-import { ShellOverlay, TutorialCard } from './Shell.tsx';
-import { Minimap } from './Minimap.tsx';
+} from "@vazante/shared";
+import type { GameRenderer } from "@vazante/view3d";
+import type { GameClient } from "../client.ts";
+import type { InputController } from "../input.ts";
+import { t } from "../i18n.ts";
+import type { Shell } from "../shell.ts";
+import { ShellOverlay, TutorialCard } from "./Shell.tsx";
+import { Minimap } from "./Minimap.tsx";
 
 interface Props {
   client: GameClient;
@@ -78,9 +83,25 @@ interface Props {
   shell: Shell;
 }
 
-const STANCE_ICON: Record<Stance, LucideIcon> = { hold: Hand, aggressive: Swords, defensive: Shield, withdraw: Undo2 };
-const STRUCTURE_ICON: Record<StructureKind, LucideIcon> = { hesco: Boxes, wall: BrickWall, gate: DoorOpen, mg_nest: Crosshair, command_post: Flag };
-const POLICY_ICON: Record<RiskPolicy, LucideIcon> = { push_through: FastForward, reroute: RotateCcw, halt: Square, return: Undo2 };
+const STANCE_ICON: Record<Stance, LucideIcon> = {
+  hold: Hand,
+  aggressive: Swords,
+  defensive: Shield,
+  withdraw: Undo2,
+};
+const STRUCTURE_ICON: Record<StructureKind, LucideIcon> = {
+  hesco: Boxes,
+  wall: BrickWall,
+  gate: DoorOpen,
+  mg_nest: Crosshair,
+  command_post: Flag,
+};
+const POLICY_ICON: Record<RiskPolicy, LucideIcon> = {
+  push_through: FastForward,
+  reroute: RotateCcw,
+  halt: Square,
+  return: Undo2,
+};
 const SPEEDS: SimSpeed[] = [0, 1, 2, 4];
 
 export function App({ client, input, view, shell }: Props) {
@@ -95,44 +116,73 @@ export function App({ client, input, view, shell }: Props) {
   }, [view]);
 
   const f = state.frame;
-  if (!f) return <div className="boot">{t('boot.loading')}</div>;
+  if (!f) return <div className="boot">{t("boot.loading")}</div>;
 
   const selected = f.squads.filter((q) => state.selected.includes(q.id));
   const seed = state.map?.seed ?? 1;
-  if (shell.screen === 'menu') return <ShellOverlay shell={shell} seed={seed} />;
-  const ended = f.mission && (f.mission.phase === 'won' || f.mission.phase === 'lost');
+  if (shell.screen === "menu")
+    return <ShellOverlay shell={shell} seed={seed} />;
+  const ended =
+    f.mission && (f.mission.phase === "won" || f.mission.phase === "lost");
   return (
     <>
       <div className="hud">
-        <TopBar frame={f} limited={state.limited} band={input.inDirect ? 'direct' : band} onSpeed={(speed) => client.send({ type: 'set_speed', speed })} />
+        <TopBar
+          frame={f}
+          limited={state.limited}
+          band={input.inDirect ? "direct" : band}
+          onSpeed={(speed) => client.send({ type: "set_speed", speed })}
+        />
         {!input.inDirect && (
           <div className="leftcol">
             {f.mission && <MissionPanel frame={f} />}
-            <SquadList frame={f} selected={state.selected} onSelect={(id) => input.select([id])} onCenter={(q) => view.rig.centerOn(q.anchorX, q.anchorY)} />
-            <VehicleList frame={f} selected={state.vehicle} onSelect={(id) => input.selectVehicle(id)} onCenter={(x, y) => view.rig.centerOn(x, y)} />
+            <SquadList
+              frame={f}
+              selected={state.selected}
+              onSelect={(id) => input.select([id])}
+              onCenter={(q) => view.rig.centerOn(q.anchorX, q.anchorY)}
+            />
+            <VehicleList
+              frame={f}
+              selected={state.vehicle}
+              onSelect={(id) => input.selectVehicle(id)}
+              onCenter={(x, y) => view.rig.centerOn(x, y)}
+            />
             <DistrictList frame={f} />
           </div>
         )}
-        {!input.inDirect && <Alerts alerts={state.alerts} onJump={(x, y) => view.rig.centerOn(x, y)} />}
+        {!input.inDirect && (
+          <Alerts
+            alerts={state.alerts}
+            onJump={(x, y) => view.rig.centerOn(x, y)}
+          />
+        )}
         {!input.inDirect && (
           <div className="bottomcol">
             <BuildPanel frame={f} input={input} />
-            {state.vehicle !== null ? <VehiclePanel frame={f} id={state.vehicle} input={input} /> : <SelectionPanel squads={selected} frame={f} input={input} />}
+            {state.vehicle !== null ? (
+              <VehiclePanel frame={f} id={state.vehicle} input={input} />
+            ) : (
+              <SelectionPanel squads={selected} frame={f} input={input} />
+            )}
           </div>
         )}
         {input.inDirect && <DirectHud frame={f} />}
         {!input.inDirect && <Minimap client={client} view={view} />}
         {input.helpVisible && !input.inDirect && (
           <div className="help panel">
-            <PanelHead icon={Radio}>{t('help.title')}</PanelHead>
-            <pre>{t('help.body')}</pre>
+            <PanelHead icon={Radio}>{t("help.title")}</PanelHead>
+            <pre>{t("help.body")}</pre>
           </div>
         )}
         {!ended && <TutorialCard shell={shell} />}
-        {ended && shell.screen === 'playing' && <Summary frame={f} shell={shell} seed={seed} />}
+        {ended && shell.screen === "playing" && (
+          <Summary frame={f} shell={shell} seed={seed} />
+        )}
         <ShellOverlay shell={shell} seed={seed} />
       </div>
       {input.box && <div className="box" style={boxStyle(input.box)} />}
+      {input.faceArrow && <FaceArrow a={input.faceArrow} />}
     </>
   );
 }
@@ -171,7 +221,8 @@ function useHudState(client: GameClient) {
       if (urgent || performance.now() - last >= HUD_MS) {
         clearTimeout(timer);
         push();
-      } else if (!timer) timer = window.setTimeout(push, HUD_MS - (performance.now() - last));
+      } else if (!timer)
+        timer = window.setTimeout(push, HUD_MS - (performance.now() - last));
     });
     return () => {
       off();
@@ -183,7 +234,15 @@ function useHudState(client: GameClient) {
 
 // ----- Building blocks -----
 
-function PanelHead({ icon: Icon, children, extra }: { icon: LucideIcon; children: ReactNode; extra?: ReactNode }) {
+function PanelHead({
+  icon: Icon,
+  children,
+  extra,
+}: {
+  icon: LucideIcon;
+  children: ReactNode;
+  extra?: ReactNode;
+}) {
   return (
     <div className="phead">
       <Icon size={13} strokeWidth={2.2} />
@@ -193,19 +252,46 @@ function PanelHead({ icon: Icon, children, extra }: { icon: LucideIcon; children
   );
 }
 
-function Meter({ value, kind = 'hp', thin }: { value: number; kind?: 'hp' | 'ammo' | 'post' | 'wave' | 'morale'; thin?: boolean }) {
+function Meter({
+  value,
+  kind = "hp",
+  thin,
+}: {
+  value: number;
+  kind?: "hp" | "ammo" | "post" | "wave" | "morale";
+  thin?: boolean;
+}) {
   const v = Math.max(0, Math.min(1, value));
-  const level = kind === 'hp' || kind === 'post' || kind === 'morale' ? (v < 0.3 ? 'low' : v < 0.6 ? 'mid' : '') : kind === 'ammo' && v < 0.2 ? 'low' : '';
+  const level =
+    kind === "hp" || kind === "post" || kind === "morale"
+      ? v < 0.3
+        ? "low"
+        : v < 0.6
+          ? "mid"
+          : ""
+      : kind === "ammo" && v < 0.2
+        ? "low"
+        : "";
   return (
-    <div className={`meter m-${kind} ${level} ${thin ? 'thin' : ''}`}>
+    <div className={`meter m-${kind} ${level} ${thin ? "thin" : ""}`}>
       <div style={{ width: `${v * 100}%` }} />
     </div>
   );
 }
 
-function Stat({ icon: Icon, children, title, className }: { icon: LucideIcon; children: ReactNode; title?: string; className?: string }) {
+function Stat({
+  icon: Icon,
+  children,
+  title,
+  className,
+}: {
+  icon: LucideIcon;
+  children: ReactNode;
+  title?: string;
+  className?: string;
+}) {
   return (
-    <span className={`stat ${className ?? ''}`} title={title}>
+    <span className={`stat ${className ?? ""}`} title={title}>
       <Icon size={12} strokeWidth={2.2} />
       {children}
     </span>
@@ -218,55 +304,83 @@ function Key({ k }: { k: string }) {
 
 // ----- Top bar -----
 
-function TopBar({ frame, limited, band, onSpeed }: { frame: Frame; limited: boolean; band: string; onSpeed: (s: SimSpeed) => void }) {
+function TopBar({
+  frame,
+  limited,
+  band,
+  onSpeed,
+}: {
+  frame: Frame;
+  limited: boolean;
+  band: string;
+  onSpeed: (s: SimSpeed) => void;
+}) {
   const lowAmmo = frame.bases[0] && frame.bases[0].ammo < 200;
   return (
     <div className="topbar panel">
-      <span className="brand">{t('app.title')}</span>
+      <span className="brand">{t("app.title")}</span>
       <span className="sep" />
-      <span className="chip" title={t('top.time')}>
+      <span className="chip" title={t("top.time")}>
         <Clock size={13} />
         {fmt(frame.tick)}
       </span>
       <DayClock tick={frame.tick} />
-      <span className="speed" role="group" aria-label={t('top.time')}>
+      <span className="speed" role="group" aria-label={t("top.time")}>
         {SPEEDS.map((s) => (
-          <button key={s} className={frame.speed === s ? 'on' : ''} title={s === 0 ? `${t('top.paused')} (Space)` : `${s}x (F${s === 4 ? 3 : s})`} onClick={() => onSpeed(s === 0 && frame.speed === 0 ? 1 : s)}>
-            {s === 0 ? <Pause size={12} /> : s === 1 ? <Play size={12} /> : `${s}x`}
+          <button
+            key={s}
+            className={frame.speed === s ? "on" : ""}
+            title={
+              s === 0
+                ? `${t("top.paused")} (Space)`
+                : `${s}x (F${s === 4 ? 3 : s})`
+            }
+            onClick={() => onSpeed(s === 0 && frame.speed === 0 ? 1 : s)}
+          >
+            {s === 0 ? (
+              <Pause size={12} />
+            ) : s === 1 ? (
+              <Play size={12} />
+            ) : (
+              `${s}x`
+            )}
           </button>
         ))}
       </span>
-      {frame.speed === 0 && <span className="paused">{t('top.paused')}</span>}
-      {limited && <span className="warn">{t('top.limited')}</span>}
+      {frame.speed === 0 && <span className="paused">{t("top.paused")}</span>}
+      {limited && <span className="warn">{t("top.limited")}</span>}
       <span className="sep" />
-      <span className="chip" title={t('top.soldiers')}>
+      <span className="chip" title={t("top.soldiers")}>
         <Users size={13} />
         {frame.stats.soldiersAlive}
       </span>
-      <span className="chip danger" title={t('top.zombies')}>
+      <span className="chip danger" title={t("top.zombies")}>
         <Biohazard size={13} />
         {frame.stats.zombiesAlive}
       </span>
-      <span className="chip" title={t('top.killed')}>
+      <span className="chip" title={t("top.killed")}>
         <Skull size={13} />
         {frame.stats.zombiesKilled}
       </span>
-      <span className="chip" title={t('top.ammo')}>
+      <span className="chip" title={t("top.ammo")}>
         <Target size={13} />
         {frame.stats.ammoTotal}
       </span>
       {frame.bases[0] && (
-        <span className={`chip ${lowAmmo ? 'warn' : ''}`} title={t('top.baseAmmo')}>
+        <span
+          className={`chip ${lowAmmo ? "warn" : ""}`}
+          title={t("top.baseAmmo")}
+        >
           <Package size={13} />
           {frame.bases[0].ammo}
         </span>
       )}
       <span className="sep" />
       <span className="band">
-        {band === 'direct' ? <Gamepad2 size={13} /> : <MapIcon size={13} />}
+        {band === "direct" ? <Gamepad2 size={13} /> : <MapIcon size={13} />}
         {t(`band.${band}`)}
       </span>
-      <span className="muted helpkey">{t('help.toggle')}</span>
+      <span className="muted helpkey">{t("help.toggle")}</span>
     </div>
   );
 }
@@ -277,9 +391,12 @@ function DayClock({ tick }: { tick: number }) {
   const mm = Math.floor((h - hh) * 60);
   const night = daylight(h) < 0.5;
   return (
-    <span className={`chip ${night ? 'night' : 'day'}`} title={t(night ? 'top.night' : 'top.day')}>
+    <span
+      className={`chip ${night ? "night" : "day"}`}
+      title={t(night ? "top.night" : "top.day")}
+    >
       {night ? <Moon size={13} /> : <Sun size={13} />}
-      {String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}
+      {String(hh).padStart(2, "0")}:{String(mm).padStart(2, "0")}
     </span>
   );
 }
@@ -291,37 +408,44 @@ function MissionPanel({ frame }: { frame: Frame }) {
   const hp = m.commandPostMaxHp > 0 ? m.commandPostHp / m.commandPostMaxHp : 0;
   return (
     <div className="mission panel">
-      <PanelHead icon={Flag}>{t('mission.title')}</PanelHead>
+      <PanelHead icon={Flag}>{t("mission.title")}</PanelHead>
       {m.objectives.map((o, i) => (
-        <Objective key={i} done={o.state === 'done'} active={o.state === 'active'}>
+        <Objective
+          key={i}
+          done={o.state === "done"}
+          active={o.state === "active"}
+        >
           {objectiveText(m, o, i)}
-          {o.kind === 'waves' && <WaveLine m={m} o={o} />}
-          {o.state === 'active' && o.progress >= 0 && (
+          {o.kind === "waves" && <WaveLine m={m} o={o} />}
+          {o.state === "active" && o.progress >= 0 && (
             <div className="obj-meter">
               <Meter value={o.progress} kind="wave" thin />
               <span className="muted">{progressText(o)}</span>
             </div>
           )}
-          {o.state === 'active' && (o.kind === 'hold' || o.kind === 'evacuate') && <div className="hint muted">{t(`obj.${o.kind}.hint`)}</div>}
+          {o.state === "active" &&
+            (o.kind === "hold" || o.kind === "evacuate") && (
+              <div className="hint muted">{t(`obj.${o.kind}.hint`)}</div>
+            )}
         </Objective>
       ))}
       {m.evacuated > 0 && (
         <div className="mrow">
-          <Stat icon={Users} title={t('mission.evacuated')}>
-            {t('mission.evacuated')} <b>{m.evacuated}</b>
+          <Stat icon={Users} title={t("mission.evacuated")}>
+            {t("mission.evacuated")} <b>{m.evacuated}</b>
           </Stat>
         </div>
       )}
       {m.civiliansMax > 0 && (
         <>
           <div className="mrow">
-            <Stat icon={Users} title={t('mission.civilians')}>
-              {t('mission.civilians')} <b>{m.civilians}</b>/{m.civiliansMax}
+            <Stat icon={Users} title={t("mission.civilians")}>
+              {t("mission.civilians")} <b>{m.civilians}</b>/{m.civiliansMax}
             </Stat>
           </div>
           <div className="mrow">
-            <Stat icon={ShieldAlert} title={t('mission.post')}>
-              {t('mission.post')} <b>{Math.round(hp * 100)}%</b>
+            <Stat icon={ShieldAlert} title={t("mission.post")}>
+              {t("mission.post")} <b>{Math.round(hp * 100)}%</b>
             </Stat>
           </div>
           <Meter value={hp} kind="post" />
@@ -334,45 +458,83 @@ function MissionPanel({ frame }: { frame: Frame }) {
 function objectiveText(m: MissionView, o: ObjectiveView, i: number): string {
   let key: string = `obj.${o.kind}`;
   // A delivery after an evacuation carries people, not cargo.
-  if (o.kind === 'deliver' && m.objectives.slice(0, i).some((x) => x.kind === 'evacuate')) key = 'obj.deliver.evac';
-  if (o.kind === 'waves' && o.place) key = 'obj.waves.at';
-  return t(key).replace('{place}', o.place).replace('{from}', o.from).replace('{n}', String(o.total)).replace('{w}', String(o.total));
+  if (
+    o.kind === "deliver" &&
+    m.objectives.slice(0, i).some((x) => x.kind === "evacuate")
+  )
+    key = "obj.deliver.evac";
+  if (o.kind === "waves" && o.place) key = "obj.waves.at";
+  return t(key)
+    .replace("{place}", o.place)
+    .replace("{from}", o.from)
+    .replace("{n}", String(o.total))
+    .replace("{w}", String(o.total));
 }
 
 function progressText(o: ObjectiveView): string {
-  if (o.kind === 'hold') return `${Math.max(0, Math.ceil(o.total * (1 - o.progress)))} s`;
-  if (o.kind === 'evacuate') return `${Math.floor(o.total * o.progress)}/${o.total}`;
+  if (o.kind === "hold")
+    return `${Math.max(0, Math.ceil(o.total * (1 - o.progress)))} s`;
+  if (o.kind === "evacuate")
+    return `${Math.floor(o.total * o.progress)}/${o.total}`;
   return `${Math.round(o.progress * 100)}%`;
 }
 
 function WaveLine({ m, o }: { m: MissionView; o: ObjectiveView }) {
-  const active = o.state === 'active';
-  const done = o.state === 'done';
-  let line = t('mission.waves.locked');
-  if (done) line = t('mission.waves.calm').replace('{n}', String(o.total));
-  else if (active && m.waveState === 'warning') line = t('mission.waves.warning').replace('{n}', String(m.wave + 1)).replace('{s}', String(m.secondsToWave));
-  else if (active && m.waveState === 'active') line = t('mission.waves.active').replace('{n}', String(m.wave)).replace('{z}', String(m.waveZombies));
-  else if (active) line = t('mission.waves.calm').replace('{n}', String(m.wave));
+  const active = o.state === "active";
+  const done = o.state === "done";
+  let line = t("mission.waves.locked");
+  if (done) line = t("mission.waves.calm").replace("{n}", String(o.total));
+  else if (active && m.waveState === "warning")
+    line = t("mission.waves.warning")
+      .replace("{n}", String(m.wave + 1))
+      .replace("{s}", String(m.secondsToWave));
+  else if (active && m.waveState === "active")
+    line = t("mission.waves.active")
+      .replace("{n}", String(m.wave))
+      .replace("{z}", String(m.waveZombies));
+  else if (active)
+    line = t("mission.waves.calm").replace("{n}", String(m.wave));
   const wave = active ? m.wave : done ? o.total : 0;
   return (
     <>
-      <div className={`wave ${active && m.waveState === 'warning' ? 'warn' : active && m.waveState === 'active' ? 'danger' : 'muted'}`}>
-        {active && m.waveState === 'warning' && <Siren size={12} />}
+      <div
+        className={`wave ${active && m.waveState === "warning" ? "warn" : active && m.waveState === "active" ? "danger" : "muted"}`}
+      >
+        {active && m.waveState === "warning" && <Siren size={12} />}
         {line}
       </div>
       <div className="pips waves">
         {Array.from({ length: o.total }, (_, i) => (
-          <span key={i} className={done || i < wave - (active && m.waveState === 'active' ? 1 : 0) ? 'done' : active && i === wave - 1 && m.waveState === 'active' ? 'now' : ''} />
+          <span
+            key={i}
+            className={
+              done || i < wave - (active && m.waveState === "active" ? 1 : 0)
+                ? "done"
+                : active && i === wave - 1 && m.waveState === "active"
+                  ? "now"
+                  : ""
+            }
+          />
         ))}
       </div>
     </>
   );
 }
 
-function Objective({ done, active, children }: { done: boolean; active: boolean; children: ReactNode }) {
+function Objective({
+  done,
+  active,
+  children,
+}: {
+  done: boolean;
+  active: boolean;
+  children: ReactNode;
+}) {
   return (
-    <div className={`obj ${done ? 'done' : active ? 'active' : 'muted'}`}>
-      <span className="check">{done ? <CircleCheck size={14} /> : <span className="box-icon" />}</span>
+    <div className={`obj ${done ? "done" : active ? "active" : "muted"}`}>
+      <span className="check">
+        {done ? <CircleCheck size={14} /> : <span className="box-icon" />}
+      </span>
       <div>{children}</div>
     </div>
   );
@@ -423,20 +585,41 @@ function squadStats(frame: Frame, q: SquadView) {
   peaks.set(q.id, p);
   const avg = q.alive ? hp / q.alive : 0;
   const morale = q.alive ? 1 - stress / q.alive / 100 : 0;
-  return { hp: Math.round(avg), hpFrac: avg / p.hp, ammo, ammoFrac: ammo / p.ammo, members, maxHp: p.hp, morale, panic, cover, roles };
+  return {
+    hp: Math.round(avg),
+    hpFrac: avg / p.hp,
+    ammo,
+    ammoFrac: ammo / p.ammo,
+    members,
+    maxHp: p.hp,
+    morale,
+    panic,
+    cover,
+    roles,
+  };
 }
 
-function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; selected: number[]; onSelect: (id: number) => void; onCenter: (q: SquadView) => void }) {
+function SquadList({
+  frame,
+  selected,
+  onSelect,
+  onCenter,
+}: {
+  frame: Frame;
+  selected: number[];
+  onSelect: (id: number) => void;
+  onCenter: (q: SquadView) => void;
+}) {
   return (
     <div className="squads panel">
-      <PanelHead icon={Users}>{t('squads.title')}</PanelHead>
+      <PanelHead icon={Users}>{t("squads.title")}</PanelHead>
       {frame.squads.map((q) => {
         const s = squadStats(frame, q);
         const StanceIcon = STANCE_ICON[q.stance];
         return (
           <div
             key={q.id}
-            className={`squad c${(q.id - 1) % 4} ${selected.includes(q.id) ? 'sel' : ''} ${q.alive === 0 ? 'dead' : ''}`}
+            className={`squad c${(q.id - 1) % 4} ${selected.includes(q.id) ? "sel" : ""} ${q.alive === 0 ? "dead" : ""}`}
             onClick={() => onSelect(q.id)}
             onDoubleClick={() => onCenter(q)}
           >
@@ -447,9 +630,15 @@ function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; sele
                   {q.name}
                   <span className="kind" title={t(`squadKind.${q.kind}.hint`)}>
                     {t(`squadKind.${q.kind}`)}
-                    {s.roles.medic > 0 && <HeartPulse size={10} aria-label={t('role.medic')} />}
-                    {s.roles.marksman > 0 && <Crosshair size={10} aria-label={t('role.marksman')} />}
-                    {s.roles.engineer > 0 && <Wrench size={10} aria-label={t('role.engineer')} />}
+                    {s.roles.medic > 0 && (
+                      <HeartPulse size={10} aria-label={t("role.medic")} />
+                    )}
+                    {s.roles.marksman > 0 && (
+                      <Crosshair size={10} aria-label={t("role.marksman")} />
+                    )}
+                    {s.roles.engineer > 0 && (
+                      <Wrench size={10} aria-label={t("role.engineer")} />
+                    )}
                   </span>
                 </span>
                 <span className="badges">
@@ -458,17 +647,38 @@ function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; sele
                     {t(`stance.${q.stance}`)}
                   </span>
                   <span className={`badge order-${q.order.kind}`}>
-                    {q.order.kind === 'move' ? <Footprints size={11} /> : q.order.kind === 'hold' ? <Shield size={11} /> : null}
+                    {q.order.kind === "move" ? (
+                      <Footprints size={11} />
+                    ) : q.order.kind === "hold" ? (
+                      <Shield size={11} />
+                    ) : null}
                     {t(`order.${q.order.kind}`)}
                   </span>
                 </span>
               </div>
-              <div className="pips" title={`${q.alive}/${q.members.length} ${t('squad.alive')}`}>
+              <div
+                className="pips"
+                title={`${q.alive}/${q.members.length} ${t("squad.alive")}`}
+              >
                 {s.members.map((m, i) => (
-                  <span key={i} className={m.condition === SoldierCondition.Dead || m.condition === SoldierCondition.Turned ? 'gone' : m.panic ? 'panic' : m.condition === SoldierCondition.Bitten ? 'bitten' : m.hp / s.maxHp < 0.5 ? 'hurt' : 'ok'} />
+                  <span
+                    key={i}
+                    className={
+                      m.condition === SoldierCondition.Dead ||
+                      m.condition === SoldierCondition.Turned
+                        ? "gone"
+                        : m.panic
+                          ? "panic"
+                          : m.condition === SoldierCondition.Bitten
+                            ? "bitten"
+                            : m.hp / s.maxHp < 0.5
+                              ? "hurt"
+                              : "ok"
+                    }
+                  />
                 ))}
                 <span className="pips-label">
-                  {q.alive}/{q.members.length} {t('squad.alive')}
+                  {q.alive}/{q.members.length} {t("squad.alive")}
                 </span>
               </div>
               <div className="bars">
@@ -480,21 +690,26 @@ function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; sele
                 <span className="num">{s.ammo}</span>
               </div>
               {q.alive > 0 && (
-                <div className="bars morale" title={t('squad.morale')}>
+                <div className="bars morale" title={t("squad.morale")}>
                   <Brain size={11} />
                   <Meter value={s.morale} kind="morale" thin />
-                  <span className={`morale-tag ${s.panic ? 'panic' : s.morale < 0.4 ? 'shaken' : ''}`}>
+                  <span
+                    className={`morale-tag ${s.panic ? "panic" : s.morale < 0.4 ? "shaken" : ""}`}
+                  >
                     {s.panic ? (
                       <>
                         <Zap size={10} />
-                        {t('morale.panic')}
+                        {t("morale.panic")}
                       </>
                     ) : (
-                      t(s.morale < 0.4 ? 'morale.shaken' : 'morale.steady')
+                      t(s.morale < 0.4 ? "morale.shaken" : "morale.steady")
                     )}
                   </span>
                   {s.cover > 0 && (
-                    <span className="morale-tag cover" title={t('morale.cover')}>
+                    <span
+                      className="morale-tag cover"
+                      title={t("morale.cover")}
+                    >
                       <ShieldHalf size={10} />
                       {s.cover}
                     </span>
@@ -509,20 +724,37 @@ function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; sele
   );
 }
 
-function VehicleList({ frame, selected, onSelect, onCenter }: { frame: Frame; selected: number | null; onSelect: (id: number) => void; onCenter: (x: number, y: number) => void }) {
+function VehicleList({
+  frame,
+  selected,
+  onSelect,
+  onCenter,
+}: {
+  frame: Frame;
+  selected: number | null;
+  onSelect: (id: number) => void;
+  onCenter: (x: number, y: number) => void;
+}) {
   if (frame.vehicles.length === 0) return null;
   return (
     <div className="squads panel">
-      <PanelHead icon={Truck}>{t('vehicles.title')}</PanelHead>
+      <PanelHead icon={Truck}>{t("vehicles.title")}</PanelHead>
       {frame.vehicles.map((v) => (
-        <div key={v.id} className={`squad vehicle ${selected === v.id ? 'sel' : ''} ${v.state === 'destroyed' ? 'dead' : ''}`} onClick={() => onSelect(v.id)} onDoubleClick={() => onCenter(v.x, v.y)}>
+        <div
+          key={v.id}
+          className={`squad vehicle ${selected === v.id ? "sel" : ""} ${v.state === "destroyed" ? "dead" : ""}`}
+          onClick={() => onSelect(v.id)}
+          onDoubleClick={() => onCenter(v.x, v.y)}
+        >
           <span className="hotkey">
             <Truck size={12} />
           </span>
           <div className="squad-body">
             <div className="row between">
-              <span className="name">{t('vehicle.truck')}</span>
-              <span className={`badge vs-${v.state}`}>{t(`vstate.${v.state}`)}</span>
+              <span className="name">{t("vehicle.truck")}</span>
+              <span className={`badge vs-${v.state}`}>
+                {t(`vstate.${v.state}`)}
+              </span>
             </div>
             <div className="bars">
               <Heart size={11} />
@@ -544,14 +776,16 @@ function DistrictList({ frame }: { frame: Frame }) {
   if (frame.districts.length < 2) return null;
   return (
     <div className="squads panel districts">
-      <PanelHead icon={MapIcon}>{t('districts.title')}</PanelHead>
+      <PanelHead icon={MapIcon}>{t("districts.title")}</PanelHead>
       {frame.districts.map((d) => (
         <div key={d.id} className="district">
           <div className="row between">
             <span>
               <span className={`dot ${d.state}`} /> {d.name}
             </span>
-            <span className={`dstate ${d.state}`}>{t(`dstate.${d.state}`)}</span>
+            <span className={`dstate ${d.state}`}>
+              {t(`dstate.${d.state}`)}
+            </span>
           </div>
           <div className={`meter thin m-district ${d.state}`}>
             <div style={{ width: `${d.control}%` }} />
@@ -564,38 +798,54 @@ function DistrictList({ frame }: { frame: Frame }) {
 
 // ----- Alerts -----
 
-const ALERT_STYLE: Partial<Record<GameClient['state']['alerts'][number]['type'], { icon: LucideIcon; tone: string }>> = {
-  soldier_bitten: { icon: TriangleAlert, tone: 'warn' },
-  soldier_died: { icon: Skull, tone: 'danger' },
-  soldier_turned: { icon: Biohazard, tone: 'danger' },
-  zombie_risen: { icon: Biohazard, tone: 'danger' },
-  out_of_ammo: { icon: Target, tone: 'warn' },
-  soldier_panicked: { icon: Zap, tone: 'warn' },
-  squad_contact: { icon: Crosshair, tone: 'info' },
-  squad_arrived: { icon: Flag, tone: 'info' },
-  command_rejected: { icon: Ban, tone: 'warn' },
-  structure_built: { icon: Hammer, tone: 'ok' },
-  structure_destroyed: { icon: BrickWall, tone: 'danger' },
-  convoy_blocked: { icon: Truck, tone: 'warn' },
-  cargo_delivered: { icon: Package, tone: 'ok' },
-  vehicle_destroyed: { icon: Truck, tone: 'danger' },
-  wave_warning: { icon: Siren, tone: 'warn' },
-  wave_started: { icon: Siren, tone: 'danger' },
-  district_lost: { icon: MapIcon, tone: 'danger' },
-  district_held: { icon: MapIcon, tone: 'ok' },
-  mission_won: { icon: CircleCheck, tone: 'ok' },
-  mission_lost: { icon: Skull, tone: 'danger' },
+const ALERT_STYLE: Partial<
+  Record<
+    GameClient["state"]["alerts"][number]["type"],
+    { icon: LucideIcon; tone: string }
+  >
+> = {
+  soldier_bitten: { icon: TriangleAlert, tone: "warn" },
+  soldier_died: { icon: Skull, tone: "danger" },
+  soldier_turned: { icon: Biohazard, tone: "danger" },
+  zombie_risen: { icon: Biohazard, tone: "danger" },
+  out_of_ammo: { icon: Target, tone: "warn" },
+  soldier_panicked: { icon: Zap, tone: "warn" },
+  squad_contact: { icon: Crosshair, tone: "info" },
+  squad_arrived: { icon: Flag, tone: "info" },
+  command_rejected: { icon: Ban, tone: "warn" },
+  structure_built: { icon: Hammer, tone: "ok" },
+  structure_destroyed: { icon: BrickWall, tone: "danger" },
+  convoy_blocked: { icon: Truck, tone: "warn" },
+  cargo_delivered: { icon: Package, tone: "ok" },
+  vehicle_destroyed: { icon: Truck, tone: "danger" },
+  wave_warning: { icon: Siren, tone: "warn" },
+  wave_started: { icon: Siren, tone: "danger" },
+  district_lost: { icon: MapIcon, tone: "danger" },
+  district_held: { icon: MapIcon, tone: "ok" },
+  mission_won: { icon: CircleCheck, tone: "ok" },
+  mission_lost: { icon: Skull, tone: "danger" },
 };
 
-function Alerts({ alerts, onJump }: { alerts: GameClient['state']['alerts']; onJump: (x: number, y: number) => void }) {
+function Alerts({
+  alerts,
+  onJump,
+}: {
+  alerts: GameClient["state"]["alerts"];
+  onJump: (x: number, y: number) => void;
+}) {
   if (alerts.length === 0) return null;
   return (
     <div className="alerts">
       {alerts.slice(0, 7).map((a, i) => {
-        const st = ALERT_STYLE[a.type] ?? { icon: Radio, tone: 'info' };
+        const st = ALERT_STYLE[a.type] ?? { icon: Radio, tone: "info" };
         const Icon = st.icon;
         return (
-          <div key={a.id} className={`alert panel t-${st.tone} a-${a.type} ${a.x !== undefined ? 'jump' : ''}`} style={{ opacity: 1 - i * 0.09 }} onClick={() => a.x !== undefined && onJump(a.x, a.y!)}>
+          <div
+            key={a.id}
+            className={`alert panel t-${st.tone} a-${a.type} ${a.x !== undefined ? "jump" : ""}`}
+            style={{ opacity: 1 - i * 0.09 }}
+            onClick={() => a.x !== undefined && onJump(a.x, a.y!)}
+          >
             <Icon size={14} />
             <span className="alert-text">{alertText(a)}</span>
             <span className="alert-time">{fmt(a.tick)}</span>
@@ -608,12 +858,20 @@ function Alerts({ alerts, onJump }: { alerts: GameClient['state']['alerts']; onJ
 
 // ----- Bottom: command cards -----
 
-function SelectionPanel({ squads, frame, input }: { squads: SquadView[]; frame: Frame; input: InputController }) {
+function SelectionPanel({
+  squads,
+  frame,
+  input,
+}: {
+  squads: SquadView[];
+  frame: Frame;
+  input: InputController;
+}) {
   if (squads.length === 0)
     return (
       <div className="selection panel empty">
         <MousePointerHint />
-        <span className="muted">{t('sel.none')}</span>
+        <span className="muted">{t("sel.none")}</span>
       </div>
     );
   const q = squads[0];
@@ -621,7 +879,7 @@ function SelectionPanel({ squads, frame, input }: { squads: SquadView[]; frame: 
   return (
     <div className={`selection panel c${(q.id - 1) % 4}`}>
       <div className="sel-head">
-        <b>{squads.map((x) => x.name).join(', ')}</b>
+        <b>{squads.map((x) => x.name).join(", ")}</b>
         <span className="sel-stats">
           <Stat icon={Users}>
             {q.alive}/{q.members.length}
@@ -635,23 +893,36 @@ function SelectionPanel({ squads, frame, input }: { squads: SquadView[]; frame: 
         {STANCES.map((st, i) => {
           const Icon = STANCE_ICON[st];
           return (
-            <button key={st} className={`cmd ${q.stance === st ? 'on' : ''}`} title={t(`tip.stance.${st}`)} onClick={() => input.setStance(st)}>
-              <Key k={'ZXCV'[i]} />
+            <button
+              key={st}
+              className={`cmd ${q.stance === st ? "on" : ""}`}
+              title={t(`tip.stance.${st}`)}
+              onClick={() => input.setStance(st)}
+            >
+              <Key k={"ZXCV"[i]} />
               <Icon size={18} />
               <span>{t(`stance.${st}`)}</span>
             </button>
           );
         })}
         <span className="cmd-sep" />
-        <button className="cmd" title={t('tip.formation')} onClick={() => input.cycleFormation()}>
+        <button
+          className="cmd"
+          title={t("tip.formation")}
+          onClick={() => input.cycleFormation()}
+        >
           <Key k="F" />
           <FormationGlyph formation={q.formation} />
           <span>{t(`formation.${q.formation}`)}</span>
         </button>
-        <button className="cmd primary" title={t('tip.direct')} onClick={() => input.toggleDirect()}>
+        <button
+          className="cmd primary"
+          title={t("tip.direct")}
+          onClick={() => input.toggleDirect()}
+        >
           <Key k="TAB" />
           <Gamepad2 size={18} />
-          <span>{t('sel.direct')}</span>
+          <span>{t("sel.direct")}</span>
         </button>
       </div>
     </div>
@@ -660,22 +931,51 @@ function SelectionPanel({ squads, frame, input }: { squads: SquadView[]; frame: 
 
 function MousePointerHint() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <rect x="3" y="3" width="18" height="18" strokeDasharray="3 3" />
       <path d="M12 12l7 3-3 1-1 3z" fill="currentColor" />
     </svg>
   );
 }
 
-function FormationGlyph({ formation }: { formation: SquadView['formation'] }) {
+function FormationGlyph({ formation }: { formation: SquadView["formation"] }) {
   const dots: [number, number][] =
-    formation === 'line'
-      ? [[3, 12], [8, 12], [13, 12], [18, 12]]
-      : formation === 'column'
-        ? [[12, 4], [12, 9], [12, 14], [12, 19]]
-        : formation === 'wedge'
-          ? [[12, 6], [7, 12], [17, 12], [3, 18], [21, 18]]
-          : [[12, 4], [19, 12], [12, 20], [5, 12]];
+    formation === "line"
+      ? [
+          [3, 12],
+          [8, 12],
+          [13, 12],
+          [18, 12],
+        ]
+      : formation === "column"
+        ? [
+            [12, 4],
+            [12, 9],
+            [12, 14],
+            [12, 19],
+          ]
+        : formation === "wedge"
+          ? [
+              [12, 6],
+              [7, 12],
+              [17, 12],
+              [3, 18],
+              [21, 18],
+            ]
+          : [
+              [12, 4],
+              [19, 12],
+              [12, 20],
+              [5, 12],
+            ];
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
       {dots.map(([x, y], i) => (
@@ -685,7 +985,13 @@ function FormationGlyph({ formation }: { formation: SquadView['formation'] }) {
   );
 }
 
-function BuildPanel({ frame, input }: { frame: Frame; input: InputController }) {
+function BuildPanel({
+  frame,
+  input,
+}: {
+  frame: Frame;
+  input: InputController;
+}) {
   const base = frame.bases[0];
   const tool = input.build;
   return (
@@ -696,17 +1002,21 @@ function BuildPanel({ frame, input }: { frame: Frame; input: InputController }) 
           base && (
             <>
               <span className="muted">{base.name}</span>
-              <Stat icon={Boxes} title={t('build.stock')}>
+              <Stat icon={Boxes} title={t("build.stock")}>
                 {base.materials}
               </Stat>
-              <Stat icon={Package} title={t('build.ammo')} className={base.ammo < 200 ? 'warn' : ''}>
+              <Stat
+                icon={Package}
+                title={t("build.ammo")}
+                className={base.ammo < 200 ? "warn" : ""}
+              >
                 {base.ammo}
               </Stat>
             </>
           )
         }
       >
-        {t('build.title')}
+        {t("build.title")}
       </PanelHead>
       <div className="cmds">
         {STRUCTURE_KINDS.map((k, i) => {
@@ -715,8 +1025,8 @@ function BuildPanel({ frame, input }: { frame: Frame; input: InputController }) 
           return (
             <button
               key={k}
-              className={`cmd ${tool.kind === k ? 'on' : ''}`}
-              title={`${t(`tip.${k}`)}\n${t('tip.stats').replace('{hp}', String(STRUCTURES[k].hp)).replace('{h}', String(STRUCTURES[k].height)).replace('{m}', String(cost))}`}
+              className={`cmd ${tool.kind === k ? "on" : ""}`}
+              title={`${t(`tip.${k}`)}\n${t("tip.stats").replace("{hp}", String(STRUCTURES[k].hp)).replace("{h}", String(STRUCTURES[k].height)).replace("{m}", String(cost))}`}
               onClick={() => input.setBuild(tool.kind === k ? null : k)}
               disabled={!base || base.materials < cost}
             >
@@ -731,22 +1041,42 @@ function BuildPanel({ frame, input }: { frame: Frame; input: InputController }) 
           );
         })}
       </div>
-      <div className={`hint ${tool.reason ? 'warn' : 'muted'}`}>{tool.active ? (tool.reason ? t(`reason.${tool.reason}`) : t('build.hint')) : t('build.edit')}</div>
+      <div className={`hint ${tool.reason ? "warn" : "muted"}`}>
+        {tool.active
+          ? tool.reason
+            ? t(`reason.${tool.reason}`)
+            : t("build.hint")
+          : t("build.edit")}
+      </div>
     </div>
   );
 }
 
-function VehiclePanel({ frame, id, input }: { frame: Frame; id: number; input: InputController }) {
+function VehiclePanel({
+  frame,
+  id,
+  input,
+}: {
+  frame: Frame;
+  id: number;
+  input: InputController;
+}) {
   const v = frame.vehicles.find((x) => x.id === id);
-  if (!v) return <div className="selection panel muted">{t('sel.none')}</div>;
+  if (!v) return <div className="selection panel muted">{t("sel.none")}</div>;
   const cs = 4;
-  const here = frame.bases.find((b) => v.x >= b.x0 * cs && v.x < (b.x1 + 1) * cs && v.y >= b.y0 * cs && v.y < (b.y1 + 1) * cs);
-  const dead = v.state === 'destroyed';
+  const here = frame.bases.find(
+    (b) =>
+      v.x >= b.x0 * cs &&
+      v.x < (b.x1 + 1) * cs &&
+      v.y >= b.y0 * cs &&
+      v.y < (b.y1 + 1) * cs,
+  );
+  const dead = v.state === "destroyed";
   return (
     <div className="selection panel vehicle-panel">
       <div className="sel-head">
         <b>
-          <Truck size={15} /> {t('vehicle.truck')}
+          <Truck size={15} /> {t("vehicle.truck")}
         </b>
         <span className="sel-stats">
           <Stat icon={Heart}>
@@ -754,18 +1084,25 @@ function VehiclePanel({ frame, id, input }: { frame: Frame; id: number; input: I
           </Stat>
           <Stat icon={Target}>{v.cargoAmmo}</Stat>
           <Stat icon={Boxes}>{v.cargoMaterials}</Stat>
-          <span className={`badge vs-${v.state}`}>{t(`vstate.${v.state}`)}</span>
+          <span className={`badge vs-${v.state}`}>
+            {t(`vstate.${v.state}`)}
+          </span>
           {here && <span className="muted">{here.name}</span>}
         </span>
       </div>
       {!dead && (
         <>
           <div className="cmd-row">
-            <span className="cmd-label">{t('convoy.policy')}</span>
+            <span className="cmd-label">{t("convoy.policy")}</span>
             {RISK_POLICIES.map((p) => {
               const Icon = POLICY_ICON[p];
               return (
-                <button key={p} className={`pill ${v.policy === p ? 'on' : ''}`} title={t(`policy.${p}.hint`)} onClick={() => input.setVehiclePolicy(p)}>
+                <button
+                  key={p}
+                  className={`pill ${v.policy === p ? "on" : ""}`}
+                  title={t(`policy.${p}.hint`)}
+                  onClick={() => input.setVehiclePolicy(p)}
+                >
                   <Icon size={12} />
                   {t(`policy.${p}`)}
                 </button>
@@ -774,30 +1111,49 @@ function VehiclePanel({ frame, id, input }: { frame: Frame; id: number; input: I
           </div>
           <div className="cmd-row">
             {frame.bases.map((b) => (
-              <button key={b.id} className="pill go" disabled={here?.id === b.id} onClick={() => input.sendConvoy(b.id, v.policy)}>
+              <button
+                key={b.id}
+                className="pill go"
+                disabled={here?.id === b.id}
+                onClick={() => input.sendConvoy(b.id, v.policy)}
+              >
                 → {b.name}
               </button>
             ))}
-            {v.state !== 'idle' && (
+            {v.state !== "idle" && (
               <button className="pill" onClick={() => input.stopVehicle()}>
-                {t('convoy.stop')}
+                {t("convoy.stop")}
               </button>
             )}
-            {here && v.state === 'idle' && (
+            {here && v.state === "idle" && (
               <>
-                <button className="pill" disabled={here.ammo === 0} onClick={() => input.loadVehicle(1000, 0)}>
-                  {t('convoy.loadAmmo')}
+                <button
+                  className="pill"
+                  disabled={here.ammo === 0}
+                  onClick={() => input.loadVehicle(1000, 0)}
+                >
+                  {t("convoy.loadAmmo")}
                 </button>
-                <button className="pill" disabled={here.materials === 0} onClick={() => input.loadVehicle(0, 100)}>
-                  {t('convoy.loadMat')}
+                <button
+                  className="pill"
+                  disabled={here.materials === 0}
+                  onClick={() => input.loadVehicle(0, 100)}
+                >
+                  {t("convoy.loadMat")}
                 </button>
-                <button className="pill" disabled={v.cargoAmmo + v.cargoMaterials === 0} onClick={() => input.loadVehicle(-v.cargoAmmo, -v.cargoMaterials)}>
-                  {t('convoy.unload')}
+                <button
+                  className="pill"
+                  disabled={v.cargoAmmo + v.cargoMaterials === 0}
+                  onClick={() =>
+                    input.loadVehicle(-v.cargoAmmo, -v.cargoMaterials)
+                  }
+                >
+                  {t("convoy.unload")}
                 </button>
               </>
             )}
           </div>
-          <div className="hint muted">{t('convoy.hint')}</div>
+          <div className="hint muted">{t("convoy.hint")}</div>
         </>
       )}
     </div>
@@ -838,9 +1194,15 @@ function DirectHud({ frame }: { frame: Frame }) {
           <span className="big">{hpShown}</span>
           <Meter value={hp / 100} kind="hp" />
         </div>
-        <div className="direct-hint muted">{document.pointerLockElement ? t('direct.exit') : t('direct.lock')}</div>
+        <div className="direct-hint muted">
+          {document.pointerLockElement ? t("direct.exit") : t("direct.lock")}
+        </div>
         <div className="direct-ammo panel">
-          <span className={`big ${mag === 0 ? 'danger' : mag < 8 ? 'warn' : ''}`}>{mag}</span>
+          <span
+            className={`big ${mag === 0 ? "danger" : mag < 8 ? "warn" : ""}`}
+          >
+            {mag}
+          </span>
           <span className="reserve">/ {total - mag}</span>
           <Target size={18} />
         </div>
@@ -851,31 +1213,55 @@ function DirectHud({ frame }: { frame: Frame }) {
 
 // ----- Summary -----
 
-function Summary({ frame, shell, seed }: { frame: Frame; shell: Shell; seed: number }) {
+function Summary({
+  frame,
+  shell,
+  seed,
+}: {
+  frame: Frame;
+  shell: Shell;
+  seed: number;
+}) {
   const m = frame.mission!;
-  const won = m.phase === 'won';
+  const won = m.phase === "won";
   useEffect(() => {
     if (won) shell.completeMission(m.id);
   }, [won, m.id, shell]);
-  const lost = frame.soldiers.length / SOLDIER_STRIDE - frame.stats.soldiersAlive;
-  const done = m.objectives.filter((o) => o.state === 'done').length;
-  const waves = m.objectives.find((o) => o.kind === 'waves');
+  const lost =
+    frame.soldiers.length / SOLDIER_STRIDE - frame.stats.soldiersAlive;
+  const done = m.objectives.filter((o) => o.state === "done").length;
+  const waves = m.objectives.find((o) => o.kind === "waves");
   const next = MISSION_IDS[MISSION_IDS.indexOf(m.id) + 1];
-  const rows: [LucideIcon, string, ReactNode][] = [[Flag, t('summary.objectives'), `${done}/${m.objectives.length}`]];
-  if (m.civiliansMax > 0) rows.push([Users, t('summary.civilians'), `${m.civilians}/${m.civiliansMax}`]);
-  if (m.evacuated > 0 || m.objectives.some((o) => o.kind === 'evacuate')) rows.push([Package, t('summary.evacuated'), m.evacuated]);
-  if (waves) rows.push([Siren, t('summary.waves'), `${waves.state === 'done' ? waves.total : waves.state === 'active' ? m.wave : 0}/${waves.total}`]);
+  const rows: [LucideIcon, string, ReactNode][] = [
+    [Flag, t("summary.objectives"), `${done}/${m.objectives.length}`],
+  ];
+  if (m.civiliansMax > 0)
+    rows.push([
+      Users,
+      t("summary.civilians"),
+      `${m.civilians}/${m.civiliansMax}`,
+    ]);
+  if (m.evacuated > 0 || m.objectives.some((o) => o.kind === "evacuate"))
+    rows.push([Package, t("summary.evacuated"), m.evacuated]);
+  if (waves)
+    rows.push([
+      Siren,
+      t("summary.waves"),
+      `${waves.state === "done" ? waves.total : waves.state === "active" ? m.wave : 0}/${waves.total}`,
+    ]);
   rows.push(
-    [Skull, t('summary.casualties'), lost],
-    [Crosshair, t('summary.killed'), frame.stats.zombiesKilled],
-    [Clock, t('summary.time'), fmt(frame.tick)],
-    [Shield, t('diff.title'), t(`diff.${frame.difficulty}`)],
+    [Skull, t("summary.casualties"), lost],
+    [Crosshair, t("summary.killed"), frame.stats.zombiesKilled],
+    [Clock, t("summary.time"), fmt(frame.tick)],
+    [Shield, t("diff.title"), t(`diff.${frame.difficulty}`)],
   );
   return (
     <div className="summary">
-      <div className={`panel card ${won ? 'won' : 'lost'}`}>
+      <div className={`panel card ${won ? "won" : "lost"}`}>
         <div className="summary-kicker">{t(`brief.${m.id}.title`)}</div>
-        <h1 className={won ? 'won' : 'lost'}>{won ? t('summary.won') : t('summary.lost')}</h1>
+        <h1 className={won ? "won" : "lost"}>
+          {won ? t("summary.won") : t("summary.lost")}
+        </h1>
         {!won && <p className="muted">{t(`loss.${m.reason}`)}</p>}
         <div className="summary-grid">
           {rows.map(([Icon, label, value]) => (
@@ -887,15 +1273,22 @@ function Summary({ frame, shell, seed }: { frame: Frame; shell: Shell; seed: num
           ))}
         </div>
         <div className="row end">
-          <button onClick={() => shell.restart(seed, false)}>{t('pause.mainMenu')}</button>
-          <button onClick={() => shell.restart(seed, true)}>{t('summary.retry')}</button>
+          <button onClick={() => shell.restart(seed, false)}>
+            {t("pause.mainMenu")}
+          </button>
+          <button onClick={() => shell.restart(seed, true)}>
+            {t("summary.retry")}
+          </button>
           {won && next ? (
             <button className="primary" onClick={() => shell.openMission(next)}>
-              {t('summary.nextMission')} <ArrowRight size={14} />
+              {t("summary.nextMission")} <ArrowRight size={14} />
             </button>
           ) : (
-            <button className="primary" onClick={() => shell.restart(seed + 1, true)}>
-              {t('summary.next')} <ArrowRight size={14} />
+            <button
+              className="primary"
+              onClick={() => shell.restart(seed + 1, true)}
+            >
+              {t("summary.next")} <ArrowRight size={14} />
             </button>
           )}
         </div>
@@ -904,31 +1297,31 @@ function Summary({ frame, shell, seed }: { frame: Frame; shell: Shell; seed: num
   );
 }
 
-function alertText(a: GameClient['state']['alerts'][number]): string {
+function alertText(a: GameClient["state"]["alerts"][number]): string {
   // Pressure groups arrive as wave 0.
-  if (a.type === 'wave_started' && !a.value) return t('alert.pressure');
+  if (a.type === "wave_started" && !a.value) return t("alert.pressure");
   const base = t(`alert.${a.type}`)
-    .replace('{n}', String(a.value ?? ''))
-    .replace('{s}', a.reason ?? '');
+    .replace("{n}", String(a.value ?? ""))
+    .replace("{s}", a.reason ?? "");
   switch (a.type) {
-    case 'structure_built':
-    case 'structure_destroyed':
+    case "structure_built":
+    case "structure_destroyed":
       return `${base} (${t(`structure.${a.reason}`)})`;
-    case 'convoy_blocked':
+    case "convoy_blocked":
       return `${base} (${t(`policy.${a.reason}`)})`;
-    case 'district_lost':
-    case 'district_held':
+    case "district_lost":
+    case "district_held":
       return `${base}: ${a.reason}`;
-    case 'cargo_delivered':
-      return `${base}: ${a.value} ${t('top.ammo').toLowerCase()} · ${a.reason} ${t('build.stock').toLowerCase()}`;
-    case 'mission_lost':
+    case "cargo_delivered":
+      return `${base}: ${a.value} ${t("top.ammo").toLowerCase()} · ${a.reason} ${t("build.stock").toLowerCase()}`;
+    case "mission_lost":
       return `${base}: ${t(`loss.${a.reason}`)}`;
-    case 'wave_warning':
-    case 'wave_started':
-    case 'mission_won':
-    case 'objective_done':
-    case 'civilians_boarded':
-    case 'civilians_delivered':
+    case "wave_warning":
+    case "wave_started":
+    case "mission_won":
+    case "objective_done":
+    case "civilians_boarded":
+    case "civilians_delivered":
       return base;
     default:
       return a.reason ? `${base} (${t(`reason.${a.reason}`)})` : base;
@@ -937,9 +1330,32 @@ function alertText(a: GameClient['state']['alerts'][number]): string {
 
 function fmt(tick: number): string {
   const s = Math.floor(tick / TICK_HZ);
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
 function boxStyle(b: { x0: number; y0: number; x1: number; y1: number }) {
-  return { left: Math.min(b.x0, b.x1), top: Math.min(b.y0, b.y1), width: Math.abs(b.x1 - b.x0), height: Math.abs(b.y1 - b.y0) };
+  return {
+    left: Math.min(b.x0, b.x1),
+    top: Math.min(b.y0, b.y1),
+    width: Math.abs(b.x1 - b.x0),
+    height: Math.abs(b.y1 - b.y0),
+  };
+}
+
+/** Right-drag arrow: the move target and the direction the squads will face. */
+function FaceArrow({
+  a,
+}: {
+  a: { x0: number; y0: number; x1: number; y1: number };
+}) {
+  const ang = Math.atan2(a.y1 - a.y0, a.x1 - a.x0);
+  const head = (d: number) =>
+    `${a.x1 - 14 * Math.cos(ang + d)},${a.y1 - 14 * Math.sin(ang + d)}`;
+  return (
+    <svg className="face-arrow">
+      <circle cx={a.x0} cy={a.y0} r={5} />
+      <line x1={a.x0} y1={a.y0} x2={a.x1} y2={a.y1} />
+      <polygon points={`${a.x1},${a.y1} ${head(0.45)} ${head(-0.45)}`} />
+    </svg>
+  );
 }

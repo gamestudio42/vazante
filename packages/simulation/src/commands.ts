@@ -1,35 +1,66 @@
-import { CELL_SIZE, SoldierActivity, ZOMBIES, ZombieKind, ZombieState, type Command } from '@vazante/shared';
-import { demolishStructure, placeStructure, toggleGate } from './systems/construction.ts';
-import { releaseDirect } from './systems/lifecycle.ts';
-import { loadCargo, orderConvoy, stopVehicle } from './systems/logistics.ts';
-import { planMove } from './systems/units.ts';
-import { isActiveSoldier, type World } from './world.ts';
+import {
+  CELL_SIZE,
+  SoldierActivity,
+  ZOMBIES,
+  ZombieKind,
+  ZombieState,
+  type Command,
+} from "@vazante/shared";
+import {
+  demolishStructure,
+  placeStructure,
+  toggleGate,
+} from "./systems/construction.ts";
+import { releaseDirect } from "./systems/lifecycle.ts";
+import { loadCargo, orderConvoy, stopVehicle } from "./systems/logistics.ts";
+import { groupSquads, planMove } from "./systems/units.ts";
+import type { Squad } from "./entities.ts";
+import { isActiveSoldier, type World } from "./world.ts";
 
 /** Apply one command at the start of a tick. Returns a rejection reason, or null on success. */
 export function applyCommand(w: World, cmd: Command): string | null {
   switch (cmd.type) {
-    case 'set_speed':
-      if (w.directSoldier !== null && cmd.speed !== 1) return 'direct_control_active';
+    case "set_speed":
+      if (w.directSoldier !== null && cmd.speed !== 1)
+        return "direct_control_active";
       w.speed = cmd.speed;
       return null;
 
-    case 'move': {
+    case "move": {
+      const qs = cmd.squads
+        .map((id) => w.squad(id))
+        .filter((q): q is Squad => q !== undefined);
+      const face = cmd.face ? unit(cmd.face.x, cmd.face.y) : null;
       let ok = 0;
-      for (const id of cmd.squads) {
-        const q = w.squad(id);
-        if (!q || !planMove(w, q, cmd.to.x, cmd.to.y)) continue;
+      const moved: Squad[] = [];
+      for (const q of qs) {
+        if (!planMove(w, q, cmd.to.x, cmd.to.y)) continue;
         q.buildTask = 0;
         q.autoBuild = true;
+        moved.push(q);
         ok++;
       }
-      return ok > 0 ? null : 'no_path';
+      // Several squads face the way they are heading as a group, unless a drag said otherwise.
+      let dir = face;
+      if (!dir && moved.length > 1) {
+        let cx = 0;
+        let cy = 0;
+        for (const q of moved) {
+          cx += q.ax / moved.length;
+          cy += q.ay / moved.length;
+        }
+        dir = unit(cmd.to.x - cx, cmd.to.y - cy);
+      }
+      for (const q of moved) q.face = dir ?? undefined;
+      groupSquads(w, moved, dir?.x ?? 0, dir?.y ?? -1);
+      return ok > 0 ? null : "no_path";
     }
 
-    case 'hold':
+    case "hold":
       for (const id of cmd.squads) {
         const q = w.squad(id);
         if (!q) continue;
-        q.order = { kind: 'hold', at: { x: q.ax, y: q.ay } };
+        q.order = { kind: "hold", at: { x: q.ax, y: q.ay } };
         q.buildTask = 0;
         q.autoBuild = false;
         q.path = [];
@@ -37,21 +68,41 @@ export function applyCommand(w: World, cmd: Command): string | null {
       }
       return null;
 
-    case 'stance':
+    case "stance":
       for (const id of cmd.squads) {
         const q = w.squad(id);
         if (q) q.stance = cmd.stance;
       }
       return null;
 
-    case 'formation':
-      for (const id of cmd.squads) {
-        const q = w.squad(id);
-        if (q) q.formation = cmd.formation;
+    case "formation": {
+      const qs = cmd.squads
+        .map((id) => w.squad(id))
+        .filter((q): q is Squad => q !== undefined);
+      for (const q of qs) q.formation = cmd.formation;
+      if (qs.length < 2) {
+        groupSquads(w, qs, 0, 0);
+        return null;
       }
+      // Several squads close up on their middle into one formation, facing the first one's way.
+      let cx = 0;
+      let cy = 0;
+      for (const q of qs) {
+        cx += q.ax / qs.length;
+        cy += q.ay / qs.length;
+      }
+      if (!w.grid.isWalkableAt(cx, cy)) [cx, cy] = [qs[0].ax, qs[0].ay];
+      const face = { x: qs[0].hx, y: qs[0].hy };
+      const moved = qs.filter((q) => planMove(w, q, cx, cy));
+      for (const q of moved) {
+        q.face = face;
+        q.buildTask = 0;
+      }
+      groupSquads(w, moved, face.x, face.y);
       return null;
+    }
 
-    case 'set_direct_control': {
+    case "set_direct_control": {
       if (w.directSoldier !== null) {
         const prev = w.soldier(w.directSoldier);
         if (prev) {
@@ -63,20 +114,27 @@ export function applyCommand(w: World, cmd: Command): string | null {
       }
       if (cmd.soldier === null) return null;
       const s = w.soldier(cmd.soldier);
-      if (!s || !isActiveSoldier(s)) return 'soldier_unavailable';
-      s.direct = { mx: 0, my: 0, ax: s.fx, ay: s.fy, fire: false, reload: false };
+      if (!s || !isActiveSoldier(s)) return "soldier_unavailable";
+      s.direct = {
+        mx: 0,
+        my: 0,
+        ax: s.fx,
+        ay: s.fy,
+        fire: false,
+        reload: false,
+      };
       s.target = -1;
       s.fireAcc = 0;
       w.directSoldier = s.id;
       w.speed = 1;
-      w.emit({ type: 'direct_control', source: s.id, value: 1 });
+      w.emit({ type: "direct_control", source: s.id, value: 1 });
       return null;
     }
 
-    case 'direct_input': {
-      if (w.directSoldier !== cmd.soldier) return 'not_direct_controlled';
+    case "direct_input": {
+      if (w.directSoldier !== cmd.soldier) return "not_direct_controlled";
       const s = w.soldier(cmd.soldier);
-      if (!s || !s.direct) return 'not_direct_controlled';
+      if (!s || !s.direct) return "not_direct_controlled";
       let { x: mx, y: my } = cmd.move;
       const ml = Math.sqrt(mx * mx + my * my);
       if (ml > 1) {
@@ -96,34 +154,37 @@ export function applyCommand(w: World, cmd: Command): string | null {
       return null;
     }
 
-    case 'build':
+    case "build":
       return placeStructure(w, cmd.kind, cmd.at.x, cmd.at.y);
 
-    case 'demolish':
+    case "demolish":
       return demolishStructure(w, cmd.structure);
 
-    case 'toggle_gate':
+    case "toggle_gate":
       return toggleGate(w, cmd.structure);
 
-    case 'convoy':
+    case "convoy":
       return orderConvoy(w, cmd.vehicle, cmd.to, cmd.policy);
 
-    case 'load':
+    case "load":
       return loadCargo(w, cmd.vehicle, cmd.ammo, cmd.materials);
 
-    case 'stop_vehicle':
+    case "stop_vehicle":
       return stopVehicle(w, cmd.vehicle);
 
-    case 'set_policy': {
+    case "set_policy": {
       const v = w.vehicle(cmd.vehicle);
-      if (!v || v.state === 'destroyed') return 'no_vehicle';
+      if (!v || v.state === "destroyed") return "no_vehicle";
       v.policy = cmd.policy;
       return null;
     }
 
-    case 'debug_spawn': {
+    case "debug_spawn": {
       const n = Math.max(1, Math.min(500, Math.floor(cmd.count)));
-      const kind = cmd.kind !== undefined && cmd.kind >= 0 && cmd.kind < ZOMBIES.length ? (Math.floor(cmd.kind) as ZombieKind) : ZombieKind.Common;
+      const kind =
+        cmd.kind !== undefined && cmd.kind >= 0 && cmd.kind < ZOMBIES.length
+          ? (Math.floor(cmd.kind) as ZombieKind)
+          : ZombieKind.Common;
       let placed = 0;
       for (let i = 0; i < n * 20 && placed < n; i++) {
         const x = cmd.at.x + w.rng.range(-5, 5) * CELL_SIZE;
@@ -132,7 +193,12 @@ export function applyCommand(w: World, cmd: Command): string | null {
         if (w.zombies.spawn(x, y, kind, ZombieState.Chasing) < 0) break;
         placed++;
       }
-      return placed > 0 ? null : 'no_space';
+      return placed > 0 ? null : "no_space";
     }
   }
+}
+
+function unit(x: number, y: number): { x: number; y: number } | null {
+  const d = Math.sqrt(x * x + y * y);
+  return d > 1e-6 ? { x: x / d, y: y / d } : null;
 }
