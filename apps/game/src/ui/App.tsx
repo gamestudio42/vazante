@@ -35,6 +35,9 @@ import {
   Footprints,
   Siren,
   Hand,
+  Brain,
+  ShieldHalf,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -60,7 +63,7 @@ import type { GameClient } from '../client.ts';
 import type { InputController } from '../input.ts';
 import { t } from '../i18n.ts';
 import type { Shell } from '../shell.ts';
-import { ShellOverlay } from './Shell.tsx';
+import { ShellOverlay, TutorialCard } from './Shell.tsx';
 import { Minimap } from './Minimap.tsx';
 
 interface Props {
@@ -120,6 +123,7 @@ export function App({ client, input, view, shell }: Props) {
             <pre>{t('help.body')}</pre>
           </div>
         )}
+        {!ended && <TutorialCard shell={shell} />}
         {ended && shell.screen === 'playing' && <Summary frame={f} shell={shell} seed={seed} />}
         <ShellOverlay shell={shell} seed={seed} />
       </div>
@@ -184,9 +188,9 @@ function PanelHead({ icon: Icon, children, extra }: { icon: LucideIcon; children
   );
 }
 
-function Meter({ value, kind = 'hp', thin }: { value: number; kind?: 'hp' | 'ammo' | 'post' | 'wave'; thin?: boolean }) {
+function Meter({ value, kind = 'hp', thin }: { value: number; kind?: 'hp' | 'ammo' | 'post' | 'wave' | 'morale'; thin?: boolean }) {
   const v = Math.max(0, Math.min(1, value));
-  const level = kind === 'hp' || kind === 'post' ? (v < 0.3 ? 'low' : v < 0.6 ? 'mid' : '') : kind === 'ammo' && v < 0.2 ? 'low' : '';
+  const level = kind === 'hp' || kind === 'post' || kind === 'morale' ? (v < 0.3 ? 'low' : v < 0.6 ? 'mid' : '') : kind === 'ammo' && v < 0.2 ? 'low' : '';
   return (
     <div className={`meter m-${kind} ${level} ${thin ? 'thin' : ''}`}>
       <div style={{ width: `${v * 100}%` }} />
@@ -335,6 +339,7 @@ function Objective({ done, active, children }: { done: boolean; active: boolean;
 interface Member {
   hp: number;
   condition: number;
+  panic: boolean;
 }
 
 /** Highest values seen per squad: what full health and a full load mean for the bars. */
@@ -347,14 +352,21 @@ function squadStats(frame: Frame, q: SquadView) {
   let hp = 0;
   let ammo = 0;
   let top = 0;
+  let stress = 0;
+  let panic = 0;
+  let cover = 0;
   const members: Member[] = [];
   for (let i = 0; i < frame.soldiers.length / SOLDIER_STRIDE; i++) {
     const o = i * SOLDIER_STRIDE;
     if (frame.soldiers[o + SoldierField.Squad] !== q.id) continue;
     const c = frame.soldiers[o + SoldierField.Condition];
     const h = frame.soldiers[o + SoldierField.Hp];
-    members.push({ hp: h, condition: c });
+    const flags = frame.soldiers[o + SoldierField.Flags];
+    members.push({ hp: h, condition: c, panic: (flags & 1) !== 0 });
     if (c > SoldierCondition.Bitten) continue;
+    stress += frame.soldiers[o + SoldierField.Stress];
+    if (flags & 1) panic++;
+    if (flags & 2) cover++;
     hp += h;
     top = Math.max(top, h);
     ammo += frame.soldiers[o + SoldierField.Ammo];
@@ -364,7 +376,8 @@ function squadStats(frame: Frame, q: SquadView) {
   p.ammo = Math.max(p.ammo, ammo);
   peaks.set(q.id, p);
   const avg = q.alive ? hp / q.alive : 0;
-  return { hp: Math.round(avg), hpFrac: avg / p.hp, ammo, ammoFrac: ammo / p.ammo, members, maxHp: p.hp };
+  const morale = q.alive ? 1 - stress / q.alive / 100 : 0;
+  return { hp: Math.round(avg), hpFrac: avg / p.hp, ammo, ammoFrac: ammo / p.ammo, members, maxHp: p.hp, morale, panic, cover };
 }
 
 function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; selected: number[]; onSelect: (id: number) => void; onCenter: (q: SquadView) => void }) {
@@ -398,7 +411,7 @@ function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; sele
               </div>
               <div className="pips" title={`${q.alive}/${q.members.length} ${t('squad.alive')}`}>
                 {s.members.map((m, i) => (
-                  <span key={i} className={m.condition === SoldierCondition.Dead || m.condition === SoldierCondition.Turned ? 'gone' : m.condition === SoldierCondition.Bitten ? 'bitten' : m.hp / s.maxHp < 0.5 ? 'hurt' : 'ok'} />
+                  <span key={i} className={m.condition === SoldierCondition.Dead || m.condition === SoldierCondition.Turned ? 'gone' : m.panic ? 'panic' : m.condition === SoldierCondition.Bitten ? 'bitten' : m.hp / s.maxHp < 0.5 ? 'hurt' : 'ok'} />
                 ))}
                 <span className="pips-label">
                   {q.alive}/{q.members.length} {t('squad.alive')}
@@ -412,6 +425,28 @@ function SquadList({ frame, selected, onSelect, onCenter }: { frame: Frame; sele
                 <Meter value={s.ammoFrac} kind="ammo" thin />
                 <span className="num">{s.ammo}</span>
               </div>
+              {q.alive > 0 && (
+                <div className="bars morale" title={t('squad.morale')}>
+                  <Brain size={11} />
+                  <Meter value={s.morale} kind="morale" thin />
+                  <span className={`morale-tag ${s.panic ? 'panic' : s.morale < 0.4 ? 'shaken' : ''}`}>
+                    {s.panic ? (
+                      <>
+                        <Zap size={10} />
+                        {t('morale.panic')}
+                      </>
+                    ) : (
+                      t(s.morale < 0.4 ? 'morale.shaken' : 'morale.steady')
+                    )}
+                  </span>
+                  {s.cover > 0 && (
+                    <span className="morale-tag cover" title={t('morale.cover')}>
+                      <ShieldHalf size={10} />
+                      {s.cover}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -481,6 +516,8 @@ const ALERT_STYLE: Partial<Record<GameClient['state']['alerts'][number]['type'],
   soldier_turned: { icon: Biohazard, tone: 'danger' },
   zombie_risen: { icon: Biohazard, tone: 'danger' },
   out_of_ammo: { icon: Target, tone: 'warn' },
+  soldier_panicked: { icon: Zap, tone: 'warn' },
+  squad_contact: { icon: Crosshair, tone: 'info' },
   squad_arrived: { icon: Flag, tone: 'info' },
   command_rejected: { icon: Ban, tone: 'warn' },
   structure_built: { icon: Hammer, tone: 'ok' },
@@ -772,6 +809,7 @@ function Summary({ frame, shell, seed }: { frame: Frame; shell: Shell; seed: num
     [Skull, t('summary.casualties'), lost],
     [Crosshair, t('summary.killed'), frame.stats.zombiesKilled],
     [Clock, t('summary.time'), fmt(frame.tick)],
+    [Shield, t('diff.title'), t(`diff.${frame.difficulty}`)],
   ];
   return (
     <div className="summary">

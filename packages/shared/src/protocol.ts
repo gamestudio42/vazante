@@ -1,3 +1,4 @@
+import type { DifficultyId } from './balance/difficulty.ts';
 import type { RiskPolicy } from './balance/logistics.ts';
 import type { StructureKind } from './balance/structures.ts';
 import type { Command } from './commands.ts';
@@ -6,8 +7,8 @@ import type { SimEvent } from './events.ts';
 import type { Formation, MapInfo, SimSpeed, SquadOrder, Stance } from './types.ts';
 
 /** Stride of the soldier frame array. */
-export const SOLDIER_STRIDE = 11;
-/** [id, squad, x, y, facingX, facingY, hp, ammoTotal, condition, activity, magazine] */
+export const SOLDIER_STRIDE = 13;
+/** [id, squad, x, y, facingX, facingY, hp, ammoTotal, condition, activity, magazine, stress, flags] */
 export enum SoldierField {
   Id = 0,
   Squad = 1,
@@ -20,6 +21,10 @@ export enum SoldierField {
   Condition = 8,
   Activity = 9,
   Magazine = 10,
+  /** Morale stress 0..100. */
+  Stress = 11,
+  /** Bit 0: panicking; bit 1: in cover. */
+  Flags = 12,
 }
 
 /** Stride of the zombie frame array. */
@@ -151,12 +156,15 @@ export interface Frame {
   mission: MissionView | null;
   districts: DistrictView[];
   directSoldier: number | null;
+  difficulty: DifficultyId;
   events: SimEvent[];
   stats: FrameStats;
 }
 
 export type ToWorker =
-  | { type: 'init'; seed: number; scenario: string; save?: SaveGame }
+  | { type: 'init'; seed: number; scenario: string; save?: SaveGame; difficulty?: string }
+  /** Rebuild the scenario at another difficulty; ignored once the game has run a tick. */
+  | { type: 'set_difficulty'; difficulty: string }
   | { type: 'save'; slot: string }
   | { type: 'command'; cmd: Command }
   | { type: 'request_hash' };

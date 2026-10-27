@@ -1,4 +1,4 @@
-import { CELL_SIZE, SLICE, ZOMBIE_POOL_CAPACITY, ZombieState } from '@vazante/shared';
+import { CELL_SIZE, DIFFICULTY, SLICE, type DifficultyId, ZOMBIE_POOL_CAPACITY, ZombieState } from '@vazante/shared';
 import { Grid } from '../grid.ts';
 import { generateSliceMap } from '../mapgen.ts';
 import { rollZombieKind, spawnSquad } from '../spawn.ts';
@@ -10,12 +10,15 @@ export type ScenarioId = 'last_convoy' | 'open_field';
 
 export interface ScenarioOptions {
   zombies?: number;
+  difficulty?: DifficultyId;
 }
 
 /** "O Último Comboio": two squads at the base, the horde spread over the city. */
 export function lastConvoy(seed: number, opts: ScenarioOptions = {}): World {
   const map = generateSliceMap(seed);
   const w = new World(seed, map.grid, map.buildings, map.districts, map.sites, ZOMBIE_POOL_CAPACITY);
+  w.difficulty = opts.difficulty ?? 'veteran';
+  const diff = DIFFICULTY[w.difficulty];
   const base = map.sites.find((s) => s.kind === 'base')!;
   const bx = ((base.x0 + base.x1 + 1) / 2) * CELL_SIZE;
   const by = ((base.y0 + base.y1 + 1) / 2) * CELL_SIZE;
@@ -24,14 +27,14 @@ export function lastConvoy(seed: number, opts: ScenarioOptions = {}): World {
 
   // The post is running out of ammunition; a loaded truck waits at the depot across the city.
   const home = w.bases.find((b) => b.kind === 'base')!;
-  home.materials = SLICE.baseMaterials;
-  home.ammo = SLICE.baseAmmo;
+  home.materials = SLICE.baseMaterials + diff.baseMaterials;
+  home.ammo = SLICE.baseAmmo + diff.baseAmmo;
   const depot = map.sites.find((s) => s.kind === 'depot')!;
   const tx = ((depot.x0 + depot.x1 + 1) / 2) * CELL_SIZE;
   const ty = ((depot.y0 + depot.y1 + 1) / 2) * CELL_SIZE;
   const truck = spawnTruck(w, tx, ty, SLICE.truckAmmo, SLICE.truckMaterials);
 
-  const count = opts.zombies ?? 200;
+  const count = opts.zombies ?? Math.round(200 * diff.cityZombies);
   const minDist2 = 150 * 150;
   let placed = 0;
   for (let attempts = 0; placed < count && attempts < count * 50; attempts++) {

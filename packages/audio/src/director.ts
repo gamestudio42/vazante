@@ -275,6 +275,12 @@ export class AudioDirector {
         this.dryClick(e.x!, e.y!);
         this.radio(false);
         return;
+      case 'squad_contact':
+        if (this.throttle('contact', 1.5)) this.radio(false);
+        return;
+      case 'soldier_panicked':
+        this.scream(e.x!, e.y!, 0);
+        return;
       case 'squad_arrived':
         if (this.throttle('arrive', 0.3)) this.radio(true);
         return;

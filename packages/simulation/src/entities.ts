@@ -37,6 +37,13 @@ export interface Soldier {
   riseAt: number;
   outOfAmmoReported: boolean;
   direct: DirectInput | null;
+  /** Morale stress 0..100; see STRESS. */
+  stress: number;
+  /** Ticks left running in panic (0 = steady) and ticks before another break is possible. */
+  panicT: number;
+  panicCd: number;
+  /** Next to a built structure this tick (braced, steadier). */
+  inCover: boolean;
 }
 
 export interface Squad {
@@ -61,6 +68,11 @@ export interface Squad {
   buildTask: number;
   /** Idle in a base, this squad helps build. A player "hold" turns it off, a move turns it back on. */
   autoBuild: boolean;
+  /** Cover cell chosen for each formation slot while holding (-1 = use the slot). */
+  cover: number[];
+  /** Any member engaging last tick, and ticks before the next contact call. */
+  engaged: boolean;
+  contactCd: number;
 }
 
 export interface Structure {

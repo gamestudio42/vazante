@@ -77,3 +77,43 @@ test('quick save and quick load with F5 and F9', async ({ page }) => {
   expect(await stateHash(page)).toBe(savedHash);
   expect(errors).toEqual([]);
 });
+
+test('tutorial from the main menu: recruit game, steps advance on the player actions', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?seed=1');
+  await page.evaluate(() => localStorage.clear());
+  await page.goto('/?seed=1');
+  await page.getByRole('button', { name: 'Tutorial' }).click({ timeout: 30_000 });
+  await expect(page.getByRole('radio', { name: /Recruta/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('checkbox', { name: 'Tutorial guiado' })).toBeChecked();
+  await page.getByRole('button', { name: 'Começar' }).click();
+  await expect.poll(async () => (await frame(page)).difficulty).toBe('recruit');
+
+  const card = page.getByRole('status').filter({ hasText: 'Tutorial' });
+  await expect(card).toContainText('1/9');
+  await page.keyboard.down('d');
+  await expect(card).toContainText('2/9', { timeout: 15_000 });
+  await page.keyboard.up('d');
+  await page.locator('.squad').first().click();
+  await expect(card).toContainText('3/9', { timeout: 10_000 });
+  await card.getByRole('button', { name: 'Pular etapa' }).click();
+  await expect(card).toContainText('4/9');
+  await card.getByRole('button', { name: 'Sair do tutorial' }).click();
+  await expect(card).toBeHidden();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('vazante.settings') ?? '{}').tutorialSeen)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('difficulty chosen on the briefing rebuilds the waiting scenario', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?seed=1');
+  await page.evaluate(() => localStorage.clear());
+  await page.goto('/?seed=1');
+  await page.getByRole('button', { name: 'Nova partida' }).click({ timeout: 30_000 });
+  const before = (await frame(page)).stats.zombiesAlive;
+  await page.getByRole('radio', { name: /Pesadelo/ }).click();
+  await expect.poll(async () => (await frame(page)).difficulty).toBe('nightmare');
+  expect((await frame(page)).stats.zombiesAlive).toBeGreaterThan(before);
+  expect(await tick(page)).toBe(0);
+  expect(errors).toEqual([]);
+});

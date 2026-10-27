@@ -1,4 +1,5 @@
-import { SoldierActivity, SoldierCondition, ZombieKind, ZombieState, RISE_AFTER_DEATH_S, TICK_HZ } from '@vazante/shared';
+import { SoldierActivity, SoldierCondition, ZombieKind, ZombieState, RISE_AFTER_DEATH_S, TICK_HZ, STRESS } from '@vazante/shared';
+import { witness } from './morale.ts';
 import type { Soldier } from '../entities.ts';
 import type { World } from '../world.ts';
 
@@ -13,6 +14,7 @@ export function killSoldier(w: World, s: Soldier, byZombie: boolean): void {
   s.riseAt = byZombie ? w.tick + RISE_AFTER_DEATH_S * TICK_HZ : -1;
   releaseDirect(w, s);
   w.emit({ type: 'soldier_died', source: s.id, x: s.x, y: s.y });
+  witness(w, s, STRESS.mateDown);
 }
 
 /** A soldier becomes a zombie at its position. */

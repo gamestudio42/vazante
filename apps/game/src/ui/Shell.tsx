@@ -1,6 +1,6 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { Download, FolderOpen, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Trash2, Undo2, Upload } from 'lucide-react';
-import { TICK_HZ, type SaveMeta } from '@vazante/shared';
+import { Check, ChevronRight, Download, FolderOpen, GraduationCap, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
+import { DIFFICULTY_IDS, TICK_HZ, type SaveMeta } from '@vazante/shared';
 import { t, type Locale } from '../i18n.ts';
 import type { Settings } from '../settings.ts';
 import type { Shell } from '../shell.ts';
@@ -48,6 +48,10 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
           <Plus size={16} />
           {t('menu.new')}
         </button>
+        <button onClick={() => shell.newTutorial()}>
+          <GraduationCap size={16} />
+          {t('menu.tutorial')}
+        </button>
         <button onClick={() => shell.openPanel('load')}>
           <FolderOpen size={16} />
           {t('menu.load')}
@@ -87,12 +91,74 @@ function Briefing({ shell }: { shell: Shell }) {
             <p key={i}>{p}</p>
           ))}
         <p className="muted tips">{t('brief.tips')}</p>
-        <div className="row end">
+        <div className="difficulty" role="radiogroup" aria-label={t('diff.title')}>
+          {DIFFICULTY_IDS.map((d) => {
+            const Icon = DIFF_ICON[d];
+            return (
+              <button key={d} role="radio" aria-checked={shell.settings.difficulty === d} className={`diff ${shell.settings.difficulty === d ? 'on' : ''}`} onClick={() => shell.setDifficulty(d)}>
+                <span className="diff-name">
+                  <Icon size={14} />
+                  {t(`diff.${d}`)}
+                </span>
+                <span className="diff-desc">{t(`diff.${d}.desc`)}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="row between">
+          <label className="tut-toggle">
+            <input type="checkbox" checked={shell.withTutorial} onChange={(e) => shell.setTutorial(e.target.checked)} />
+            <GraduationCap size={14} />
+            {t('brief.tutorial')}
+          </label>
           <button className="primary big" autoFocus onClick={() => shell.start()}>
             <Play size={16} />
             {t('brief.start')}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const DIFF_ICON = { recruit: Shield, veteran: Check, nightmare: Skull } as const;
+
+/** One hint at a time over the running game; never blocks the map. */
+export function TutorialCard({ shell }: { shell: Shell }) {
+  const tut = shell.tutorial;
+  useSyncExternalStore(tut.subscribe, () => tut.version);
+  if (!tut.active || shell.screen !== 'playing') return null;
+  const last = tut.step === tut.total - 1;
+  return (
+    <div className={`tutorial panel ${tut.completed ? 'done' : ''}`} role="status">
+      <div className="row between tut-head">
+        <span className="tut-kicker">
+          <GraduationCap size={13} />
+          {t('tut.title')} {tut.step + 1}/{tut.total}
+        </span>
+        <button className="icon" title={t('tut.quit')} aria-label={t('tut.quit')} onClick={() => tut.stop()}>
+          <X size={14} />
+        </button>
+      </div>
+      <h3>
+        {tut.completed && <Check size={16} />}
+        {t(`tut.${tut.id}.h`)}
+      </h3>
+      <p>{t(`tut.${tut.id}`)}</p>
+      <div className="row end">
+        {tut.manual ? (
+          <button className="primary" onClick={() => tut.next()}>
+            {last ? t('tut.finish') : t('tut.ok')}
+            <ChevronRight size={14} />
+          </button>
+        ) : tut.completed ? (
+          <span className="tut-ok">{t('tut.done')}</span>
+        ) : (
+          <button onClick={() => tut.next()}>
+            {t('tut.skip')}
+            <ChevronRight size={14} />
+          </button>
+        )}
       </div>
     </div>
   );

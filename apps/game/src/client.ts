@@ -1,4 +1,4 @@
-import type { Command, Frame, FromWorker, MapInfo, SaveGame, SimEvent, ToWorker } from '@vazante/shared';
+import type { Command, DifficultyId, Frame, FromWorker, MapInfo, SaveGame, SimEvent, ToWorker } from '@vazante/shared';
 
 export interface Alert {
   id: number;
@@ -16,6 +16,8 @@ const ALERT_TYPES = new Set<SimEvent['type']>([
   'soldier_turned',
   'zombie_risen',
   'out_of_ammo',
+  'soldier_panicked',
+  'squad_contact',
   'squad_arrived',
   'command_rejected',
   'structure_built',
@@ -54,10 +56,15 @@ export class GameClient {
   private pendingSaves = new Map<string, (s: SaveGame) => void>();
   state: ClientState = { map: null, frame: null, selected: [], vehicle: null, alerts: [], limited: false, loadError: null, version: 0 };
 
-  constructor(seed: number, save?: SaveGame) {
+  constructor(seed: number, save?: SaveGame, difficulty?: DifficultyId) {
     this.worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
     this.worker.onmessage = (ev: MessageEvent<FromWorker>) => this.onMessage(ev.data);
-    this.post({ type: 'init', seed, scenario: save?.scenario ?? 'last_convoy', save });
+    this.post({ type: 'init', seed, scenario: save?.scenario ?? 'last_convoy', save, difficulty });
+  }
+
+  /** Rebuild the (not yet started) scenario at another difficulty. */
+  setDifficulty(difficulty: DifficultyId): void {
+    this.post({ type: 'set_difficulty', difficulty });
   }
 
   /** Ask the worker for a full copy of the current state. */

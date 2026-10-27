@@ -1,5 +1,5 @@
 import { Rng } from '@vazante/kernel';
-import { BASE_START, Blocked, CELL_SIZE, SoldierCondition, type BuildingRect, type DistrictInfo, type SimEvent, type SimSpeed, type SiteInfo } from '@vazante/shared';
+import { type DifficultyId, BASE_START, Blocked, CELL_SIZE, SoldierCondition, type BuildingRect, type DistrictInfo, type SimEvent, type SimSpeed, type SiteInfo } from '@vazante/shared';
 import type { Base, Mission, Soldier, Squad, Structure, Vehicle } from './entities.ts';
 import type { Grid } from './grid.ts';
 import { ZombiePool } from './zombies.ts';
@@ -33,6 +33,8 @@ export class World {
   flowDirty = false;
   readonly stats: WorldStats = { zombiesKilled: 0, shotsFired: 0 };
   directSoldier: number | null = null;
+  /** Fixed at scenario start. */
+  difficulty: DifficultyId = 'veteran';
   nextId = 1;
 
   /** Spatial hash of zombies by cell, rebuilt each tick (derived, not hashed). */

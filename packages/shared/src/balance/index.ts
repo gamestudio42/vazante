@@ -6,3 +6,5 @@ export * from './trig.ts';
 export * from './structures.ts';
 export * from './logistics.ts';
 export * from './mission.ts';
+export * from './tactics.ts';
+export * from './difficulty.ts';

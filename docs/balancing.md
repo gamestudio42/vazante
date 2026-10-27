@@ -108,6 +108,35 @@ Planned (not implemented yet):
 | Wave spawn | at least 200 m from the base |
 | District lost | control 0; drops 1/s at 5:1 zombies to soldiers (15+ zombies) |
 
+## Squad tactics (`balance/tactics.ts`)
+
+| Constant | Value | Effect |
+| --- | --- | --- |
+| Stagger per non-lethal hit | rifle 0.4 s, LMG 0.3 s, shotgun 0.9 s (brutes half) | zombie moves at 15% speed and cannot attack; sustained fire holds a line back |
+| Fire distribution | +80% effective distance per squadmate already on a target | a squad spreads fire over the front instead of all on the nearest |
+| Cover | walkable cell next to a wall, barrier, closed gate or building | hit chance ×1.15, stress gain ×0.55 |
+| Cover search | 2 cells around each slot, obstacle on the enemy side, every 1 s | only while holding in `hold` or `defensive` stance |
+| Stress gain | 3/s per zombie within 8 m (max 10), +6/s out of ammo, +1/s in the dark | ×0.75 with 3+ squadmates within 10 m |
+| Stress shocks | bitten 30, squadmate down 22 (others nearby 11), squadmate bitten 12 (6) | within 15 m |
+| Recovery | 8/s with no zombie within 8 m, 16/s at a lit base or depot | |
+| Nerve | hit chance −35% at full stress | |
+| Panic | at 92 stress: runs from the nearest zombie for 3 s, holds fire; then stress ≤ 60 and no new panic for 30 s | the player keeps control in direct mode |
+| Contact call | `squad_contact` on first engagement, then at most every 30 s per squad | radio blip and alert |
+
+## Difficulty (`balance/difficulty.ts`)
+
+Veteran is the reference; every other table in this file is tuned for it. Chosen on the briefing, fixed for the game and stored in saves.
+
+| | Recruit | Veteran | Nightmare |
+| --- | --- | --- | --- |
+| Zombies in the city at start | ×0.7 | ×1 (200) | ×1.3 |
+| Wave size | ×0.65 | ×1 (60, 100, 150) | ×1.4 |
+| Wave warning | +15 s | 20 to 40 s | −10 s (at least 5 s) |
+| Zombie damage | ×0.7 | ×1 | ×1.25 |
+| Bite chance | ×0.5 | ×1 | ×1.4 |
+| Stress gain | ×0.7 | ×1 | ×1.25 |
+| Base materials / ammo | +80 / +300 | 160 / 300 | −40 / −100 |
+
 ## World and AI (`balance/world.ts`)
 
 | Constant | Value |
@@ -131,3 +160,5 @@ Planned (not implemented yet):
 | 2026-10-26 | structure footprint | 2×2 nest, 2×1 gate → 1×1 | one cell per piece for the slice; multi-cell later |
 | 2026-10-26 | flow penalty for structures | — → 200 (20 cells) | horde detours around short walls and besieges long ones |
 | 2026-10-26 | cargo truck | 500 HP, 15 m/s, 8 t → 400 HP, 7 m/s | the truck has to be escorted; at 15 m/s it outran every threat |
+| 2026-10-27 | squad tactics | — → table above | suppression, fire distribution, cover and morale; line battle still 10 of 10 |
+| 2026-10-27 | difficulty | — → three levels | recruit for the tutorial and new players, nightmare for veterans of the slice |

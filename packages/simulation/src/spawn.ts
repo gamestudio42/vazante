@@ -23,6 +23,9 @@ export function spawnSquad(w: World, kind: SquadKind, name: string, x: number, y
     pathIdx: 0,
     buildTask: 0,
     autoBuild: true,
+    cover: [],
+    engaged: false,
+    contactCd: 0,
   };
   const n = t.weapons.length;
   for (let i = 0; i < n; i++) {
@@ -54,6 +57,10 @@ export function spawnSquad(w: World, kind: SquadKind, name: string, x: number, y
       riseAt: -1,
       outOfAmmoReported: false,
       direct: null,
+      stress: 0,
+      panicT: 0,
+      panicCd: 0,
+      inCover: false,
     };
     q.members.push(s.id);
     w.addSoldier(s);

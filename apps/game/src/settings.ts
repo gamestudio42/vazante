@@ -1,3 +1,4 @@
+import type { DifficultyId } from '@vazante/shared';
 import type { Locale } from './i18n.ts';
 
 export interface Settings {
@@ -8,10 +9,14 @@ export interface Settings {
   /** Seconds of game time between autosaves; 0 turns autosave off. */
   autosaveS: number;
   edgePan: boolean;
+  /** Difficulty for the next new game. */
+  difficulty: DifficultyId;
+  /** The tutorial was finished or skipped once. */
+  tutorialSeen: boolean;
 }
 
 const KEY = 'vazante.settings';
-const DEFAULTS: Settings = { volume: 0.8, musicVolume: 0.7, locale: 'pt-BR', uiScale: 1, autosaveS: 120, edgePan: false };
+const DEFAULTS: Settings = { volume: 0.8, musicVolume: 0.7, locale: 'pt-BR', uiScale: 1, autosaveS: 120, edgePan: false, difficulty: 'veteran', tutorialSeen: false };
 
 export function loadSettings(): Settings {
   try {

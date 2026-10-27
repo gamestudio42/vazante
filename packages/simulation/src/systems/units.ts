@@ -1,8 +1,13 @@
-import { DIR16_X, DIR16_Y, FORMATION_SPACING_M, SoldierActivity, TICK_DT, type Formation } from '@vazante/shared';
+import { COVER_INTERVAL_TICKS, COVER_SEARCH_CELLS, DIR16_X, DIR16_Y, FORMATION_SPACING_M, SoldierActivity, TICK_DT, type Formation } from '@vazante/shared';
 import type { Soldier, Squad } from '../entities.ts';
 import { findPath } from '../navigation.ts';
 import { isActiveSoldier, type World } from '../world.ts';
+import { isCover, isObstacle } from './morale.ts';
 import { moveWithCollision } from './movement.ts';
+
+/** A panicking soldier runs from zombies this close, slightly faster than the squad walks. */
+const PANIC_FLEE_M = 15;
+const PANIC_SPEED_FACTOR = 1.2;
 
 /** Anchor slows down while members lag farther than this behind their slots (metres). */
 const LAG_SLOW_M = 4;
@@ -102,9 +107,22 @@ function stepSquad(w: World, q: Squad): void {
     }
   }
 
+  const seeksCover = q.order.kind === 'hold' && (q.stance === 'hold' || q.stance === 'defensive');
+  if (!seeksCover) q.cover.length = 0;
+  else if (q.cover.length !== members.length || (w.tick + q.id) % COVER_INTERVAL_TICKS === 0) pickCover(w, q, members.length);
+
   for (let i = 0; i < members.length; i++) {
     const s = members[i];
-    const [sx, sy] = slotPosition(w, q, i, members.length);
+    if (s.panicT > 0) {
+      flee(w, q.speed * PANIC_SPEED_FACTOR, s);
+      continue;
+    }
+    let [sx, sy] = slotPosition(w, q, i, members.length);
+    const cov = seeksCover ? q.cover[i] : -1;
+    if (cov >= 0) {
+      sx = w.grid.cellCenterX(cov);
+      sy = w.grid.cellCenterY(cov);
+    }
     const dx = sx - s.x;
     const dy = sy - s.y;
     const d = Math.sqrt(dx * dx + dy * dy);
@@ -129,6 +147,86 @@ function stepSquad(w: World, q: Squad): void {
       s.activity = s.moving ? SoldierActivity.Moving : SoldierActivity.Idle;
     }
   }
+}
+
+/**
+ * For each slot, the closest free cover cell within COVER_SEARCH_CELLS whose obstacle faces the
+ * enemy (the squad heading), or -1 to stay on the slot.
+ */
+function pickCover(w: World, q: Squad, n: number): void {
+  const g = w.grid;
+  q.cover.length = 0;
+  for (let i = 0; i < n; i++) {
+    const [sx, sy] = slotPosition(w, q, i, n);
+    const home = g.cellAt(sx, sy);
+    let best = -1;
+    let bestD = Infinity;
+    if (home >= 0) {
+      const hx = home % g.width;
+      const hy = (home - hx) / g.width;
+      const r = COVER_SEARCH_CELLS;
+      for (let oy = -r; oy <= r; oy++) {
+        for (let ox = -r; ox <= r; ox++) {
+          if (!g.inBounds(hx + ox, hy + oy)) continue;
+          const c = g.idx(hx + ox, hy + oy);
+          if (!isCover(g, c) || !facesFront(w, q, c) || q.cover.includes(c)) continue;
+          const d = ox * ox + oy * oy;
+          if (d < bestD) {
+            bestD = d;
+            best = c;
+          }
+        }
+      }
+    }
+    q.cover.push(best);
+  }
+}
+
+/** The cell has an obstacle on the side the squad faces. */
+function facesFront(w: World, q: Squad, cell: number): boolean {
+  const g = w.grid;
+  const cx = cell % g.width;
+  const cy = (cell - cx) / g.width;
+  for (let oy = -1; oy <= 1; oy++) {
+    for (let ox = -1; ox <= 1; ox++) {
+      if (ox * q.hx + oy * q.hy < 0.5 || !g.inBounds(cx + ox, cy + oy)) continue;
+      if (isObstacle(g, g.idx(cx + ox, cy + oy))) return true;
+    }
+  }
+  return false;
+}
+
+/** Run straight away from the nearest zombie. */
+function flee(w: World, speed: number, s: Soldier): void {
+  let best = -1;
+  let bd = Infinity;
+  w.forZombiesNear(s.x, s.y, PANIC_FLEE_M, (slot, d2) => {
+    if (d2 < bd && w.zombies.isAlive(slot)) {
+      bd = d2;
+      best = slot;
+    }
+  });
+  s.activity = SoldierActivity.Moving;
+  if (best < 0) {
+    s.moving = false;
+    return;
+  }
+  let dx = s.x - w.zombies.x[best];
+  let dy = s.y - w.zombies.y[best];
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d > 1e-6) {
+    dx /= d;
+    dy /= d;
+  } else {
+    dx = -s.fx;
+    dy = -s.fy;
+  }
+  const m = moveWithCollision(w.grid, s.x, s.y, dx * speed * TICK_DT, dy * speed * TICK_DT);
+  s.moving = Math.abs(m.x - s.x) + Math.abs(m.y - s.y) > 0.01;
+  s.x = m.x;
+  s.y = m.y;
+  s.fx = dx;
+  s.fy = dy;
 }
 
 function stepDirect(w: World, s: Soldier): void {

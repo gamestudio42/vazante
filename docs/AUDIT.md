@@ -23,7 +23,11 @@
 | Squad AI and combat | 4 → 5 | cover, suppression, morale |
 | Content | 3 | one mission; campaign, helicopter, artillery, more enemies (v0.5) |
 
-Next, in order: measure fps after the graphics pass; squad cover, suppression and morale; tutorial and difficulty levels; recorded CC0 audio; v0.5; licensed building and vehicle art; remote repository and CI.
+**Update, same day:** squad tactics landed (suppression by stagger, fire distribution, cover seeking in `hold` and `defensive`, stress, panic and contact calls; 7 new tests). Squad AI and combat: 5 → 6.5. Gaps left there: path smoothing, flanking, grenades, medics.
+
+Then the guided tutorial (nine steps over the real mission, each advancing on the player's action; on by default for a first game and from the main menu) and three difficulty levels on the briefing. UX / UI: 8 → 8.5; game loop: 6 → 6.5.
+
+Next, in order: measure fps after the graphics pass; recorded CC0 audio; v0.5; licensed building and vehicle art; remote repository and CI.
 
 ## Verdict
 

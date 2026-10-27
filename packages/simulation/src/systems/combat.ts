@@ -7,8 +7,14 @@ import {
   NOISE_SHOT,
   NOISE_SHOT_RADIUS_M,
   RETARGET_INTERVAL_TICKS,
+  BRUTE_STAGGER_FACTOR,
+  COVER_ACCURACY_BONUS,
+  STAGGER_TICKS,
+  STRESS,
   SoldierActivity,
+  TARGET_SHARE_PENALTY,
   TICK_DT,
+  ZombieKind,
   TICK_HZ,
   WEAPONS,
   DAY,
@@ -48,11 +54,17 @@ export function stepCombat(w: World): void {
       continue;
     }
 
+    if (s.panicT > 0) {
+      s.target = -1;
+      s.fireAcc = 0;
+      continue;
+    }
+
     const q = w.squad(s.squad);
     const stance: Stance = q ? q.stance : 'aggressive';
     const range = engagementRange(stance, wpn) * sightFactor(w, s.x, s.y);
     if (!validTarget(w, s, s.target, range) || (w.tick + s.id) % RETARGET_INTERVAL_TICKS === 0) {
-      s.target = acquire(w, s, range, stance, q ? q.hx : s.fx, q ? q.hy : s.fy);
+      s.target = acquire(w, s, range, stance, q ? q.hx : s.fx, q ? q.hy : s.fy, mateTargets(w, s));
     }
     if (s.target < 0) {
       s.fireAcc = 0;
@@ -99,12 +111,35 @@ function validTarget(w: World, s: Soldier, t: number, range: number): boolean {
   return dx * dx + dy * dy <= range * range;
 }
 
-/** Nearest visible zombie in range (and in the front arc for `hold`). */
-function acquire(w: World, s: Soldier, range: number, stance: Stance, hx: number, hy: number): number {
+const mates: number[] = [];
+
+/** Targets the soldier's squadmates are already shooting at (shared scratch array). */
+function mateTargets(w: World, s: Soldier): number[] {
+  mates.length = 0;
+  const q = w.squad(s.squad);
+  if (!q) return mates;
+  for (const id of q.members) {
+    if (id === s.id) continue;
+    const m = w.soldier(id);
+    if (m && m.target >= 0 && isActiveSoldier(m)) mates.push(m.target);
+  }
+  return mates;
+}
+
+/**
+ * Nearest visible zombie in range (and in the front arc for `hold`). A zombie that squadmates
+ * already shoot at counts as farther, so a squad spreads its fire over the front.
+ */
+function acquire(w: World, s: Soldier, range: number, stance: Stance, hx: number, hy: number, taken: readonly number[]): number {
   let best = -1;
-  let bestD2 = Infinity;
+  let bestScore = Infinity;
   w.forZombiesNear(s.x, s.y, range, (slot, d2) => {
-    if (d2 >= bestD2) return;
+    if (d2 >= bestScore) return;
+    let n = 0;
+    for (const t of taken) if (t === slot) n++;
+    const f = 1 + TARGET_SHARE_PENALTY * n;
+    const score = d2 * f * f;
+    if (score >= bestScore) return;
     const dx = w.zombies.x[slot] - s.x;
     const dy = w.zombies.y[slot] - s.y;
     if (stance === 'hold' && d2 > 1e-6) {
@@ -113,7 +148,7 @@ function acquire(w: World, s: Soldier, range: number, stance: Stance, hx: number
     }
     if (!w.grid.lineOfSight(s.x, s.y, w.zombies.x[slot], w.zombies.y[slot])) return;
     best = slot;
-    bestD2 = d2;
+    bestScore = score;
   });
   return best;
 }
@@ -191,8 +226,9 @@ function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: numb
   const d = Math.sqrt((zx - s.x) * (zx - s.x) + (zy - s.y) * (zy - s.y));
   const r = d / wpn.range;
   const rangeFactor = 1 - r * r * 0.5;
-  const stanceFactor = s.moving ? ACCURACY_MOVING : ACCURACY_STATIONARY;
-  const p = clamp01(wpn.accuracy * clamp01(rangeFactor) * stanceFactor + bonus);
+  const stanceFactor = s.moving ? ACCURACY_MOVING : s.inCover ? ACCURACY_STATIONARY * COVER_ACCURACY_BONUS : ACCURACY_STATIONARY;
+  const nerve = 1 - (STRESS.aimPenalty * s.stress) / 100;
+  const p = clamp01(wpn.accuracy * clamp01(rangeFactor) * stanceFactor * nerve + bonus);
   let hits = 0;
   for (let i = 0; i < wpn.pellets; i++) if (w.rng.chance(p)) hits++;
   if (hits > 0) {
@@ -201,6 +237,10 @@ function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: numb
       z.kill(slot);
       w.stats.zombiesKilled++;
       w.emit({ type: 'zombie_killed', source: s.id, target: slot, x: zx, y: zy });
+    } else {
+      // Suppression: the hit knocks the zombie back on its heels.
+      const t = z.kind[slot] === ZombieKind.Brute ? Math.round(STAGGER_TICKS[s.weapon] * BRUTE_STAGGER_FACTOR) : STAGGER_TICKS[s.weapon];
+      if (z.stagger[slot] < t) z.stagger[slot] = t;
     }
   }
   w.emit({ type: 'shot', source: s.id, x: s.x, y: s.y, x2: zx, y2: zy, value: hits });

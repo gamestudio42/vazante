@@ -21,6 +21,8 @@ export class ZombiePool {
   readonly stack: Int32Array;
   /** 1 for wave zombies driven by the director: they never give up the chase. */
   readonly driven: Uint8Array;
+  /** Ticks left staggered by a hit (slowed, cannot attack). */
+  readonly stagger: Uint8Array;
   /** Stack of free slots; top at freeCount - 1. Lowest slots are handed out first. */
   private readonly free: Int32Array;
   private freeCount: number;
@@ -43,6 +45,7 @@ export class ZombiePool {
     this.target = new Int32Array(capacity);
     this.stack = new Int32Array(capacity).fill(-1);
     this.driven = new Uint8Array(capacity);
+    this.stagger = new Uint8Array(capacity);
     this.free = new Int32Array(capacity);
     for (let i = 0; i < capacity; i++) this.free[i] = capacity - 1 - i;
     this.freeCount = capacity;
@@ -65,6 +68,7 @@ export class ZombiePool {
     this.target[s] = 0;
     this.stack[s] = -1;
     this.driven[s] = 0;
+    this.stagger[s] = 0;
     this.alive++;
     if (s >= this.highWater) this.highWater = s + 1;
     return s;

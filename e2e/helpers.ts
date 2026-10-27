@@ -45,6 +45,8 @@ export async function startGame(page: Page, seed = 1): Promise<void> {
   });
   await page.goto(`/?seed=${seed}`);
   await page.getByRole('button', { name: 'Nova partida' }).click({ timeout: 30_000 });
+  // The guided tutorial is on for a first game; these tests drive the game themselves.
+  await page.getByRole('checkbox', { name: 'Tutorial guiado' }).uncheck();
   await page.getByRole('button', { name: 'Começar' }).click();
   await expect.poll(() => tick(page), { timeout: 10_000 }).toBeGreaterThan(0);
 }

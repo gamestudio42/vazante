@@ -1,4 +1,4 @@
-import { Blocked, CELL_SIZE, DISTRICT, Ground, SLICE, STRUCTURES, TICK_HZ, ZombieState } from '@vazante/shared';
+import { Blocked, CELL_SIZE, DIFFICULTY, DISTRICT, Ground, SLICE, STRUCTURES, TICK_HZ, ZombieState } from '@vazante/shared';
 import type { Mission } from '../entities.ts';
 import { rollZombieKind } from '../spawn.ts';
 import { isActiveSoldier, type World } from '../world.ts';
@@ -115,14 +115,14 @@ export function stepMission(w: World): void {
       end(w, m, true);
       return;
     }
-    const warn = w.rng.int(SLICE.warningMinS, SLICE.warningMaxS);
+    const warn = Math.max(5, w.rng.int(SLICE.warningMinS, SLICE.warningMaxS) + DIFFICULTY[w.difficulty].warningBonusS);
     m.waveState = 'warning';
     m.nextAt = w.tick + warn * TICK_HZ;
     w.emit({ type: 'wave_warning', value: m.wave + 1, reason: String(warn) });
   } else if (m.waveState === 'warning' && w.tick >= m.nextAt) {
     m.wave++;
     m.waveState = 'active';
-    spawnWave(w, m, SLICE.waves[m.wave - 1]);
+    spawnWave(w, m, Math.round(SLICE.waves[m.wave - 1] * DIFFICULTY[w.difficulty].waveSize));
   } else if (m.waveState === 'active' && w.tick % 10 === 0 && drivenAlive(w) === 0) {
     m.waveState = 'calm';
     m.nextAt = w.tick + (m.wave >= SLICE.waves.length ? 1 : SLICE.calmS * TICK_HZ);

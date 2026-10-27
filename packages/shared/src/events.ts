@@ -10,6 +10,8 @@ export type SimEventType =
   | 'out_of_ammo'
   | 'reloading'
   | 'squad_arrived'
+  | 'squad_contact'
+  | 'soldier_panicked'
   | 'direct_control'
   | 'structure_placed'
   | 'structure_built'

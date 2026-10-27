@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { MAX_TICKS_PER_FRAME, TICK_HZ, type FromWorker, type ToWorker } from '@vazante/shared';
+import { DIFFICULTY_IDS, MAX_TICKS_PER_FRAME, TICK_HZ, type DifficultyId, type FromWorker, type ToWorker } from '@vazante/shared';
 import { SimulationEngine } from '@vazante/simulation';
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -41,20 +41,30 @@ self.onmessage = (ev: MessageEvent<ToWorker>) => {
   switch (msg.type) {
     case 'init': {
       const scenario = msg.scenario === 'open_field' ? 'open_field' : 'last_convoy';
+      const difficulty = difficultyOf(msg.difficulty);
       if (msg.save) {
         try {
           engine = SimulationEngine.load(msg.save);
         } catch (err) {
           post({ type: 'error', reason: err instanceof Error ? err.message : 'save_invalid' });
-          engine = SimulationEngine.create(msg.seed, scenario);
+          engine = SimulationEngine.create(msg.seed, scenario, { difficulty });
         }
-      } else engine = SimulationEngine.create(msg.seed, scenario);
+      } else engine = SimulationEngine.create(msg.seed, scenario, { difficulty });
       // Every game opens paused: behind the menu, the briefing or a loaded save.
       engine.world.speed = 0;
       const map = engine.mapInfo();
       post({ type: 'ready', map }, [map.ground.buffer, map.heights.buffer]);
       last = performance.now();
       loop();
+      break;
+    }
+    case 'set_difficulty': {
+      // Same city, new numbers: only before the first tick, so nothing the player did is lost.
+      const difficulty = difficultyOf(msg.difficulty);
+      if (!engine || engine.world.tick > 0 || engine.world.difficulty === difficulty) return;
+      engine = SimulationEngine.create(engine.world.seed, 'last_convoy', { difficulty });
+      engine.world.speed = 0;
+      post({ type: 'frame', frame: engine.frame(false) });
       break;
     }
     case 'command': {
@@ -77,3 +87,7 @@ self.onmessage = (ev: MessageEvent<ToWorker>) => {
       break;
   }
 };
+
+function difficultyOf(v: string | undefined): DifficultyId {
+  return DIFFICULTY_IDS.find((d) => d === v) ?? 'veteran';
+}

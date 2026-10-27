@@ -29,6 +29,7 @@ import { stepFlow } from './systems/flow.ts';
 import { stepHorde } from './systems/horde.ts';
 import { stepInfection } from './systems/infection.ts';
 import { stepResupply, stepVehicles } from './systems/logistics.ts';
+import { stepMorale } from './systems/morale.ts';
 import { districtCounts, drivenAlive, stepDistricts, stepMission } from './systems/mission.ts';
 import { restoreWorld, snapshotWorld } from './snapshot.ts';
 import { decayNoise } from './systems/noise.ts';
@@ -44,6 +45,7 @@ const STEPS: readonly (readonly [string, (w: World) => void])[] = [
   ['vehicles', stepVehicles],
   ['hash', (w) => w.rebuildZombieHash()],
   ['combat', stepCombat],
+  ['morale', stepMorale],
   ['emplacements', stepEmplacements],
   ['infection', stepInfection],
   ['construction', stepConstruction],
@@ -171,6 +173,8 @@ export class SimulationEngine {
       soldiers[o + 8] = s.condition;
       soldiers[o + 9] = s.activity;
       soldiers[o + 10] = s.mag;
+      soldiers[o + 11] = s.stress;
+      soldiers[o + 12] = (s.panicT > 0 ? 1 : 0) | (s.inCover ? 2 : 0);
       if (isActiveSoldier(s)) {
         soldiersAlive++;
         ammoTotal += s.ammo + s.mag;
@@ -283,6 +287,7 @@ export class SimulationEngine {
       mission,
       districts,
       directSoldier: w.directSoldier,
+      difficulty: w.difficulty,
       events,
       stats: {
         zombiesAlive: z.alive,
@@ -301,7 +306,7 @@ export class SimulationEngine {
     const h = new Fnv1a();
     h.u32(w.tick).u32(w.nextId).u32(w.stats.zombiesKilled).u32(w.stats.shotsFired);
     for (const v of w.rng.getState()) h.u32(v);
-    h.u32(w.directSoldier ?? 0);
+    h.u32(w.directSoldier ?? 0).str(w.difficulty);
     h.bytes(w.grid.blocked).bytes(w.grid.noise).bytes(w.grid.flow).bytes(w.grid.structHeight).bytes(w.grid.pile);
     h.byte(w.flowDirty ? 1 : 0);
     for (const b of w.bases) h.u32(b.id).u32(b.materials).u32(b.ammo);
@@ -327,14 +332,14 @@ export class SimulationEngine {
         continue;
       }
       h.byte(1).u32(s).f64Value(z.x[s]).f64Value(z.y[s]).f64Value(z.vx[s]).f64Value(z.vy[s]);
-      h.u32(z.hp[s] & 0xffff).byte(z.state[s]).byte(z.kind[s]).u32(z.attackCd[s]).u32(z.wanderT[s]).byte(z.wanderDir[s]).u32(z.target[s]).u32(z.stack[s] + 1).byte(z.driven[s]);
+      h.u32(z.hp[s] & 0xffff).byte(z.state[s]).byte(z.kind[s]).u32(z.attackCd[s]).u32(z.wanderT[s]).byte(z.wanderDir[s]).u32(z.target[s]).u32(z.stack[s] + 1).byte(z.driven[s]).byte(z.stagger[s]);
     }
     for (const v of z.serializeFree()) h.u32(v);
     for (const s of w.soldiers) {
       h.u32(s.id).u32(s.squad).f64Value(s.x).f64Value(s.y).f64Value(s.fx).f64Value(s.fy);
       h.f64Value(s.hp).byte(WEAPON_IDS.indexOf(s.weapon)).u32(s.mag).u32(s.ammo).byte(s.condition).byte(s.activity);
       h.u32(s.reloadT).f64Value(s.fireAcc).u32(s.target + 1).byte(s.moving ? 1 : 0).u32(s.turnAt + 1).u32(s.riseAt + 1);
-      h.byte(s.outOfAmmoReported ? 1 : 0);
+      h.byte(s.outOfAmmoReported ? 1 : 0).f64Value(s.stress).u32(s.panicT).u32(s.panicCd).byte(s.inCover ? 1 : 0);
       if (s.direct) {
         const d = s.direct;
         h.byte(1).f64Value(d.mx).f64Value(d.my).f64Value(d.ax).f64Value(d.ay).byte(d.fire ? 1 : 0).byte(d.reload ? 1 : 0);
@@ -343,6 +348,8 @@ export class SimulationEngine {
     for (const q of w.squads) {
       h.u32(q.id).str(q.order.kind).str(q.stance).str(q.formation);
       h.f64Value(q.ax).f64Value(q.ay).f64Value(q.hx).f64Value(q.hy).u32(q.pathIdx).u32(q.path.length).u32(q.buildTask).byte(q.autoBuild ? 1 : 0);
+      h.byte(q.engaged ? 1 : 0).u32(q.contactCd).u32(q.cover.length);
+      for (const c of q.cover) h.u32(c + 1);
       for (const v of q.path) h.f64Value(v);
       if (q.order.kind !== 'idle') {
         const p = q.order.kind === 'move' ? q.order.to : q.order.at;

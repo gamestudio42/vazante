@@ -2,10 +2,13 @@ import {
   BITE_TURN_MAX_S,
   BITE_TURN_MIN_S,
   CELL_SIZE,
+  DIFFICULTY,
   DIR16_X,
   DIR16_Y,
   NOISE_CHASE_THRESHOLD,
   SoldierCondition,
+  STAGGER_SPEED_FACTOR,
+  STRESS,
   TICK_DT,
   TICK_HZ,
   ZOMBIES,
@@ -34,6 +37,7 @@ let uy = 0;
 import { isActiveSoldier, type World } from '../world.ts';
 import { computePiles, damageStructure } from './construction.ts';
 import { killSoldier } from './lifecycle.ts';
+import { addStress, witness } from './morale.ts';
 import { moveWithCollisionInto, type MoveResult } from './movement.ts';
 
 /** Chasing zombies give up when farther than this (flow units: 10 per cell = 4 m) and no noise. */
@@ -58,6 +62,8 @@ export function stepHorde(w: World): void {
     if (!z.isAlive(s)) continue;
     const stats = ZOMBIES[z.kind[s]];
     if (z.attackCd[s] > 0) z.attackCd[s]--;
+    const staggered = z.stagger[s] > 0;
+    if (staggered) z.stagger[s]--;
     const x = z.x[s];
     const y = z.y[s];
 
@@ -150,13 +156,13 @@ export function stepHorde(w: World): void {
       z.target[s] = victim.id;
       dx = 0;
       dy = 0;
-      if (z.attackCd[s] === 0) attack(w, s, victim);
+      if (z.attackCd[s] === 0 && !staggered) attack(w, s, victim);
     } else if ((truck = vehicleInReach(w, x, y)) !== undefined) {
       z.state[s] = ZombieState.Attacking;
       z.stack[s] = -1;
       dx = 0;
       dy = 0;
-      if (z.attackCd[s] === 0) {
+      if (z.attackCd[s] === 0 && !staggered) {
         z.attackCd[s] = ATTACK_CD_TICKS;
         truck.hp -= ZOMBIE_VEHICLE_DAMAGE;
         w.emit({ type: 'vehicle_hit', source: s, target: truck.id, x: truck.x, y: truck.y });
@@ -170,6 +176,8 @@ export function stepHorde(w: World): void {
         damageStructure(w, st, ZOMBIE_STRUCTURE_DAMAGE);
       }
     }
+
+    if (staggered) speed *= STAGGER_SPEED_FACTOR;
 
     // Velocity with limited acceleration.
     const maxDv = ZOMBIE_ACCEL * TICK_DT;
@@ -270,15 +278,19 @@ function perceive(w: World, s: number, active: readonly Soldier[]): void {
 function attack(w: World, s: number, victim: Soldier): void {
   const z = w.zombies;
   const stats = ZOMBIES[z.kind[s]];
+  const diff = DIFFICULTY[w.difficulty];
+  const damage = stats.damage * diff.zombieDamage;
   z.attackCd[s] = ATTACK_CD_TICKS;
-  victim.hp -= stats.damage;
-  w.emit({ type: 'soldier_hit', source: s, target: victim.id, x: victim.x, y: victim.y, value: stats.damage });
+  victim.hp -= damage;
+  w.emit({ type: 'soldier_hit', source: s, target: victim.id, x: victim.x, y: victim.y, value: damage });
   if (victim.hp <= 0) {
     killSoldier(w, victim, true);
-  } else if (victim.condition === SoldierCondition.Ok && w.rng.chance(stats.biteChance)) {
+  } else if (victim.condition === SoldierCondition.Ok && w.rng.chance(Math.min(1, stats.biteChance * diff.biteChance))) {
     victim.condition = SoldierCondition.Bitten;
     victim.turnAt = w.tick + w.rng.int(BITE_TURN_MIN_S * TICK_HZ, BITE_TURN_MAX_S * TICK_HZ);
     w.emit({ type: 'soldier_bitten', source: s, target: victim.id, x: victim.x, y: victim.y });
+    addStress(victim, STRESS.selfBitten);
+    witness(w, victim, STRESS.mateBitten);
   }
 }
 
