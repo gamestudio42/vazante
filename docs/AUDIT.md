@@ -2,6 +2,29 @@
 
 2026-10-26 · first audit at build `8069844` (28 tests); progress column updated after the quality pass and M5 (40 tests)
 
+## Re-audit 2026-10-27 (build `fdd5477`, 62 unit tests, 10 e2e)
+
+**Overall 6.5 / 10: a polished indie vertical slice** (about 4 at the first audit). The slice plays end to end with objectives, three waves, win and loss, saves, animated characters, day and night, adaptive music and a professional HUD. What separates it from AAA now is content volume and tactical depth more than technology.
+
+| Area | 26/10 → 27/10 | Biggest gaps |
+| --- | --- | --- |
+| UX / UI | 6 → 8 | tutorial, key rebinding, colour-blind palette, gamepad |
+| Simulation architecture | 8 → 8.5 | sector LOD (v0.5) |
+| Camera | 5 → 7.5 | collision in direct mode |
+| Rendering | 6 → 7.5 | modelled buildings, water and sky, destruction, weather |
+| VFX | 5 → 7 | rain, sparks on metal, bullet marks |
+| Performance | 5 → 7 | fps not yet measured after the graphics pass; 25 ms worst tick at 4,000 zombies |
+| Engineering | 7 → 7.5 | no remote, no CI, no crash reporting |
+| Horde AI | 7 → 7 | Choir directives |
+| Animation | 4 → 6.5 | blended transitions, hit reactions, animated climbing |
+| Audio | 5 → 6.5 | recorded weapons, radio voice barks, reverb zones |
+| Platform | 6 → 6 | Snap, Flatpak, Windows, macOS builds; Steam |
+| Game loop | 6 → 6 | difficulty levels, economy depth, more scenarios |
+| Squad AI and combat | 4 → 5 | cover, suppression, morale |
+| Content | 3 | one mission; campaign, helicopter, artillery, more enemies (v0.5) |
+
+Next, in order: measure fps after the graphics pass; squad cover, suppression and morale; tutorial and difficulty levels; recorded CC0 audio; v0.5; licensed building and vehicle art; remote repository and CI.
+
 ## Verdict
 
 The foundation is the strong part: one deterministic, tested, authoritative simulation in a worker, with views that cannot corrupt it. Everything the player sees and hears is prototype level. Measured against an AAA bar the build is a **tech demo**: systems work, but there is no game loop (no objective, win or loss), no audio, no animation and no art direction.
