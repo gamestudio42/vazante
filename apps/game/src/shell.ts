@@ -100,6 +100,19 @@ export class Shell {
     this.changed();
   }
 
+  /** Porto Velário, the 2 km city of v0.5 (sandbox while it is built). */
+  openCity(): void {
+    const p = new URLSearchParams(location.search);
+    p.set('scenario', 'city_war');
+    p.set('play', '1');
+    p.delete('load');
+    location.search = p.toString();
+  }
+
+  get scenario(): string {
+    return new URLSearchParams(location.search).get('scenario') ?? 'last_convoy';
+  }
+
   /** Main menu "Tutorial": a recruit game with the guide on. */
   newTutorial(): void {
     this.withTutorial = true;
@@ -234,6 +247,14 @@ export class Shell {
   mainMenu(): void {
     if (this.screen !== 'menu' && !confirm(t('pause.confirmLeave'))) return;
     const seed = this.client.state.map?.seed ?? 1;
+    const p = new URLSearchParams(location.search);
+    if (p.has('scenario')) {
+      p.delete('scenario');
+      p.delete('load');
+      p.delete('play');
+      location.search = p.toString();
+      return;
+    }
     this.restart(seed, false);
   }
 

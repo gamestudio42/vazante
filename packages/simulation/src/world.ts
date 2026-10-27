@@ -2,6 +2,7 @@ import { Rng } from '@vazante/kernel';
 import { type DifficultyId, BASE_START, Blocked, CELL_SIZE, SoldierCondition, type BuildingRect, type DistrictInfo, type SimEvent, type SimSpeed, type SiteInfo } from '@vazante/shared';
 import type { Base, Mission, Soldier, Squad, Structure, Vehicle } from './entities.ts';
 import type { Grid } from './grid.ts';
+import { FlowJob } from './navigation.ts';
 import { ZombiePool } from './zombies.ts';
 
 export interface WorldStats {
@@ -31,6 +32,8 @@ export class World {
   readonly districtControl: Uint8Array;
   /** Set when navigation changed (structure built, destroyed or toggled); forces a flow rebuild. */
   flowDirty = false;
+  /** The horde distance field being rebuilt, a slice per tick. */
+  readonly flowJob = new FlowJob();
   readonly stats: WorldStats = { zombiesKilled: 0, shotsFired: 0 };
   directSoldier: number | null = null;
   /** Fixed at scenario start. */

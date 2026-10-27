@@ -23,5 +23,7 @@ export const NOISE_DECAY_NUM = 9;
 
 /** Flow field is recomputed every N ticks. */
 export const FLOW_INTERVAL_TICKS = 5;
+/** Queue entries the flow rebuild may expand per tick (about 4 ms); the slice map needs ~40,000. */
+export const FLOW_BUDGET_PER_TICK = 60_000;
 /** Soldiers re-evaluate targets every N ticks. */
 export const RETARGET_INTERVAL_TICKS = 5;

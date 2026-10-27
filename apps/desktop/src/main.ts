@@ -11,6 +11,8 @@ const GAME_DIR = path.join(here, '..', 'game');
 const ORIGIN = 'app://game';
 const smoke = process.argv.includes('--smoke');
 const bench = process.argv.includes('--bench');
+/** `--city`: run the game (or the benchmark) on Porto Velário, the 2 km v0.5 city. */
+const city = process.argv.includes('--city');
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -93,7 +95,8 @@ function createWindow(): BrowserWindow {
       e.preventDefault();
     }
   });
-  void win.loadURL(`${ORIGIN}/index.html${bench ? '?bench=1' : ''}`);
+  const query = [bench ? 'bench=1' : '', city ? 'scenario=city_war' : ''].filter(Boolean).join('&');
+  void win.loadURL(`${ORIGIN}/index.html${query ? `?${query}` : ''}`);
   return win;
 }
 

@@ -44,7 +44,7 @@ async function boot(): Promise<void> {
   }
   const seed = (save?.seed ?? Number(params.get('seed') ?? 1)) >>> 0;
   const initial: Screen = params.has('bench') ? 'playing' : save ? 'paused' : params.has('play') ? 'briefing' : 'menu';
-  const client = new GameClient(seed, save ?? undefined, params.has('bench') ? 'veteran' : settings.difficulty);
+  const client = new GameClient(seed, save ?? undefined, params.has('bench') ? 'veteran' : settings.difficulty, params.get('scenario') ?? undefined);
   const unsubscribe = client.subscribe(() => {
     const map = client.state.map;
     if (!map) return;

@@ -20,8 +20,8 @@ interface Result {
   hash: string;
 }
 
-function run(name: string, zombies: number, attackers: number): Result {
-  const e = SimulationEngine.create(7, 'last_convoy', { zombies });
+function run(name: string, zombies: number, attackers: number, scenario: 'last_convoy' | 'city_war' = 'last_convoy'): Result {
+  const e = SimulationEngine.create(7, scenario, { zombies });
   const w = e.world;
   const base = w.bases.find((b) => b.kind === 'base')!;
   const bx = ((base.x0 + base.x1 + 1) / 2) * 4;
@@ -49,14 +49,15 @@ function run(name: string, zombies: number, attackers: number): Result {
   return { name, zombies: w.zombies.alive, ticks, mean, p95: times[Math.floor(times.length * 0.95)], worst: times[times.length - 1], systems, hash: hex32(e.hashState()) };
 }
 
-const cases: [string, number, number][] = [
+const cases: [string, number, number, ('last_convoy' | 'city_war')?][] = [
   ['slice (200)', 200, 0],
   ['slice + attack (200 + 300)', 200, 300],
   ['1,000', 1000, 300],
   ['4,000', 4000, 300],
   ['8,000', 8000, 300],
+  ['Porto Velário 8,000 (2 km)', 8000, 300, 'city_war'],
 ];
-const results = cases.map(([n, z, a]) => run(n, z, a));
+const results = cases.map(([n, z, a, s]) => run(n, z, a, s));
 if (json) console.log(JSON.stringify({ cpu: cpus()[0]?.model, node: process.version, ticks, results }, null, 2));
 else {
   console.log(`cpu: ${cpus()[0]?.model} · node ${process.version} · ${ticks} ticks per case`);

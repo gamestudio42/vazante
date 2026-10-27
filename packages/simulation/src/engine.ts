@@ -22,7 +22,7 @@ import {
   type SaveGame,
 } from '@vazante/shared';
 import { applyCommand } from './commands.ts';
-import { createScenario, type ScenarioId, type ScenarioOptions } from './scenarios/index.ts';
+import { SCENARIO_IDS, createScenario, type ScenarioId, type ScenarioOptions } from './scenarios/index.ts';
 import { stepCombat } from './systems/combat.ts';
 import { buildTicks, stepConstruction, stepEmplacements } from './systems/construction.ts';
 import { stepFlow } from './systems/flow.ts';
@@ -94,10 +94,14 @@ export class SimulationEngine {
   static load(save: SaveGame): SimulationEngine {
     if (save.format !== SAVE_FORMAT || save.version !== SAVE_VERSION) throw new Error('save_incompatible');
     const e = new SimulationEngine(restoreWorld(save.world));
-    e.scenario = save.scenario === 'open_field' ? 'open_field' : 'last_convoy';
+    e.scenario = SCENARIO_IDS.find((id) => id === save.scenario) ?? 'last_convoy';
     if (e.hashState() !== save.hash) throw new Error('save_mismatch');
     e.world.speed = 0;
     return e;
+  }
+
+  get scenarioId(): ScenarioId {
+    return this.scenario;
   }
 
   get tickCount(): number {
@@ -308,7 +312,8 @@ export class SimulationEngine {
     for (const v of w.rng.getState()) h.u32(v);
     h.u32(w.directSoldier ?? 0).str(w.difficulty);
     h.bytes(w.grid.blocked).bytes(w.grid.noise).bytes(w.grid.flow).bytes(w.grid.structHeight).bytes(w.grid.pile);
-    h.byte(w.flowDirty ? 1 : 0);
+    h.byte(w.flowDirty ? 1 : 0).byte(w.flowJob.active ? 1 : 0).u32(w.flowJob.d).u32(w.flowJob.pending);
+    if (w.flowJob.active) h.bytes(w.flowJob.dist);
     for (const b of w.bases) h.u32(b.id).u32(b.materials).u32(b.ammo);
     h.bytes(w.districtControl);
     if (w.mission) {

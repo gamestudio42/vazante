@@ -14,7 +14,8 @@
     "dist:appimage": "pnpm build && electron-builder --linux AppImage --publish never",
     "dist:win": "pnpm build && electron-builder --win nsis --publish never",
     "dist:mac": "pnpm build && electron-builder --mac dmg --publish never",
-    "bench": "pnpm build && electron . --bench"
+    "bench": "pnpm build && electron . --bench",
+    "bench:city": "pnpm build && electron . --bench --city"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

@@ -101,6 +101,16 @@ Porto Velário (2 km procedural city), sector LOD L0/L1/L2 with conservation and
 
 If the v0.5 performance gate fails, stop and re-evaluate the architecture with Marcel before continuing.
 
+Progress (2026-10-27):
+
+- [x] Porto Velário generator: 512 × 512 cells, bay, meandering river crossed by street bridges, avenues, six districts, waterfront base and three depots (`generateCityMap`).
+- [x] `city_war` sandbox scenario (four squads, a truck per depot, 6,000 infected at veteran); main menu "Porto Velário", desktop `--city`, `pnpm --filter @vazante/desktop bench:city`.
+- [x] Horde flow field rebuilt in per-tick slices (`FlowJob`, 60,000 queue entries per tick), resumable from saves; identical to the one-shot field (test).
+- [x] Simulation gate in the container: 8,000 agents on the 2 km city, mean 6.6 ms, p95 10.3 ms, worst 19 ms.
+- [ ] Render gate (60 fps with 5,000 visible) on Marcel's laptop.
+- [ ] Sector LOD L0/L1/L2 with conservation and calibration tests.
+- [ ] Objectives for the city, armored vehicles, helicopters, fire support, evacuation and triage, the full Choir, building damage and rubble.
+
 ## v1.0 World survival
 
 Campaign across regions carried by what reaches the port, delegated officers, adaptive Choir, more factions.

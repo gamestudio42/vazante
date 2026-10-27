@@ -147,3 +147,152 @@ function overlaps(a: Rect, b: Rect): boolean {
 function fill(grid: Grid, r: Rect, g: Ground): void {
   for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) grid.ground[grid.idx(x, y)] = g;
 }
+
+const CITY_DISTRICTS = ['Cais Velho', 'Alto da Sé', 'Vila Operária', 'Ribeira', 'Centro', 'Porto Novo'];
+
+/**
+ * Porto Velário, the v0.5 city: 512 x 512 cells (2 km). A bay along the south edge, a river running
+ * down from the north into it (streets cross it as bridges), wide avenues every few streets, six
+ * districts in a 3 x 2 layout, the base on the waterfront and three depots inland.
+ */
+export function generateCityMap(seed: number, size = 512): GeneratedMap {
+  const rng = new Rng(seed ^ 0xc17e);
+  const grid = new Grid(size, size);
+
+  // Coast: the land ends at a wavy line near the bottom.
+  const coast = new Int32Array(size);
+  let c = size - 34;
+  for (let x = 0; x < size; x++) {
+    c += rng.int(-1, 1);
+    c = Math.max(size - 44, Math.min(size - 26, c));
+    coast[x] = c;
+  }
+  // River: a meandering channel from the top edge down to the coast.
+  const riverX = new Int32Array(size);
+  const riverW = new Int32Array(size);
+  let rx = Math.floor(size * 0.38) + rng.int(-20, 20);
+  let drift = 0;
+  for (let y = 0; y < size; y++) {
+    if (y % 24 === 0) drift = rng.int(-1, 1);
+    if (y % 3 === 0) rx += drift;
+    rx = Math.max(size >> 2, Math.min((size * 3) >> 2, rx));
+    riverX[y] = rx;
+    riverW[y] = 5 + ((y >> 5) % 3);
+  }
+
+  const vertical = cityStreetLines(rng, size);
+  const horizontal = cityStreetLines(rng, size);
+  const isStreetX = new Uint8Array(size);
+  const isStreetY = new Uint8Array(size);
+  for (const [start, w] of vertical) for (let i = start; i < start + w && i < size; i++) isStreetX[i] = 1;
+  for (const [start, w] of horizontal) for (let i = start; i < start + w && i < size; i++) isStreetY[i] = 1;
+
+  const isWater = (x: number, y: number) => y > coast[x] || (x >= riverX[y] && x < riverX[y] + riverW[y]);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = grid.idx(x, y);
+      const street = isStreetX[x] || isStreetY[y];
+      // Streets cross the river as bridges, but never run into the bay.
+      if (y > coast[x]) grid.ground[i] = Ground.Water;
+      else if (street) grid.ground[i] = Ground.Street;
+      else if (isWater(x, y)) grid.ground[i] = Ground.Water;
+      else if (isStreetX[x - 1] || isStreetX[x + 1] || isStreetY[y - 1] || isStreetY[y + 1]) grid.ground[i] = Ground.Sidewalk;
+      else grid.ground[i] = Ground.Lot;
+    }
+  }
+  // A waterfront quay along the coast so the whole shore is walkable.
+  for (let x = 0; x < size; x++) {
+    for (let y = coast[x] - 2; y <= coast[x]; y++) if (y >= 0 && grid.ground[grid.idx(x, y)] !== Ground.Water) grid.ground[grid.idx(x, y)] = Ground.Sidewalk;
+  }
+
+  const midX = Math.floor(size / 2);
+  const base: Rect = { x0: midX - 12, y0: size - 70, x1: midX + 11, y1: size - 47 };
+  const depots: Array<[string, Rect]> = [
+    ['Depósito Norte', { x0: size - 60, y0: 10, x1: size - 43, y1: 27 }],
+    ['Hospital São Lucas', { x0: 14, y0: 60, x1: 31, y1: 77 }],
+    ['Estação Ferroviária', { x0: size - 90, y0: Math.floor(size * 0.55), x1: size - 73, y1: Math.floor(size * 0.55) + 17 }],
+  ];
+  const reserved = [base, ...depots.map(([, r]) => r)];
+  for (const r of reserved) {
+    for (let y = r.y0; y <= r.y1; y++) {
+      for (let x = r.x0; x <= r.x1; x++) {
+        const i = grid.idx(x, y);
+        if (grid.ground[i] === Ground.Water) grid.ground[i] = Ground.Lot;
+      }
+    }
+  }
+
+  const xs = blockRuns(isStreetX, size);
+  const ys = blockRuns(isStreetY, size);
+  const buildings: BuildingRect[] = [];
+  for (const [by0, by1] of ys) {
+    for (const [bx0, bx1] of xs) {
+      const block: Rect = { x0: bx0, y0: by0, x1: bx1, y1: by1 };
+      if (reserved.some((r) => overlaps(block, r))) continue;
+      // Taller towers downtown, low houses towards the edges.
+      const cx = (bx0 + bx1) / 2 / size - 0.5;
+      const cy = (by0 + by1) / 2 / size - 0.5;
+      const centre = 1 - Math.min(1, Math.sqrt(cx * cx + cy * cy) * 2);
+      if (rng.chance(0.08)) {
+        fillLand(grid, block, Ground.Park);
+        continue;
+      }
+      subdivide(rng, block, (lot) => {
+        if (!rng.chance(0.78)) return;
+        for (let y = lot.y0; y <= lot.y1; y++) for (let x = lot.x0; x <= lot.x1; x++) if (grid.ground[grid.idx(x, y)] !== Ground.Lot) return;
+        const id = buildings.length + 1;
+        const floors = rng.int(1, 3 + Math.round(centre * 14));
+        const h = floors * 3;
+        buildings.push({ id, ...lot, height: h });
+        for (let y = lot.y0; y <= lot.y1; y++) {
+          for (let x = lot.x0; x <= lot.x1; x++) {
+            const i = grid.idx(x, y);
+            grid.ground[i] = Ground.Building;
+            grid.buildingId[i] = id;
+            grid.heights[i] = h;
+          }
+        }
+      });
+    }
+  }
+
+  const third = Math.floor(size / 3);
+  const half = size >> 1;
+  const districts: DistrictInfo[] = [];
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 3; col++) {
+      const id = districts.length + 1;
+      districts.push({ id, name: CITY_DISTRICTS[id - 1], x0: col * third, y0: row * half, x1: col === 2 ? size - 1 : (col + 1) * third - 1, y1: row === 1 ? size - 1 : half - 1 });
+    }
+  }
+  for (const d of districts) {
+    for (let y = d.y0; y <= d.y1; y++) for (let x = d.x0; x <= d.x1; x++) grid.district[grid.idx(x, y)] = d.id;
+  }
+
+  const sites: SiteInfo[] = [{ kind: 'base', name: 'Posto Âncora', ...base }, ...depots.map(([name, r]) => ({ kind: 'depot' as const, name, ...r }))];
+  return { grid, buildings, districts, sites };
+}
+
+/** Like `streetLines`, with an avenue (4 cells) every fourth street. */
+function cityStreetLines(rng: Rng, size: number): Array<[number, number]> {
+  const lines: Array<[number, number]> = [[1, 3]];
+  let x = 4;
+  for (let n = 1; ; n++) {
+    x += rng.int(12, 18);
+    const w = n % 4 === 0 ? 4 : rng.int(2, 3);
+    if (x + w >= size - 4) break;
+    lines.push([x, w]);
+    x += w;
+  }
+  lines.push([size - 3, 2]);
+  return lines;
+}
+
+function fillLand(grid: Grid, r: Rect, g: Ground): void {
+  for (let y = r.y0; y <= r.y1; y++) {
+    for (let x = r.x0; x <= r.x1; x++) {
+      const i = grid.idx(x, y);
+      if (grid.ground[i] === Ground.Lot) grid.ground[i] = g;
+    }
+  }
+}

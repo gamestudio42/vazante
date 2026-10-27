@@ -1,5 +1,6 @@
 import { Rng } from '@vazante/kernel';
 import { Grid } from './grid.ts';
+import { FlowJob } from './navigation.ts';
 import { World } from './world.ts';
 import { ZombiePool } from './zombies.ts';
 
@@ -24,6 +25,7 @@ export function restoreWorld(snap: unknown): World {
   Object.setPrototypeOf(w.grid, Grid.prototype);
   Object.setPrototypeOf(w.zombies, ZombiePool.prototype);
   Object.setPrototypeOf(w.rng, Rng.prototype);
+  Object.setPrototypeOf(w.flowJob, FlowJob.prototype);
   w.events = [];
   w.relink();
   return w;

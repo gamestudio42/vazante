@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { DIFFICULTY_IDS, MAX_TICKS_PER_FRAME, TICK_HZ, type DifficultyId, type FromWorker, type ToWorker } from '@vazante/shared';
-import { SimulationEngine } from '@vazante/simulation';
+import { SCENARIO_IDS, SimulationEngine } from '@vazante/simulation';
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -40,7 +40,7 @@ self.onmessage = (ev: MessageEvent<ToWorker>) => {
   const msg = ev.data;
   switch (msg.type) {
     case 'init': {
-      const scenario = msg.scenario === 'open_field' ? 'open_field' : 'last_convoy';
+      const scenario = SCENARIO_IDS.find((id) => id === msg.scenario) ?? 'last_convoy';
       const difficulty = difficultyOf(msg.difficulty);
       if (msg.save) {
         try {
@@ -62,7 +62,7 @@ self.onmessage = (ev: MessageEvent<ToWorker>) => {
       // Same city, new numbers: only before the first tick, so nothing the player did is lost.
       const difficulty = difficultyOf(msg.difficulty);
       if (!engine || engine.world.tick > 0 || engine.world.difficulty === difficulty) return;
-      engine = SimulationEngine.create(engine.world.seed, 'last_convoy', { difficulty });
+      engine = SimulationEngine.create(engine.world.seed, engine.scenarioId, { difficulty });
       engine.world.speed = 0;
       post({ type: 'frame', frame: engine.frame(false) });
       break;

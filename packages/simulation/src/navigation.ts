@@ -118,96 +118,123 @@ export function zombieCanStep(grid: Grid, cx: number, cy: number, dx: number, dy
   return true;
 }
 
-// Scratch buffers for the flow field, grown on demand and reused across calls.
-let costBuf = new Int16Array(0);
-let openBuf = new Uint8Array(0);
 const BUCKETS = 256; // > largest step cost (14 + structure penalty), so the ring never laps itself
-const bucketCells: Int32Array[] = Array.from({ length: BUCKETS }, () => new Int32Array(64));
-const bucketLen = new Int32Array(BUCKETS);
-
-let pending = 0;
-let flowRef: Uint16Array = new Uint16Array(0);
-
-function relax(n: number, nd: number): void {
-  const c = costBuf[n];
-  if (c < 0) return;
-  nd += c;
-  if (nd < flowRef[n] && nd < FLOW_UNREACHABLE) {
-    flowRef[n] = nd;
-    pushBucket(nd, n);
-    pending++;
-  }
-}
-
-function pushBucket(d: number, cell: number): void {
-  const b = d & (BUCKETS - 1);
-  let arr = bucketCells[b];
-  if (bucketLen[b] === arr.length) {
-    const grown = new Int32Array(arr.length * 2);
-    grown.set(arr);
-    bucketCells[b] = arr = grown;
-  }
-  arr[bucketLen[b]++] = cell;
-}
 
 /**
- * Distance field from all source cells into `grid.flow` (Dial's bucket queue: costs are small
- * integers). Unclimbed structures cost `structurePenalty` extra, so the horde detours around short
- * walls and piles up at long ones. Diagonals need both orthogonal cells open (no corner cutting).
- * Distances are unique, so the result is identical to any other exact shortest-path search.
+ * A distance field from source cells (Dial's bucket queue: costs are small integers), computed in
+ * slices so a 2 km city never stalls a tick. Unclimbed structures cost `structurePenalty` extra, so
+ * the horde detours around short walls and piles up at long ones. Diagonals need both orthogonal
+ * cells open (no corner cutting). Distances are unique, so the result is identical to any other
+ * exact shortest-path search, however it is sliced. All state lives here (and in the world that owns
+ * it), so a save taken mid-job resumes identically.
  */
-export function computeFlowField(grid: Grid, sources: readonly number[], structurePenalty = 0): void {
-  if (structurePenalty + 14 >= BUCKETS) throw new Error('structure penalty too large for the bucket ring');
-  const flow = grid.flow;
-  const w = grid.width;
-  const h = grid.height;
-  const size = grid.size;
-  if (costBuf.length < size) {
-    costBuf = new Int16Array(size);
-    openBuf = new Uint8Array(size);
-  }
-  const cost = costBuf;
-  const open = openBuf;
-  for (let c = 0; c < size; c++) {
-    const k = grid.zombieCost(c, 1);
-    cost[c] = k < 0 ? -1 : k === 0 ? 0 : structurePenalty;
-    open[c] = k === 0 ? 1 : 0;
-  }
-  flow.fill(FLOW_UNREACHABLE);
-  flowRef = flow;
-  bucketLen.fill(0);
+export class FlowJob {
+  active = false;
+  /** Current bucket distance and queued entries (including stale ones). */
+  d = 0;
   pending = 0;
-  for (const s of sources) {
-    if (s < 0 || flow[s] === 0) continue;
-    flow[s] = 0;
-    pushBucket(0, s);
-    pending++;
-  }
-  for (let d = 0; pending > 0; d++) {
-    const b = d & (BUCKETS - 1);
-    // Steps cost 10..(14 + penalty) < BUCKETS, so nothing is pushed into the bucket being drained.
-    const cells = bucketCells[b];
-    while (bucketLen[b] > 0) {
-      const cur = cells[--bucketLen[b]];
-      pending--;
-      if (flow[cur] !== d) continue; // stale: a shorter distance was found after it was queued
-      const cx = cur % w;
-      const cy = (cur - cx) / w;
-      const xl = cx > 0;
-      const xr = cx < w - 1;
-      const yu = cy > 0;
-      const yd = cy < h - 1;
-      // Orthogonal steps.
-      if (xr) relax(cur + 1, d + 10);
-      if (xl) relax(cur - 1, d + 10);
-      if (yd) relax(cur + w, d + 10);
-      if (yu) relax(cur - w, d + 10);
-      // Diagonal steps.
-      if (xr && yd && open[cur + 1] && open[cur + w]) relax(cur + w + 1, d + 14);
-      if (xl && yd && open[cur - 1] && open[cur + w]) relax(cur + w - 1, d + 14);
-      if (xr && yu && open[cur + 1] && open[cur - w]) relax(cur - w + 1, d + 14);
-      if (xl && yu && open[cur - 1] && open[cur - w]) relax(cur - w - 1, d + 14);
+  cost = new Int16Array(0);
+  open = new Uint8Array(0);
+  dist = new Uint16Array(0);
+  buckets: Int32Array[] = Array.from({ length: BUCKETS }, () => new Int32Array(64));
+  bucketLen = new Int32Array(BUCKETS);
+
+  /** Snapshot the costs and seed the sources. */
+  begin(grid: Grid, sources: readonly number[], structurePenalty: number): void {
+    if (structurePenalty + 14 >= BUCKETS) throw new Error('structure penalty too large for the bucket ring');
+    const size = grid.size;
+    if (this.cost.length !== size) {
+      this.cost = new Int16Array(size);
+      this.open = new Uint8Array(size);
+      this.dist = new Uint16Array(size);
+    }
+    for (let c = 0; c < size; c++) {
+      const k = grid.zombieCost(c, 1);
+      this.cost[c] = k < 0 ? -1 : k === 0 ? 0 : structurePenalty;
+      this.open[c] = k === 0 ? 1 : 0;
+    }
+    this.dist.fill(FLOW_UNREACHABLE);
+    this.bucketLen.fill(0);
+    this.pending = 0;
+    this.d = 0;
+    this.active = true;
+    for (const s of sources) {
+      if (s < 0 || this.dist[s] === 0) continue;
+      this.dist[s] = 0;
+      this.push(0, s);
     }
   }
 
+  /**
+   * Expand up to `budget` queue entries. Returns true when the field is complete; it is then copied
+   * into `grid.flow`.
+   */
+  run(grid: Grid, budget = Infinity): boolean {
+    if (!this.active) return true;
+    const w = grid.width;
+    const h = grid.height;
+    const { dist, open } = this;
+    let left = budget;
+    while (this.pending > 0) {
+      const d = this.d;
+      const b = d & (BUCKETS - 1);
+      // Steps cost 10..(14 + penalty) < BUCKETS, so nothing is pushed into the bucket being drained.
+      while (this.bucketLen[b] > 0) {
+        if (left-- <= 0) return false;
+        const cur = this.buckets[b][--this.bucketLen[b]];
+        this.pending--;
+        if (dist[cur] !== d) continue; // stale: a shorter distance was found after it was queued
+        const cx = cur % w;
+        const cy = (cur - cx) / w;
+        const xl = cx > 0;
+        const xr = cx < w - 1;
+        const yu = cy > 0;
+        const yd = cy < h - 1;
+        // Orthogonal steps.
+        if (xr) this.relax(cur + 1, d + 10);
+        if (xl) this.relax(cur - 1, d + 10);
+        if (yd) this.relax(cur + w, d + 10);
+        if (yu) this.relax(cur - w, d + 10);
+        // Diagonal steps.
+        if (xr && yd && open[cur + 1] && open[cur + w]) this.relax(cur + w + 1, d + 14);
+        if (xl && yd && open[cur - 1] && open[cur + w]) this.relax(cur + w - 1, d + 14);
+        if (xr && yu && open[cur + 1] && open[cur - w]) this.relax(cur - w + 1, d + 14);
+        if (xl && yu && open[cur - 1] && open[cur - w]) this.relax(cur - w - 1, d + 14);
+      }
+      this.d++;
+    }
+    grid.flow.set(dist);
+    this.active = false;
+    return true;
+  }
+
+  private relax(n: number, nd: number): void {
+    const c = this.cost[n];
+    if (c < 0) return;
+    nd += c;
+    if (nd < this.dist[n] && nd < FLOW_UNREACHABLE) {
+      this.dist[n] = nd;
+      this.push(nd, n);
+    }
+  }
+
+  private push(d: number, cell: number): void {
+    const b = d & (BUCKETS - 1);
+    let arr = this.buckets[b];
+    if (this.bucketLen[b] === arr.length) {
+      const grown = new Int32Array(arr.length * 2);
+      grown.set(arr);
+      this.buckets[b] = arr = grown;
+    }
+    arr[this.bucketLen[b]++] = cell;
+    this.pending++;
+  }
+}
+
+const scratchJob = new FlowJob();
+
+/** The whole distance field from all source cells into `grid.flow`, at once. */
+export function computeFlowField(grid: Grid, sources: readonly number[], structurePenalty = 0): void {
+  scratchJob.begin(grid, sources, structurePenalty);
+  scratchJob.run(grid);
 }

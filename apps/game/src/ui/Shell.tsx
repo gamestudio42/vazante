@@ -1,5 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { Check, ChevronRight, Download, FolderOpen, GraduationCap, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
+import { Building2, Check, ChevronRight, Download, FolderOpen, GraduationCap, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { DIFFICULTY_IDS, TICK_HZ, type SaveMeta } from '@vazante/shared';
 import { t, type Locale } from '../i18n.ts';
 import type { Settings } from '../settings.ts';
@@ -48,6 +48,11 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
           <Plus size={16} />
           {t('menu.new')}
         </button>
+        <button onClick={() => shell.openCity()}>
+          <Building2 size={16} />
+          {t('menu.city.war')}
+          <span className="muted"> · {t('menu.experimental')}</span>
+        </button>
         <button onClick={() => shell.newTutorial()}>
           <GraduationCap size={16} />
           {t('menu.tutorial')}
@@ -80,17 +85,18 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
 }
 
 function Briefing({ shell }: { shell: Shell }) {
+  const city = shell.scenario === 'city_war';
   return (
     <div className="modal">
       <div className="panel card briefing">
-        <div className="summary-kicker">{t('menu.subtitle')}</div>
-        <h1>{t('brief.title')}</h1>
-        {t('brief.body')
+        <div className="summary-kicker">{t(city ? 'menu.experimental' : 'menu.subtitle')}</div>
+        <h1>{t(city ? 'brief.city.title' : 'brief.title')}</h1>
+        {t(city ? 'brief.city.body' : 'brief.body')
           .split('\n\n')
           .map((p, i) => (
             <p key={i}>{p}</p>
           ))}
-        <p className="muted tips">{t('brief.tips')}</p>
+        {!city && <p className="muted tips">{t('brief.tips')}</p>}
         <div className="difficulty" role="radiogroup" aria-label={t('diff.title')}>
           {DIFFICULTY_IDS.map((d) => {
             const Icon = DIFF_ICON[d];
