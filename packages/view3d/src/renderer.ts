@@ -36,6 +36,8 @@ const MAX_CORPSES = 1500;
 const CORPSE_FALL_S = 0.35;
 const PATH_VERTS = 4096;
 /** Metres of travel per full walk cycle (two steps). */
+/** Characters this far outside the view are skipped (covers their size and a short shadow). */
+const CULL_RADIUS_M = 6;
 const STRIDE_M = 1.6;
 /** Skinned models drawn at most (the nearest to the camera); the rest use the cheap block figures. */
 const MAX_SKINNED_ZOMBIES = 320;
@@ -77,7 +79,7 @@ export class GameRenderer {
   private readonly post = new PixelPost();
   private readonly sun: THREE.DirectionalLight;
   private readonly hemi: THREE.HemisphereLight;
-  private readonly lights = new LightPools(2048);
+  private readonly lights: LightPools;
   /** Current hour (0..24) and darkness (0 day .. 1 night), for the HUD and audio. */
   hours = 16;
   night = 0;
@@ -168,6 +170,8 @@ export class GameRenderer {
 
     const city = buildCity(map);
     this.scene.add(city);
+    // Every street lamp, the site floodlights, then room for beams, fires and flashes.
+    this.lights = new LightPools((city.userData.lamps as unknown[]).length + 32 * map.sites.length + 1024);
     for (const [x, y] of city.userData.lamps as [number, number][]) this.lights.addStatic(x, y, 8, PALETTE.lampLight, 0.3);
     for (const site of map.sites) {
       const cs = map.cellSize;
@@ -731,6 +735,7 @@ export class GameRenderer {
     const p = this.pose;
     const turn = Math.min(1, dt * 6);
     this.zombies.begin();
+    this.updateViewFrustum();
     const crowd = this.zombieCrowd;
     // Animated models for the nearest zombies, block figures for the rest.
     let cutoff = Infinity;
@@ -755,6 +760,12 @@ export class GameRenderer {
         this.zSpeed[slot] = 0;
         this.zPhase[slot] = slot;
         this.zYaw[slot] = vx !== 0 || vy !== 0 ? Math.atan2(-vx, -vy) : slot;
+      }
+      if (!this.inView(x, y)) {
+        // Off screen: keep the position so the walk does not jump when it comes into view.
+        this.zDrawX[slot] = x;
+        this.zDrawY[slot] = y;
+        continue;
       }
       const moved = Math.hypot(x - this.zDrawX[slot], y - this.zDrawY[slot]);
       this.zDrawX[slot] = x;
@@ -811,6 +822,23 @@ export class GameRenderer {
     }
     this.zombies.end();
     crowd?.end();
+  }
+
+  private readonly frustum = new THREE.Frustum();
+  private readonly frustumMatrix = new THREE.Matrix4();
+  private readonly cullSphere = new THREE.Sphere(new THREE.Vector3(), CULL_RADIUS_M);
+
+  private updateViewFrustum(): void {
+    const cam = this.rig.active;
+    cam.updateMatrixWorld();
+    this.frustumMatrix.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    this.frustum.setFromProjectionMatrix(this.frustumMatrix);
+  }
+
+  /** A character at (x, y) could show on screen (its shadow included, roughly). */
+  private inView(x: number, y: number): boolean {
+    this.cullSphere.center.set(x, 1, y);
+    return this.frustum.intersectsSphere(this.cullSphere);
   }
 
   /** Distance from the camera focus under which at most `cap` zombies fall (fills zDist). */

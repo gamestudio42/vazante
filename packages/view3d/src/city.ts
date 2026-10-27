@@ -49,7 +49,55 @@ export function buildCity(map: MapInfo): THREE.Group {
 
   group.add(buildRooftops(map));
   group.add(buildOutskirts(map));
+  splitIntoChunks(group, CHUNK_M);
   return group;
+}
+
+/** Side of a culling chunk (metres): 32 cells. */
+const CHUNK_M = 128;
+
+/**
+ * Split every large instanced mesh into square chunks with their own bounds, so the camera and the
+ * shadow camera skip what they cannot see. On the 2 km city this cuts the drawn buildings, roofs and
+ * trees to the few chunks around the view instead of all of them; the slice map has 16 chunks.
+ */
+function splitIntoChunks(root: THREE.Object3D, size: number): void {
+  const meshes: THREE.InstancedMesh[] = [];
+  root.traverse((o) => {
+    if ((o as THREE.InstancedMesh).isInstancedMesh && (o as THREE.InstancedMesh).count > 64) meshes.push(o as THREE.InstancedMesh);
+  });
+  const m = new THREE.Matrix4();
+  const c = new THREE.Color();
+  for (const mesh of meshes) {
+    const buckets = new Map<string, number[]>();
+    for (let i = 0; i < mesh.count; i++) {
+      mesh.getMatrixAt(i, m);
+      const key = `${Math.floor(m.elements[12] / size)},${Math.floor(m.elements[14] / size)}`;
+      let list = buckets.get(key);
+      if (!list) buckets.set(key, (list = []));
+      list.push(i);
+    }
+    if (buckets.size < 2) continue;
+    const parent = mesh.parent!;
+    for (const list of buckets.values()) {
+      const chunk = new THREE.InstancedMesh(mesh.geometry, mesh.material, list.length);
+      list.forEach((src, i) => {
+        mesh.getMatrixAt(src, m);
+        chunk.setMatrixAt(i, m);
+        if (mesh.instanceColor) {
+          mesh.getColorAt(src, c);
+          chunk.setColorAt(i, c);
+        }
+      });
+      chunk.castShadow = mesh.castShadow;
+      chunk.receiveShadow = mesh.receiveShadow;
+      chunk.name = mesh.name;
+      chunk.computeBoundingSphere();
+      parent.add(chunk);
+    }
+    parent.remove(mesh);
+    mesh.dispose();
+  }
 }
 
 /** Map-scale overlay (district bounds, base and depot frames), shown only above the tactical view. */

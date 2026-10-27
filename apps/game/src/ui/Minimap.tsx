@@ -43,6 +43,14 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
     const k = SIZE / Math.max(worldW, worldH);
     let raf = 0;
     let last = 0;
+    // Zombies go through a pixel buffer: thousands of fillRect calls cost milliseconds per redraw.
+    const dots = new ImageData(SIZE, SIZE);
+    const dotPixels = new Uint32Array(dots.data.buffer);
+    const dotLayer = document.createElement('canvas');
+    dotLayer.width = dotLayer.height = SIZE;
+    const dotCtx = dotLayer.getContext('2d')!;
+    // #d84a3a as one RGBA pixel in the platform's byte order.
+    const RED = new Uint32Array(new Uint8Array([0xd8, 0x4a, 0x3a, 0xff]).buffer)[0];
     const draw = (now: number) => {
       raf = requestAnimationFrame(draw);
       if (now - last < 100) return;
@@ -63,9 +71,17 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
         ctx.lineWidth = 1;
         ctx.strokeRect(s.x0 * cs * k + 0.5, s.y0 * cs * k + 0.5, (s.x1 - s.x0 + 1) * cs * k, (s.y1 - s.y0 + 1) * cs * k);
       }
-      ctx.fillStyle = '#d84a3a';
+      dotPixels.fill(0);
       const zs = f.zombies;
-      for (let i = 0; i < zs.length; i += ZOMBIE_STRIDE) ctx.fillRect(zs[i + ZombieField.X] * k - 0.5, zs[i + ZombieField.Y] * k - 0.5, 1.5, 1.5);
+      for (let i = 0; i < zs.length; i += ZOMBIE_STRIDE) {
+        const px = Math.floor(zs[i + ZombieField.X] * k);
+        const py = Math.floor(zs[i + ZombieField.Y] * k);
+        if (px < 0 || py < 0 || px >= SIZE - 1 || py >= SIZE - 1) continue;
+        const o = py * SIZE + px;
+        dotPixels[o] = dotPixels[o + 1] = dotPixels[o + SIZE] = dotPixels[o + SIZE + 1] = RED;
+      }
+      dotCtx.putImageData(dots, 0, 0);
+      ctx.drawImage(dotLayer, 0, 0);
       ctx.fillStyle = '#7fc8ff';
       const ss = f.soldiers;
       for (let i = 0; i < ss.length; i += SOLDIER_STRIDE) {
