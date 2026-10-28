@@ -25,6 +25,22 @@ export const TRUCK = {
   radiusM: 1.4,
 } as const;
 
+/**
+ * A truck escorting a squad keeps about `behindM` behind its anchor, re-plans every
+ * `replanTicks`, waits once within `nearM`, and only drives faster than the squad (by
+ * `paceFactor`) while farther than `catchUpM`.
+ */
+export const TRUCK_ESCORT = {
+  behindM: 10,
+  nearM: 8,
+  catchUpM: 30,
+  paceFactor: 1.1,
+  replanTicks: 10,
+} as const;
+
+/** A drive order lands on the nearest road cell within this many cells of the point. */
+export const TRUCK_DRIVE_SEARCH_CELLS = 8;
+
 /** Distance at which zombies can hit a vehicle. */
 export const ZOMBIE_VEHICLE_REACH_M = 2.2;
 /** Engine noise of a moving truck. */

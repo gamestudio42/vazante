@@ -247,6 +247,7 @@ export class SimulationEngine {
       state: v.state,
       policy: v.policy,
       dest: v.dest,
+      escort: v.escort ?? 0,
       passengers: v.passengers,
       path: v.path.slice(v.pathIdx * 2),
     }));
@@ -314,6 +315,7 @@ export class SimulationEngine {
       h.u32(v.id).f64Value(v.x).f64Value(v.y).f64Value(v.hx).f64Value(v.hy).f64Value(v.hp).u32(v.cargoAmmo).u32(v.cargoMaterials);
       h.str(v.state).str(v.policy).u32(v.dest).u32(v.origin).u32(v.pathIdx).u32(v.path.length).u32(v.blockedT).byte(v.rerouted ? 1 : 0).byte(v.blockReported ? 1 : 0).u32(v.passengers);
       for (const p of v.path) h.f64Value(p);
+      if (v.escort !== undefined) h.u32(v.escort);
     }
     for (const st of w.structures) {
       h.u32(st.id).str(st.kind).u32(st.cell).u32(st.base).f64Value(st.hp).u32(st.work).byte(st.built ? 1 : 0).byte(st.open ? 1 : 0);

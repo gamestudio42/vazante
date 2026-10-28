@@ -325,6 +325,14 @@ export class InputController {
     this.feedback("order");
   }
 
+  /** Make the selected truck follow a squad (null stops following). */
+  escortSquad(squad: number | null): void {
+    const v = this.client.state.vehicle;
+    if (v === null) return;
+    this.client.send({ type: "escort", vehicle: v, squad });
+    this.feedback("order");
+  }
+
   /** Send the selected truck to a base or depot. */
   sendConvoy(to: number, policy: RiskPolicy): void {
     const v = this.client.state.vehicle;
@@ -354,10 +362,19 @@ export class InputController {
           p.y < (b.y1 + 1) * cs,
       );
       const v = f?.vehicles.find((x) => x.id === veh);
-      if (site && v) {
-        this.sendConvoy(site.id, v.policy);
-        this.view.markOrder(p.x, p.y);
-      } else this.feedback("deny");
+      if (!v) return;
+      // On a squad: follow it. On a base or depot: deliver there. Anywhere else: drive to the road.
+      const squad = this.view.pickSquad(x, y, w, h);
+      if (squad !== null) {
+        this.escortSquad(squad);
+        return;
+      }
+      if (site) this.sendConvoy(site.id, v.policy);
+      else {
+        this.client.send({ type: "drive", vehicle: veh, to: p });
+        this.feedback("order");
+      }
+      this.view.markOrder(p.x, p.y);
       return;
     }
     if (sel.length === 0) return;

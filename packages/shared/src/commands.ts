@@ -19,6 +19,10 @@ export type Command =
   /** Load cargo from the stock of the site the vehicle is in (negative values unload). */
   | { type: 'load'; vehicle: number; ammo: number; materials: number }
   | { type: 'stop_vehicle'; vehicle: number }
+  /** Drive a vehicle to the road nearest a point. */
+  | { type: 'drive'; vehicle: number; to: Vec2 }
+  /** Keep a vehicle behind a squad at the squad's pace (null stops escorting). */
+  | { type: 'escort'; vehicle: number; squad: number | null }
   | { type: 'set_policy'; vehicle: number; policy: RiskPolicy }
   /** Development helper: spawn a group of zombies around a point. */
   | { type: 'debug_spawn'; at: Vec2; count: number; kind?: number };

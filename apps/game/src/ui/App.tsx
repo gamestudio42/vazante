@@ -1099,6 +1099,7 @@ function VehiclePanel({
       v.y < (b.y1 + 1) * cs,
   );
   const dead = v.state === "destroyed";
+  const escorted = frame.squads.find((q) => q.id === v.escort);
   return (
     <div className="selection panel vehicle-panel">
       <div className="sel-head">
@@ -1115,6 +1116,11 @@ function VehiclePanel({
             {t(`vstate.${v.state}`)}
           </span>
           {here && <span className="muted">{here.name}</span>}
+          {escorted && (
+            <span className="muted">
+              {t("convoy.following").replace("{name}", escorted.name)}
+            </span>
+          )}
         </span>
       </div>
       {!dead && (
@@ -1179,6 +1185,22 @@ function VehiclePanel({
                 </button>
               </>
             )}
+          </div>
+          <div className="cmd-row">
+            <span className="cmd-label">{t("convoy.escort")}</span>
+            {frame.squads.map((q) => (
+              <button
+                key={q.id}
+                className={`pill ${v.escort === q.id ? "on" : ""}`}
+                title={t("convoy.escortHint")}
+                onClick={() =>
+                  input.escortSquad(v.escort === q.id ? null : q.id)
+                }
+              >
+                <Footprints size={12} />
+                {q.name}
+              </button>
+            ))}
           </div>
           <div className="hint muted">{t("convoy.hint")}</div>
         </>

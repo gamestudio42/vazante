@@ -12,7 +12,13 @@ import {
   toggleGate,
 } from "./systems/construction.ts";
 import { releaseDirect } from "./systems/lifecycle.ts";
-import { loadCargo, orderConvoy, stopVehicle } from "./systems/logistics.ts";
+import {
+  loadCargo,
+  orderConvoy,
+  orderDrive,
+  orderEscort,
+  stopVehicle,
+} from "./systems/logistics.ts";
 import { groupSquads, planMove } from "./systems/units.ts";
 import type { Squad } from "./entities.ts";
 import { isActiveSoldier, type World } from "./world.ts";
@@ -171,6 +177,12 @@ export function applyCommand(w: World, cmd: Command): string | null {
 
     case "stop_vehicle":
       return stopVehicle(w, cmd.vehicle);
+
+    case "drive":
+      return orderDrive(w, cmd.vehicle, cmd.to.x, cmd.to.y);
+
+    case "escort":
+      return orderEscort(w, cmd.vehicle, cmd.squad);
 
     case "set_policy": {
       const v = w.vehicle(cmd.vehicle);

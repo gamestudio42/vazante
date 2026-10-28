@@ -89,6 +89,8 @@ export interface VehicleView {
   policy: RiskPolicy;
   /** Destination base id, 0 = none. */
   dest: number;
+  /** Squad the vehicle follows, 0 = none. */
+  escort: number;
   /** Civilians aboard. */
   passengers: number;
   /** Remaining route, flattened x, y pairs. */

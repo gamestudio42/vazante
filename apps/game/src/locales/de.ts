@@ -95,7 +95,10 @@ export const de: Record<Key, string> = {
   "convoy.loadMat": "100 Material laden",
   "convoy.unload": "Entladen",
   "convoy.hint":
-    "Rechtsklick auf eine Basis oder ein Depot schickt den Lastwagen los. Eskortiere ihn: Zombies folgen dem Motorenlärm.",
+    "Rechtsklick auf eine Basis oder ein Depot zum Abliefern, auf die Straße zum Hinfahren oder auf einen Trupp, um ihm zu folgen. Zombies folgen dem Motorenlärm.",
+  "convoy.escort": "Folgen",
+  "convoy.escortHint": "Der Lastwagen bleibt in dessen Tempo hinter diesem Trupp",
+  "convoy.following": "folgt {name}",
   "policy.push_through": "Durchbrechen",
   "policy.reroute": "Umleiten",
   "policy.halt": "Anhalten",

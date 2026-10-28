@@ -97,7 +97,10 @@ export const es: Record<Key, string> = {
   "convoy.loadMat": "Cargar 100 de materiales",
   "convoy.unload": "Descargar",
   "convoy.hint":
-    "Clic derecho en una base o depósito para enviar el camión. Escóltalo: los zombis persiguen el ruido del motor.",
+    "Clic derecho en una base o depósito para entregar, en la calle para ir allí, o en un escuadrón para seguirlo. Los zombis persiguen el ruido del motor.",
+  "convoy.escort": "Seguir",
+  "convoy.escortHint": "El camión va detrás de este escuadrón, a su paso",
+  "convoy.following": "siguiendo a {name}",
   "policy.push_through": "Abrirse paso",
   "policy.reroute": "Desviarse",
   "policy.halt": "Detenerse",

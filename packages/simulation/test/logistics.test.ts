@@ -129,3 +129,45 @@ describe('trucks and convoys', () => {
     expect(w.mission!.stage).toBe(1);
   });
 });
+
+describe('driving and escorting', () => {
+  it('drives to the road nearest a point and parks there', () => {
+    const { e, truckId } = roadEngine();
+    const w = e.world;
+    // A point beside the street: the truck stops on the street next to it.
+    e.enqueue({ type: 'drive', vehicle: truckId, to: { x: c(30), y: c(36) } });
+    e.runTicks(300);
+    const v = w.vehicle(truckId)!;
+    expect(v.state).toBe('idle');
+    expect(Math.abs(v.x - c(30))).toBeLessThan(CELL_SIZE * 1.5);
+    expect(w.grid.ground[w.grid.cellAt(v.x, v.y)]).toBe(Ground.Street);
+    expect(v.cargoAmmo).toBe(3000);
+  });
+
+  it('follows a squad at its pace and waits behind it', () => {
+    const { e, truckId } = roadEngine();
+    const w = e.world;
+    const q = addSquad(e, 'slice', c(54), c(32));
+    e.enqueue({ type: 'escort', vehicle: truckId, squad: q.id });
+    e.enqueue({ type: 'move', squads: [q.id], to: { x: c(10), y: c(32) } });
+    let maxGap = 0;
+    for (let t = 0; t < 900; t++) {
+      e.tick();
+      const v = w.vehicle(truckId)!;
+      if (t > 100) maxGap = Math.max(maxGap, Math.abs(v.x - q.ax));
+      // Never drives ahead of the squad it escorts.
+      if (t > 30) expect(v.x).toBeGreaterThan(q.ax - 4);
+    }
+    const v = w.vehicle(truckId)!;
+    expect(q.order.kind).toBe('hold');
+    expect(maxGap).toBeLessThan(30);
+    expect(v.state).toBe('idle');
+    expect(v.x - q.ax).toBeGreaterThan(4);
+    expect(v.x - q.ax).toBeLessThan(20);
+    expect(e.frame(false).vehicles[0].escort).toBe(q.id);
+    // Escorting stops on request.
+    e.enqueue({ type: 'escort', vehicle: truckId, squad: null });
+    e.runTicks(2);
+    expect(e.frame(false).vehicles[0].escort).toBe(0);
+  });
+});

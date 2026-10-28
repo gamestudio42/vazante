@@ -8,6 +8,8 @@ import {
   TICK_DT,
   TICK_HZ,
   TRUCK,
+  TRUCK_DRIVE_SEARCH_CELLS,
+  TRUCK_ESCORT,
   TRUCK_RESUPPLY_M,
   WEAPONS,
   type RiskPolicy,
@@ -129,7 +131,10 @@ function siteTargetCell(w: World, b: Base, ok: (cell: number) => boolean): numbe
 
 function planRoute(w: World, v: Vehicle, dest: Base, avoidZombies: boolean): boolean {
   const ok = truckPassable(w);
-  const goal = siteTargetCell(w, dest, ok);
+  return planRouteTo(w, v, siteTargetCell(w, dest, ok), ok, avoidZombies);
+}
+
+function planRouteTo(w: World, v: Vehicle, goal: number, ok: (cell: number) => boolean, avoidZombies: boolean): boolean {
   if (goal < 0) return false;
   const cells = findPath(w.grid, w.grid.cellAt(v.x, v.y), goal, {
     maxExpanded: 40000,
@@ -143,17 +148,103 @@ function planRoute(w: World, v: Vehicle, dest: Base, avoidZombies: boolean): boo
   return true;
 }
 
+/** The truck cell nearest a point within TRUCK_DRIVE_SEARCH_CELLS, or -1. */
+function pointTargetCell(w: World, x: number, y: number, ok: (cell: number) => boolean): number {
+  const g = w.grid;
+  const c0 = g.cellAt(x, y);
+  if (c0 < 0) return -1;
+  const cx = c0 % g.width;
+  const cy = (c0 - cx) / g.width;
+  let best = -1;
+  let bd = Infinity;
+  const r = TRUCK_DRIVE_SEARCH_CELLS;
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      if (!g.inBounds(cx + dx, cy + dy)) continue;
+      const c = g.idx(cx + dx, cy + dy);
+      const d = dx * dx + dy * dy;
+      if (d < bd && ok(c)) {
+        bd = d;
+        best = c;
+      }
+    }
+  }
+  return best;
+}
+
+/** Clear the per-trip state before a new order. */
+function startTrip(w: World, v: Vehicle): void {
+  v.origin = w.siteAt(v.x, v.y)?.id ?? v.origin;
+  v.rerouted = false;
+  v.blockedT = 0;
+  v.blockReported = false;
+}
+
+export function orderDrive(w: World, id: number, x: number, y: number): string | null {
+  const v = w.vehicle(id);
+  if (!v || v.state === 'destroyed') return 'no_vehicle';
+  const ok = truckPassable(w);
+  const goal = pointTargetCell(w, x, y, ok);
+  if (goal < 0) return 'no_road';
+  startTrip(w, v);
+  v.escort = undefined;
+  v.dest = 0;
+  if (!planRouteTo(w, v, goal, ok, false)) return 'no_route';
+  v.state = 'moving';
+  return null;
+}
+
+export function orderEscort(w: World, id: number, squad: number | null): string | null {
+  const v = w.vehicle(id);
+  if (!v || v.state === 'destroyed') return 'no_vehicle';
+  if (squad === null) {
+    v.escort = undefined;
+    return null;
+  }
+  if (!w.squad(squad)) return 'no_squad';
+  startTrip(w, v);
+  v.escort = squad;
+  v.dest = 0;
+  return null;
+}
+
+/** Escorting: keep behind the squad, re-planning now and then; returns the speed cap for this tick. */
+function stepEscort(w: World, v: Vehicle): number {
+  const q = w.squad(v.escort!);
+  const members = q ? q.members.map((id) => w.soldier(id)).filter((s) => s !== undefined && isActiveSoldier(s)) : [];
+  if (!q || members.length === 0) {
+    v.escort = undefined;
+    return TRUCK.speed;
+  }
+  const tx = q.ax - q.hx * TRUCK_ESCORT.behindM;
+  const ty = q.ay - q.hy * TRUCK_ESCORT.behindM;
+  const dx = tx - v.x;
+  const dy = ty - v.y;
+  const d2 = dx * dx + dy * dy;
+  if ((w.tick + v.id) % TRUCK_ESCORT.replanTicks === 0) {
+    if (d2 < TRUCK_ESCORT.nearM * TRUCK_ESCORT.nearM) {
+      if (v.state === 'moving') {
+        v.state = 'idle';
+        v.path = [];
+        v.pathIdx = 0;
+      }
+    } else if (v.state !== 'blocked') {
+      const ok = truckPassable(w);
+      if (planRouteTo(w, v, pointTargetCell(w, tx, ty, ok), ok, false)) v.state = 'moving';
+    }
+  }
+  return d2 > TRUCK_ESCORT.catchUpM * TRUCK_ESCORT.catchUpM ? TRUCK.speed : Math.min(TRUCK.speed, q.speed * TRUCK_ESCORT.paceFactor);
+}
+
 export function orderConvoy(w: World, id: number, to: number, policy: RiskPolicy): string | null {
   const v = w.vehicle(id);
   if (!v || v.state === 'destroyed') return 'no_vehicle';
   const dest = w.baseById(to);
   if (!dest) return 'no_site';
-  v.origin = w.siteAt(v.x, v.y)?.id ?? v.origin;
+  startTrip(w, v);
   v.policy = policy;
   v.dest = dest.id;
-  v.rerouted = false;
-  v.blockedT = 0;
-  v.blockReported = false;
+  v.escort = undefined;
   if (!planRoute(w, v, dest, false)) return 'no_route';
   v.state = 'moving';
   return null;
@@ -166,6 +257,7 @@ export function stopVehicle(w: World, id: number): string | null {
   v.path = [];
   v.pathIdx = 0;
   v.dest = 0;
+  v.escort = undefined;
   return null;
 }
 
@@ -229,13 +321,14 @@ export function stepVehicles(w: World): void {
       w.emit({ type: 'vehicle_destroyed', source: v.id, x: v.x, y: v.y });
       continue;
     }
+    const cap = v.escort !== undefined ? stepEscort(w, v) : TRUCK.speed;
     if (v.state !== 'moving' && v.state !== 'blocked') continue;
     if (v.pathIdx * 2 >= v.path.length) {
       arrive(w, v);
       continue;
     }
 
-    let speed: number = TRUCK.speed;
+    let speed: number = cap;
     const crowd = zombiesAhead(w, v, TRUCK.blockRadiusM);
     if (crowd >= TRUCK.blockCount) {
       if (!v.blockReported) {

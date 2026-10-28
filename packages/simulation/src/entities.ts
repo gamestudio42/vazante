@@ -143,6 +143,8 @@ export interface Vehicle {
   blockReported: boolean;
   /** Civilians aboard. */
   passengers: number;
+  /** Squad this vehicle follows; absent when it is not escorting. */
+  escort?: number;
 }
 
 /** A mission area in cells. */

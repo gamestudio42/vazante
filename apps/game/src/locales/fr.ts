@@ -97,7 +97,10 @@ export const fr: Record<Key, string> = {
   "convoy.loadMat": "Charger 100 matériaux",
   "convoy.unload": "Décharger",
   "convoy.hint":
-    "Clic droit sur une base ou un dépôt pour envoyer le camion. Escortez-le : les zombies suivent le bruit du moteur.",
+    "Clic droit sur une base ou un dépôt pour livrer, sur la route pour y aller, ou sur une escouade pour la suivre. Les zombies suivent le bruit du moteur.",
+  "convoy.escort": "Suivre",
+  "convoy.escortHint": "Le camion reste derrière cette escouade, à son rythme",
+  "convoy.following": "suit {name}",
   "policy.push_through": "Forcer le passage",
   "policy.reroute": "Dévier",
   "policy.halt": "S’arrêter",
