@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="apps/game/public/favicon.svg" width="88" alt="Vazante emblem: an amber V over the tide">
+  <img src="apps/game/public/favicon.svg" width="88" alt="Vazante emblem: a pixel V over the tide">
 </p>
 
 <h1 align="center">Vazante</h1>

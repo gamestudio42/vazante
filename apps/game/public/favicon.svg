@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vazante">
-  <rect width="64" height="64" rx="12" fill="#0d1013"/>
-  <path d="M12 14h10l10 22 10-22h10L36 48h-8z" fill="#f0b03f"/>
-  <path d="M10 54c5-3 9-3 14 0s9 3 14 0 9-3 14 0" fill="none" stroke="#6fb6db" stroke-width="3" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vazante" shape-rendering="crispEdges">
+  <rect x="2.5" y="2.5" width="59" height="59" rx="6" fill="#12161a" stroke="#3a4148"/>
+  <path d="M12 14h4v8h-4zM48 14h4v8h-4zM16 22h4v8h-4zM44 22h4v8h-4zM20 30h4v8h-4zM40 30h4v8h-4zM24 38h4v4h-4zM36 38h4v4h-4zM24 42h16v4H24zM28 46h8v4h-8z" fill="#e6e1d3"/>
+  <path d="M11 51h41v2H11z" fill="#4fa3ff"/>
+  <path d="M17 55h30v2H17z" fill="#4fa3ff" fill-opacity=".63"/>
 </svg>
