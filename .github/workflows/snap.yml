@@ -45,7 +45,8 @@ jobs:
         run: |
           sudo snap install --dangerous ${{ steps.build.outputs.snap }}
           sudo apt-get install -y xvfb
-          xvfb-run -a snap run vazante --smoke 2>&1 | tee smoke.log
+          # The runner has no GPU: render WebGL in software, as the browser tests do.
+          xvfb-run -a snap run vazante --smoke --ignore-gpu-blocklist --enable-unsafe-swiftshader --use-angle=swiftshader 2>&1 | tee smoke.log
           grep -q '^SMOKE .*"ready":true' smoke.log
 
       - uses: actions/upload-artifact@v5
