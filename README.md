@@ -120,6 +120,11 @@ interface only send commands and read frames. See the [game design](docs/GDD.md)
 ## Licence
 
 Vazante is free software under the GNU Affero General Public License, version 3 or any later
-version (see [LICENSE](LICENSE)). Its code, city, procedural art and music are original. Third-party models, sounds,
-fonts and icons are CC0, OFL or ISC, each listed in the [asset register](docs/assets.md).
+version ([`AGPL-3.0-or-later`](LICENSE)), following the
+[Game Studio 42](https://github.com/gamestudio42) default for complete games. If you run a modified
+version for other people, including as a website or over a network, you must offer them its source
+under the same licence. Copyright (c) 2026 Marcel Savegnago.
+
+Its code, city, procedural art and music are original. Third-party models, sounds,
+fonts and icons keep their own licences (CC0, OFL or ISC), each listed in the [asset register](docs/assets.md).
 See [LICENSE](LICENSE) and [AGENTS.md](AGENTS.md) for project rules.
