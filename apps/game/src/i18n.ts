@@ -1,3 +1,7 @@
+import { de } from './locales/de.ts';
+import { es } from './locales/es.ts';
+import { fr } from './locales/fr.ts';
+
 const en = {
   'app.title': 'Vazante',
   'boot.loading': 'Generating the city…',
@@ -287,7 +291,7 @@ const en = {
   'brief.retake.tips': 'The hold clock only runs while soldiers stand in the marked area · have the engineers raise barricades at each point · fortify the quay before the waves',
 } as const;
 
-type Key = keyof typeof en;
+export type Key = keyof typeof en;
 
 const ptBR: Record<Key, string> = {
   'app.title': 'Vazante',
@@ -578,8 +582,25 @@ const ptBR: Record<Key, string> = {
   'brief.retake.tips': 'O relógio só corre com soldados dentro da área marcada · use os engenheiros para barricadas em cada ponto · fortifique o cais antes das ondas',
 };
 
-const dictionaries = { en, 'pt-BR': ptBR } as const;
+const dictionaries = { 'pt-BR': ptBR, en, es, fr, de } as const;
 export type Locale = keyof typeof dictionaries;
+
+export const LOCALES = Object.keys(dictionaries) as Locale[];
+export const LOCALE_NAMES: Record<Locale, string> = { 'pt-BR': 'Português (Brasil)', en: 'English', es: 'Español', fr: 'Français', de: 'Deutsch' };
+
+export function isLocale(v: unknown): v is Locale {
+  return typeof v === 'string' && (LOCALES as string[]).includes(v);
+}
+
+/** The first browser language the game speaks (any Portuguese counts as pt-BR), else Portuguese. */
+export function browserLocale(languages: readonly string[] = typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]): Locale {
+  for (const tag of languages) {
+    const base = (tag ?? '').toLowerCase().split('-')[0];
+    if (base === 'pt') return 'pt-BR';
+    if (isLocale(base)) return base;
+  }
+  return 'pt-BR';
+}
 
 let locale: Locale = 'pt-BR';
 

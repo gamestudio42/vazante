@@ -11,6 +11,8 @@ export default defineConfig({
     baseURL: 'http://localhost:5199',
     viewport: { width: 1280, height: 720 },
     screenshot: 'only-on-failure',
+    // The game follows the browser language on first run; the tests read the Portuguese texts.
+    locale: 'pt-BR',
   },
   projects: [
     {

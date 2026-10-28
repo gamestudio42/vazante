@@ -1,5 +1,5 @@
 import type { DifficultyId, MissionId } from '@vazante/shared';
-import type { Locale } from './i18n.ts';
+import { browserLocale, isLocale, type Locale } from './i18n.ts';
 
 export interface Settings {
   volume: number;
@@ -23,9 +23,12 @@ const DEFAULTS: Settings = { volume: 0.8, musicVolume: 0.7, locale: 'pt-BR', uiS
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
-    const s = { ...DEFAULTS, ...(raw ? (JSON.parse(raw) as Partial<Settings>) : {}) };
+    const saved = raw ? (JSON.parse(raw) as Partial<Settings>) : {};
+    const s = { ...DEFAULTS, ...saved };
+    // First run: the browser's language, until the player picks one.
+    if (!isLocale(saved.locale)) s.locale = browserLocale();
     const lang = new URLSearchParams(location.search).get('lang');
-    if (lang === 'en' || lang === 'pt-BR') s.locale = lang;
+    if (isLocale(lang)) s.locale = lang;
     return s;
   } catch {
     return { ...DEFAULTS };

@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Building2, Check, ChevronRight, CircleCheck, Lock, Map as MapIcon, Download, FolderOpen, GraduationCap, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { DIFFICULTY_IDS, MISSION_IDS, TICK_HZ, type MissionId, type SaveMeta } from '@vazante/shared';
-import { t, type Locale } from '../i18n.ts';
+import { LOCALES, LOCALE_NAMES, t, type Locale } from '../i18n.ts';
 import type { Settings } from '../settings.ts';
 import type { Shell } from '../shell.ts';
 
@@ -337,8 +337,11 @@ function SettingsPanel({ shell }: { shell: Shell }) {
         <label>
           <span>{t('settings.language')}</span>
           <select value={s.locale} onChange={(e) => set({ locale: e.target.value as Locale })}>
-            <option value="pt-BR">Português (Brasil)</option>
-            <option value="en">English</option>
+            {LOCALES.map((l) => (
+              <option key={l} value={l}>
+                {LOCALE_NAMES[l]}
+              </option>
+            ))}
           </select>
           <span />
         </label>
