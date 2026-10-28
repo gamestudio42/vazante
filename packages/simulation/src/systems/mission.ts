@@ -197,8 +197,14 @@ function spawnGroup(
   count: number,
 ): [number, number] | null {
   if (candidates.length === 0) return null;
-  const g = w.grid;
   const origin = candidates[w.rng.int(0, candidates.length - 1)];
+  spawnAround(w, origin, count);
+  return [w.grid.cellCenterX(origin), w.grid.cellCenterY(origin)];
+}
+
+/** Up to `count` driven zombies scattered around a cell. */
+function spawnAround(w: World, origin: number, count: number): void {
+  const g = w.grid;
   const ox = g.cellCenterX(origin);
   const oy = g.cellCenterY(origin);
   let placed = 0;
@@ -211,8 +217,40 @@ function spawnGroup(
     w.zombies.driven[s] = 1;
     placed++;
   }
-  return [ox, oy];
 }
+
+/**
+ * `n` entry cells far apart from each other: the first at random, each next one the farthest
+ * from those already chosen among a random sample.
+ */
+function spreadOrigins(w: World, candidates: number[], n: number): number[] {
+  const g = w.grid;
+  const out = [candidates[w.rng.int(0, candidates.length - 1)]];
+  while (out.length < n) {
+    let best = -1;
+    let bestD = -1;
+    for (let k = 0; k < ORIGIN_SAMPLES; k++) {
+      const c = candidates[w.rng.int(0, candidates.length - 1)];
+      let d = Infinity;
+      for (const o of out) {
+        const dx = g.cellCenterX(c) - g.cellCenterX(o);
+        const dy = g.cellCenterY(c) - g.cellCenterY(o);
+        d = Math.min(d, dx * dx + dy * dy);
+      }
+      if (d > bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    out.push(best);
+  }
+  return out;
+}
+
+/** A wave splits into one group per this many zombies (at most WAVE_GROUPS_MAX), from different sides. */
+const WAVE_GROUP_SIZE = 30;
+const WAVE_GROUPS_MAX = 4;
+const ORIGIN_SAMPLES = 48;
 
 /** Walkable street cells at a distance from (x, y) in metres between `min` and `max`. */
 function streetsAround(
@@ -237,7 +275,7 @@ function streetsAround(
 }
 
 /**
- * A wave: one entry point far from the base, so the attack has a direction. In the city it stays
+ * A wave: a few entry points far from the base and from each other. In the city it stays
  * within WAVE_CITY_MAX_M: farther out the defenders' scent does not reach and the wave would wander.
  */
 function spawnWave(w: World, m: Mission, count: number, zone?: number): void {
@@ -262,8 +300,15 @@ function spawnWave(w: World, m: Mission, count: number, zone?: number): void {
         );
   // Courtyards and the far bank can be cut off from the defenders; a wave there would never arrive.
   if (city) cells = cells.filter((c) => w.grid.flow[c] !== FLOW_UNREACHABLE);
-  const at = spawnGroup(w, cells, count);
-  if (at) w.emit({ type: "wave_started", value: m.wave, x: at[0], y: at[1] });
+  if (cells.length === 0) return;
+  // Several groups from different sides, so the wave arrives as a front and not as one file.
+  const groups = Math.max(1, Math.min(WAVE_GROUPS_MAX, Math.round(count / WAVE_GROUP_SIZE)));
+  const origins = spreadOrigins(w, cells, groups);
+  for (let k = 0; k < groups; k++) {
+    const share = Math.floor(count / groups) + (k < count % groups ? 1 : 0);
+    spawnAround(w, origins[k], share);
+    w.emit({ type: "wave_started", value: m.wave, x: w.grid.cellCenterX(origins[k]), y: w.grid.cellCenterY(origins[k]) });
+  }
 }
 
 /** City waves start at most this far from the base. */

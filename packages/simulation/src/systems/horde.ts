@@ -42,6 +42,14 @@ import { moveWithCollisionInto, type MoveResult } from './movement.ts';
 
 /** Chasing zombies give up when farther than this (flow units: 10 per cell = 4 m) and no noise. */
 const CHASE_GIVE_UP = 250;
+/**
+ * Wave zombies farther than this from the defenders (flow units: 10 per cell) fan out, taking
+ * steps at most SPREAD_SLACK worse than the best one.
+ */
+const SPREAD_MIN_FLOW = 120;
+const SPREAD_SLACK = 4;
+const downhillX = new Int8Array(8);
+const downhillY = new Int8Array(8);
 /** Within this distance a chasing zombie steers straight at its target instead of the flow field. */
 const DIRECT_STEER_M = 8;
 const IDLE_DIR = 255;
@@ -127,6 +135,24 @@ export function stepHorde(w: World): void {
             bx = ox;
             by = oy;
           }
+        }
+        // Far from the defenders a wave zombie takes any step nearly as good as the best one
+        // (picked by its slot and cell, so no RNG), which fans a wave out over the street and the
+        // parallel streets instead of a single file down the one shortest path.
+        if (z.driven[s] !== 0 && here > SPREAD_MIN_FLOW && best < here) {
+          let n = 0;
+          for (let k = 0; k < 8; k++) {
+            const ox = NB_X[k];
+            const oy = NB_Y[k];
+            const f = g.flow[c + oy * g.width + ox];
+            if (f >= here || f > best + SPREAD_SLACK || !zombieCanStep(g, cx, cy, ox, oy)) continue;
+            downhillX[n] = ox;
+            downhillY[n] = oy;
+            n++;
+          }
+          const pick = (s + c) % n;
+          bx = downhillX[pick];
+          by = downhillY[pick];
         }
         if (bx !== 0 || by !== 0) {
           unit((cx + bx + 0.5) * CELL_SIZE - x, (cy + by + 0.5) * CELL_SIZE - y);

@@ -53,12 +53,19 @@ describe('O Último Comboio', () => {
     let lastWarnTick = -1;
     for (let t = 0; t < 20000 && w.mission!.phase === 'active'; t++) {
       e.tick();
-      for (const ev of e.frame(false).events) {
+      const events = e.frame(false).events;
+      // A wave enters as several groups from different sides.
+      const starts = events.filter((ev) => ev.type === 'wave_started');
+      if (starts.length > 0) {
+        expect(starts.length).toBeGreaterThan(1);
+        expect(new Set(starts.map((ev) => `${ev.x},${ev.y}`)).size).toBe(starts.length);
+      }
+      for (const ev of events) {
         if (ev.type === 'wave_warning') {
           warnings.push(Number(ev.reason));
           lastWarnTick = w.tick;
         }
-        if (ev.type === 'wave_started') {
+        if (ev.type === 'wave_started' && ev === starts[0]) {
           const secs = (w.tick - lastWarnTick) / 10;
           expect(secs).toBeGreaterThanOrEqual(SLICE.warningMinS);
           expect(secs).toBeLessThanOrEqual(SLICE.warningMaxS + 0.2);
