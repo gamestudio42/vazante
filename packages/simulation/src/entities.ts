@@ -46,6 +46,11 @@ export interface Soldier {
   panicCd: number;
   /** Next to a built structure this tick (braced, steadier). */
   inCover: boolean;
+  /** Waypoints (x, y pairs) around whatever blocked the straight walk to the slot; absent when walking straight. */
+  route?: number[];
+  /** Ticks the soldier has been blocked far from the slot, and ticks the current route may still run. */
+  stuckT?: number;
+  routeT?: number;
 }
 
 export interface Squad {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Ground } from "@vazante/shared";
 import { addSquad, fieldEngine, soldiersOf } from "./helpers.ts";
 
 describe("squad command", () => {
@@ -93,5 +94,31 @@ describe("squad command", () => {
         ).toBeGreaterThan(1);
     expect(a.formation).toBe("column");
     expect(b.slotTotal).toBe(all.length);
+  });
+});
+
+describe("members caught behind a wall", () => {
+  it("find their own way back to the squad", () => {
+    const e = fieldEngine();
+    const g = e.world.grid;
+    const q = addSquad(e, "guard", 128, 110);
+    const [lost] = soldiersOf(e, q.id);
+    // A cup open to the south between the soldier and his slot: walking straight north only
+    // presses him against the wall.
+    const wall = (x0: number, y0: number, x1: number, y1: number) => {
+      for (let y = y0; y <= y1; y++)
+        for (let x = x0; x <= x1; x++) g.ground[g.idx(x, y)] = Ground.Building;
+    };
+    const cx = g.cellAt(128, 0) % g.width;
+    const cy = Math.floor(g.cellAt(0, 140) / g.width);
+    wall(cx - 6, cy, cx + 6, cy);
+    wall(cx - 6, cy, cx - 6, cy + 6);
+    wall(cx + 6, cy, cx + 6, cy + 6);
+    lost.x = 128;
+    lost.y = g.cellCenterY(g.cellAt(0, 140) + 3 * g.width);
+    e.runTicks(400);
+    const others = soldiersOf(e, q.id).slice(1);
+    const my = others.reduce((a, s) => a + s.y, 0) / others.length;
+    expect(Math.abs(lost.y - my)).toBeLessThan(8);
   });
 });

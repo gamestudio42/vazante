@@ -327,6 +327,19 @@ b {
   margin-top: 6px;
   line-height: 1.35;
 }
+.obj.locate {
+  cursor: pointer;
+  pointer-events: auto;
+}
+.obj.locate:hover > div:first-of-type {
+  color: var(--accent);
+}
+.obj .locate-icon {
+  flex: none;
+  margin-left: auto;
+  margin-top: 2px;
+  color: var(--accent);
+}
 .obj .check {
   padding-top: 1px;
   color: var(--dim);
@@ -1461,6 +1474,57 @@ input[type='checkbox'] {
   }
 }
 
+/* ----- Map labels ----- */
+.map-labels {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.map-label,
+.obj-arrow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.9);
+}
+.map-label {
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(10, 13, 16, 0.55);
+  border-left: 3px solid currentColor;
+}
+.map-label.site-base {
+  color: #9fd0ff;
+}
+.map-label.site-depot {
+  color: #f0d79a;
+}
+.map-label.objective {
+  color: var(--accent);
+  font-size: 15px;
+  background: rgba(10, 13, 16, 0.75);
+}
+.obj-arrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+}
+.obj-arrow.left {
+  flex-direction: row-reverse;
+}
+.obj-arrow span {
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(10, 13, 16, 0.75);
+}
+
 /* ----- Minimap ----- */
 .minimap {
   bottom: 8px;
@@ -1473,6 +1537,17 @@ input[type='checkbox'] {
   height: 210px;
   image-rendering: pixelated;
   cursor: crosshair;
+}
+/* Direct control: a smaller window around the soldier, out of the way of the aim. */
+.minimap.direct-map {
+  pointer-events: none;
+  opacity: 0.92;
+}
+.minimap.direct-map canvas {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  image-rendering: auto;
 }
 
 @media (max-width: 1100px) {

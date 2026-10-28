@@ -289,6 +289,7 @@ export const de: Record<Key, string> = {
   "obj.deliver.evac": "Bring die Überlebenden heim: {place}",
   "obj.reach": "Erreiche: {place}",
   "obj.hold": "Halte: {place}",
+  "obj.locate": "Klicken, um die Kamera dorthin zu bewegen",
   "obj.hold.hint":
     "Die Uhr läuft nur, solange Soldaten im markierten Bereich sind",
   "obj.evacuate": "Nimm {n} Zivilisten auf: {place}",

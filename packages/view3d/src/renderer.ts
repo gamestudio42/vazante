@@ -1022,9 +1022,10 @@ export class GameRenderer {
     return this.raycaster.ray.intersectPlane(this.plane, hit) ? { x: hit.x, y: hit.z } : null;
   }
 
-  worldToScreen(x: number, y: number, cssW: number, cssH: number, height = 1): { x: number; y: number } {
+  /** `front` is false for a point behind the camera (only possible in direct control's perspective view). */
+  worldToScreen(x: number, y: number, cssW: number, cssH: number, height = 1): { x: number; y: number; front: boolean } {
     const v = new THREE.Vector3(x, height, y).project(this.rig.active);
-    return { x: ((v.x + 1) / 2) * cssW, y: ((1 - v.y) / 2) * cssH };
+    return { x: ((v.x + 1) / 2) * cssW, y: ((1 - v.y) / 2) * cssH, front: v.z < 1 };
   }
 
   /** Squad of the living soldier nearest to a screen point within `radiusPx`, or null. */

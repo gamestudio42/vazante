@@ -1,4 +1,5 @@
 import {
+  CELL_SIZE,
   COVER_INTERVAL_TICKS,
   COVER_SEARCH_CELLS,
   DIRECT_SPEED_FACTOR,
@@ -26,6 +27,17 @@ const ARRIVE_LAG_M = 1.5;
 const LEG_DONE_M = 8;
 /** The squad of the soldier under direct control forms up this far behind him. */
 const FOLLOW_BEHIND_M = 4;
+/**
+ * Members walk straight at their slots. One that is this far from its slot and has barely moved
+ * for STUCK_TICKS is caught on a wall or a corner, and plans its own way round.
+ */
+const STUCK_FAR_M = 2.5;
+const STUCK_TICKS = 6;
+/** A route may take this many times its walking time (plus ROUTE_SPARE_TICKS) before it is dropped. */
+const ROUTE_TIME_FACTOR = 1.5;
+const ROUTE_SPARE_TICKS = 20;
+const ROUTE_MAX_EXPANDED = 6000;
+const WAYPOINT_M = 0.6;
 
 export function stepUnits(w: World): void {
   for (const q of w.squads) stepSquad(w, q);
@@ -252,8 +264,10 @@ function stepSquad(w: World, q: Squad): void {
       sx = w.grid.cellCenterX(cov);
       sy = w.grid.cellCenterY(cov);
     }
-    const dx = sx - s.x;
-    const dy = sy - s.y;
+    const slotD = Math.hypot(sx - s.x, sy - s.y);
+    const [tx, ty] = routeTarget(s, sx, sy);
+    const dx = tx - s.x;
+    const dy = ty - s.y;
     const d = Math.sqrt(dx * dx + dy * dy);
     const step = Math.min(d, speed * TICK_DT);
     if (d > 0.05) {
@@ -264,9 +278,14 @@ function stepSquad(w: World, q: Squad): void {
         (dx / d) * step,
         (dy / d) * step,
       );
-      s.moving = Math.abs(m.x - s.x) + Math.abs(m.y - s.y) > 0.01;
+      const moved = Math.abs(m.x - s.x) + Math.abs(m.y - s.y);
+      s.moving = moved > 0.01;
       s.x = m.x;
       s.y = m.y;
+      if (!s.route && slotD > STUCK_FAR_M && moved < step * 0.3) {
+        s.stuckT = (s.stuckT ?? 0) + 1;
+        if (s.stuckT >= STUCK_TICKS) routeAround(w, q, s, sx, sy, speed);
+      } else if (s.stuckT) s.stuckT = undefined;
       if (s.moving && s.target < 0) {
         s.fx = dx / d;
         s.fy = dy / d;
@@ -285,6 +304,35 @@ function stepSquad(w: World, q: Squad): void {
       s.activity = s.moving ? SoldierActivity.Moving : SoldierActivity.Idle;
     }
   }
+}
+
+/** Where a member walks this tick: the next waypoint of its route, or straight at the slot. */
+function routeTarget(s: Soldier, sx: number, sy: number): [number, number] {
+  const r = s.route;
+  if (!r) return [sx, sy];
+  while (r.length > 0 && Math.hypot(r[0] - s.x, r[1] - s.y) < WAYPOINT_M) r.splice(0, 2);
+  s.routeT = (s.routeT ?? 0) - 1;
+  if (r.length === 0 || s.routeT <= 0) {
+    s.route = undefined;
+    s.routeT = undefined;
+    return [sx, sy];
+  }
+  return [r[0], r[1]];
+}
+
+/** Plan a member's own way to its slot (or to the squad anchor when the slot is inside a wall). */
+function routeAround(w: World, q: Squad, s: Soldier, sx: number, sy: number, speed: number): void {
+  s.stuckT = undefined;
+  const g = w.grid;
+  let goal = g.cellAt(sx, sy);
+  if (!g.isWalkable(goal)) goal = g.cellAt(q.ax, q.ay);
+  const cells = findPath(g, g.cellAt(s.x, s.y), goal, ROUTE_MAX_EXPANDED);
+  if (!cells || cells.length < 2) return;
+  const route: number[] = [];
+  for (let k = 1; k < cells.length; k++) route.push(g.cellCenterX(cells[k]), g.cellCenterY(cells[k]));
+  s.route = route;
+  const lengthM = (cells.length - 1) * CELL_SIZE;
+  s.routeT = Math.ceil((lengthM / (speed * TICK_DT)) * ROUTE_TIME_FACTOR) + ROUTE_SPARE_TICKS;
 }
 
 /**

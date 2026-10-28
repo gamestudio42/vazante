@@ -335,6 +335,12 @@ export class SimulationEngine {
       h.f64Value(s.hp).byte(WEAPON_IDS.indexOf(s.weapon)).u32(s.mag).u32(s.ammo).byte(s.condition).byte(s.activity);
       h.u32(s.reloadT).f64Value(s.fireAcc).u32(s.target + 1).byte(s.moving ? 1 : 0).u32(s.turnAt + 1).u32(s.riseAt + 1);
       h.byte(s.outOfAmmoReported ? 1 : 0).f64Value(s.stress).u32(s.panicT).u32(s.panicCd).byte(s.inCover ? 1 : 0);
+      // Hashed only when set, so saves from before catch-up routes still load.
+      if (s.stuckT) h.u32(s.stuckT);
+      if (s.route) {
+        h.u32(s.route.length).u32(s.routeT ?? 0);
+        for (const v of s.route) h.f64Value(v);
+      }
       if (s.direct) {
         const d = s.direct;
         h.byte(1).f64Value(d.mx).f64Value(d.my).f64Value(d.ax).f64Value(d.ay).byte(d.fire ? 1 : 0).byte(d.reload ? 1 : 0);

@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { Ground, SOLDIER_STRIDE, SoldierField, ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
+import { type Frame, Ground, SOLDIER_STRIDE, SoldierField, ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from '../client.ts';
 import { t } from '../i18n.ts';
+import { objectiveTarget } from './objective.ts';
 
 const SIZE = 192;
+/** Metres across the minimap while controlling a soldier. */
+const DIRECT_SPAN_M = 320;
 const GROUND_RGB: Record<number, [number, number, number]> = {
   [Ground.Street]: [52, 56, 60],
   [Ground.Sidewalk]: [70, 72, 72],
@@ -18,7 +21,7 @@ const GROUND_RGB: Record<number, [number, number, number]> = {
  * Overview of the whole city: terrain, districts, sites, the horde, squads, the truck and the
  * camera footprint. Click or drag to move the camera.
  */
-export function Minimap({ client, view }: { client: GameClient; view: GameRenderer }) {
+export function Minimap({ client, view, direct = false }: { client: GameClient; view: GameRenderer; direct?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -40,7 +43,7 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
 
     const cv = canvas.current!;
     const ctx = cv.getContext('2d')!;
-    const k = SIZE / Math.max(worldW, worldH);
+    const kAll = SIZE / Math.max(worldW, worldH);
     let raf = 0;
     let last = 0;
     // Zombies go through a pixel buffer: thousands of fillRect calls cost milliseconds per redraw.
@@ -56,33 +59,42 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
       if (now - last < 100) return;
       last = now;
       const f = client.state.frame;
+      // In direct control the map is a window around the soldier; otherwise the whole city.
+      const me = f ? directSoldier(f) : null;
+      const k = me ? SIZE / DIRECT_SPAN_M : kAll;
+      const ox = me ? me.x - DIRECT_SPAN_M / 2 : 0;
+      const oy = me ? me.y - DIRECT_SPAN_M / 2 : 0;
+      const X = (m: number) => (m - ox) * k;
+      const Y = (m: number) => (m - oy) * k;
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(terrain, 0, 0, map.width * cs * k, map.height * cs * k);
+      ctx.fillStyle = '#1a1d20';
+      ctx.fillRect(0, 0, SIZE, SIZE);
+      ctx.drawImage(terrain, X(0), Y(0), worldW * k, worldH * k);
       if (!f) return;
       // Held districts get a blue wash, contested ones amber; lost ones stay as they are.
       for (const d of f.districts) {
         const info = map.districts.find((x) => x.id === d.id);
         if (!info || d.state === 'lost') continue;
         ctx.fillStyle = d.state === 'held' ? 'rgba(79,163,255,0.16)' : 'rgba(220,150,40,0.16)';
-        ctx.fillRect(info.x0 * cs * k, info.y0 * cs * k, (info.x1 - info.x0 + 1) * cs * k, (info.y1 - info.y0 + 1) * cs * k);
+        ctx.fillRect(X(info.x0 * cs), Y(info.y0 * cs), (info.x1 - info.x0 + 1) * cs * k, (info.y1 - info.y0 + 1) * cs * k);
       }
       for (const s of map.sites) {
         ctx.strokeStyle = s.kind === 'base' ? '#4fa3ff' : '#e0b040';
         ctx.lineWidth = 1;
-        ctx.strokeRect(s.x0 * cs * k + 0.5, s.y0 * cs * k + 0.5, (s.x1 - s.x0 + 1) * cs * k, (s.y1 - s.y0 + 1) * cs * k);
+        ctx.strokeRect(Math.round(X(s.x0 * cs)) + 0.5, Math.round(Y(s.y0 * cs)) + 0.5, (s.x1 - s.x0 + 1) * cs * k, (s.y1 - s.y0 + 1) * cs * k);
       }
       // The mission area the current objective is about, blinking so it reads at a glance.
       for (const z of f.mission?.zones ?? []) {
         if (!z.active) continue;
         ctx.strokeStyle = `rgba(240,176,63,${0.55 + 0.45 * Math.sin(now / 160)})`;
         ctx.lineWidth = 2;
-        ctx.strokeRect(z.x0 * cs * k - 2, z.y0 * cs * k - 2, (z.x1 - z.x0 + 1) * cs * k + 4, (z.y1 - z.y0 + 1) * cs * k + 4);
+        ctx.strokeRect(X(z.x0 * cs) - 2, Y(z.y0 * cs) - 2, (z.x1 - z.x0 + 1) * cs * k + 4, (z.y1 - z.y0 + 1) * cs * k + 4);
       }
       dotPixels.fill(0);
       const zs = f.zombies;
       for (let i = 0; i < zs.length; i += ZOMBIE_STRIDE) {
-        const px = Math.floor(zs[i + ZombieField.X] * k);
-        const py = Math.floor(zs[i + ZombieField.Y] * k);
+        const px = Math.floor(X(zs[i + ZombieField.X]));
+        const py = Math.floor(Y(zs[i + ZombieField.Y]));
         if (px < 0 || py < 0 || px >= SIZE - 1 || py >= SIZE - 1) continue;
         const o = py * SIZE + px;
         dotPixels[o] = dotPixels[o + 1] = dotPixels[o + SIZE] = dotPixels[o + SIZE + 1] = RED;
@@ -93,11 +105,46 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
       const ss = f.soldiers;
       for (let i = 0; i < ss.length; i += SOLDIER_STRIDE) {
         if (ss[i + SoldierField.Condition] > 1) continue;
-        ctx.fillRect(ss[i + SoldierField.X] * k - 1, ss[i + SoldierField.Y] * k - 1, 2.5, 2.5);
+        ctx.fillRect(X(ss[i + SoldierField.X]) - 1, Y(ss[i + SoldierField.Y]) - 1, 2.5, 2.5);
       }
       for (const v of f.vehicles) {
         ctx.fillStyle = v.state === 'destroyed' ? '#555' : '#ffd24a';
-        ctx.fillRect(v.x * k - 2, v.y * k - 2, 4, 4);
+        ctx.fillRect(X(v.x) - 2, Y(v.y) - 2, 4, 4);
+      }
+      // Names of the sites and of the objective, so a base can be told apart from a depot.
+      ctx.font = '600 9px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+      const label = (text: string, x: number, y: number, color: string) => {
+        const px = Math.min(SIZE - 4 - ctx.measureText(text).width / 2, Math.max(4 + ctx.measureText(text).width / 2, x));
+        if (y < 10 || y > SIZE + 10) return;
+        ctx.strokeText(text, px, y);
+        ctx.fillStyle = color;
+        ctx.fillText(text, px, y);
+      };
+      const target = objectiveTarget(f, map);
+      for (const s of map.sites) {
+        if (target && target.name === s.name) continue;
+        label(s.name, X(((s.x0 + s.x1 + 1) / 2) * cs), Y(s.y0 * cs) - 2, s.kind === 'base' ? '#9fd0ff' : '#f0d79a');
+      }
+      if (target) label(target.name, X(target.x), Y(target.y) - 8, '#ffc04d');
+      if (me) {
+        // The soldier in the middle, pointing where he looks.
+        ctx.save();
+        ctx.translate(SIZE / 2, SIZE / 2);
+        ctx.rotate(Math.atan2(me.fy, me.fx));
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(6, 0);
+        ctx.lineTo(-4, -4);
+        ctx.lineTo(-2, 0);
+        ctx.lineTo(-4, 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        return;
       }
       // Camera footprint (approximate: the tilt makes it a trapezoid).
       const rig = view.rig;
@@ -107,6 +154,7 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
       const cos = Math.cos(rig.yaw);
       const sin = Math.sin(rig.yaw);
       ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 1;
       ctx.beginPath();
       [
         [-hw, -hh],
@@ -114,8 +162,8 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
         [hw, hh],
         [-hw, hh],
       ].forEach(([x, y], i) => {
-        const px = (rig.focusX + x * cos - y * sin) * k;
-        const py = (rig.focusY + x * sin + y * cos) * k;
+        const px = X(rig.focusX + x * cos - y * sin);
+        const py = Y(rig.focusY + x * sin + y * cos);
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       });
@@ -128,7 +176,8 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
     const jump = (e: PointerEvent) => {
       const r = cv.getBoundingClientRect();
       const scale = r.width / SIZE;
-      view.rig.centerOn((e.clientX - r.left) / scale / k, (e.clientY - r.top) / scale / k);
+      if (client.state.frame?.directSoldier != null) return;
+      view.rig.centerOn((e.clientX - r.left) / scale / kAll, (e.clientY - r.top) / scale / kAll);
     };
     const down = (e: PointerEvent) => {
       dragging = true;
@@ -149,8 +198,19 @@ export function Minimap({ client, view }: { client: GameClient; view: GameRender
   }, [client, view]);
 
   return (
-    <div className="minimap panel" title={t('minimap.hint')}>
+    <div className={`minimap panel ${direct ? 'direct-map' : ''}`} title={direct ? undefined : t('minimap.hint')}>
       <canvas ref={canvas} width={SIZE} height={SIZE} />
     </div>
   );
+}
+
+/** Position and facing of the directly controlled soldier, if any. */
+function directSoldier(f: Frame): { x: number; y: number; fx: number; fy: number } | null {
+  if (f.directSoldier == null) return null;
+  const ss = f.soldiers;
+  for (let i = 0; i < ss.length; i += SOLDIER_STRIDE) {
+    if (ss[i + SoldierField.Id] !== f.directSoldier) continue;
+    return { x: ss[i + SoldierField.X], y: ss[i + SoldierField.Y], fx: ss[i + SoldierField.FacingX], fy: ss[i + SoldierField.FacingY] };
+  }
+  return null;
 }

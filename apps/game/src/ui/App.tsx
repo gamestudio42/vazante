@@ -41,6 +41,7 @@ import {
   Footprints,
   Siren,
   Hand,
+  LocateFixed,
   Brain,
   ShieldHalf,
   Wrench,
@@ -75,6 +76,8 @@ import { t } from "../i18n.ts";
 import type { Shell } from "../shell.ts";
 import { ShellOverlay, TutorialCard } from "./Shell.tsx";
 import { Minimap } from "./Minimap.tsx";
+import { MapLabels } from "./MapLabels.tsx";
+import { objectiveTarget } from "./objective.ts";
 
 interface Props {
   client: GameClient;
@@ -126,6 +129,7 @@ export function App({ client, input, view, shell }: Props) {
     f.mission && (f.mission.phase === "won" || f.mission.phase === "lost");
   return (
     <>
+      <MapLabels client={client} view={view} />
       <div className="hud">
         <TopBar
           frame={f}
@@ -135,7 +139,15 @@ export function App({ client, input, view, shell }: Props) {
         />
         {!input.inDirect && (
           <div className="leftcol">
-            {f.mission && <MissionPanel frame={f} />}
+            {f.mission && (
+              <MissionPanel
+                frame={f}
+                onLocate={() => {
+                  const tg = state.map && objectiveTarget(f, state.map);
+                  if (tg) view.rig.centerOn(tg.x, tg.y);
+                }}
+              />
+            )}
             <SquadList
               frame={f}
               selected={state.selected}
@@ -168,7 +180,7 @@ export function App({ client, input, view, shell }: Props) {
           </div>
         )}
         {input.inDirect && <DirectHud frame={f} />}
-        {!input.inDirect && <Minimap client={client} view={view} />}
+        <Minimap client={client} view={view} direct={input.inDirect} />
         {input.helpVisible && !input.inDirect && (
           <div className="help panel">
             <PanelHead icon={Radio}>{t("help.title")}</PanelHead>
@@ -403,7 +415,13 @@ function DayClock({ tick }: { tick: number }) {
 
 // ----- Left column -----
 
-function MissionPanel({ frame }: { frame: Frame }) {
+function MissionPanel({
+  frame,
+  onLocate,
+}: {
+  frame: Frame;
+  onLocate: () => void;
+}) {
   const m = frame.mission!;
   const hp = m.commandPostMaxHp > 0 ? m.commandPostHp / m.commandPostMaxHp : 0;
   return (
@@ -414,6 +432,7 @@ function MissionPanel({ frame }: { frame: Frame }) {
           key={i}
           done={o.state === "done"}
           active={o.state === "active"}
+          onLocate={o.state === "active" && o.place ? onLocate : undefined}
         >
           {objectiveText(m, o, i)}
           {o.kind === "waves" && <WaveLine m={m} o={o} />}
@@ -524,18 +543,26 @@ function WaveLine({ m, o }: { m: MissionView; o: ObjectiveView }) {
 function Objective({
   done,
   active,
+  onLocate,
   children,
 }: {
   done: boolean;
   active: boolean;
+  /** Set when the objective has a place: clicking it moves the camera there. */
+  onLocate?: () => void;
   children: ReactNode;
 }) {
   return (
-    <div className={`obj ${done ? "done" : active ? "active" : "muted"}`}>
+    <div
+      className={`obj ${done ? "done" : active ? "active" : "muted"} ${onLocate ? "locate" : ""}`}
+      onClick={onLocate}
+      title={onLocate ? t("obj.locate") : undefined}
+    >
       <span className="check">
         {done ? <CircleCheck size={14} /> : <span className="box-icon" />}
       </span>
       <div>{children}</div>
+      {onLocate && <LocateFixed size={14} className="locate-icon" />}
     </div>
   );
 }
