@@ -264,7 +264,7 @@ function stepSquad(w: World, q: Squad): void {
       sx = w.grid.cellCenterX(cov);
       sy = w.grid.cellCenterY(cov);
     }
-    const slotD = Math.hypot(sx - s.x, sy - s.y);
+    const slotD = Math.sqrt(dist2(sx, sy, s.x, s.y));
     const [tx, ty] = routeTarget(s, sx, sy);
     const dx = tx - s.x;
     const dy = ty - s.y;
@@ -310,7 +310,7 @@ function stepSquad(w: World, q: Squad): void {
 function routeTarget(s: Soldier, sx: number, sy: number): [number, number] {
   const r = s.route;
   if (!r) return [sx, sy];
-  while (r.length > 0 && Math.hypot(r[0] - s.x, r[1] - s.y) < WAYPOINT_M) r.splice(0, 2);
+  while (r.length > 0 && dist2(r[0], r[1], s.x, s.y) < WAYPOINT_M * WAYPOINT_M) r.splice(0, 2);
   s.routeT = (s.routeT ?? 0) - 1;
   if (r.length === 0 || s.routeT <= 0) {
     s.route = undefined;
