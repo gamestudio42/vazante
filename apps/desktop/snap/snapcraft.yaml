@@ -4,6 +4,7 @@ name: vazante
 title: Vazante
 base: core22
 adopt-info: vazante
+icon: snap/gui/icon.png
 summary: Real-time tactics against the zombie horde
 description: |
   Command squads, run convoys and hold the last block of a fallen city.
