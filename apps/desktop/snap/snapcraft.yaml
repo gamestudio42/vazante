@@ -27,7 +27,7 @@ architectures:
 apps:
   vazante:
     # Chromium's own sandbox cannot run inside strict confinement; the snap sandbox replaces it.
-    command: vazante/vazante --no-sandbox
+    command: app/vazante --no-sandbox
     desktop: meta/gui/vazante.desktop
     extensions: [gnome]
     plugs:
@@ -42,7 +42,7 @@ parts:
     plugin: dump
     source: release/linux-unpacked
     organize:
-      '*': vazante/
+      '*': app/
     stage-packages:
       - libnspr4
       - libnss3
