@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Vazante
+Comment=Real-time tactics against the zombie horde
+Exec=vazante
+Icon=${SNAP}/meta/gui/vazante.png
+Categories=Game;StrategyGame;
+StartupWMClass=Vazante
+Terminal=false

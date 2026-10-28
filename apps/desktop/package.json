@@ -10,12 +10,13 @@
     "build": "pnpm --filter @vazante/game build && tsc -p tsconfig.json && node scripts/copy-game.mjs",
     "start": "pnpm build && electron .",
     "smoke": "pnpm build && electron . --smoke",
-    "dist:linux": "pnpm build && electron-builder --linux AppImage snap flatpak --publish never",
+    "dist:linux": "pnpm build && electron-builder --linux AppImage flatpak --publish never",
     "dist:appimage": "pnpm build && electron-builder --linux AppImage --publish never",
     "dist:win": "pnpm build && electron-builder --win nsis --publish never",
     "dist:mac": "pnpm build && electron-builder --mac dmg --publish never",
     "bench": "pnpm build && electron . --bench",
-    "bench:city": "pnpm build && electron . --bench --city"
+    "bench:city": "pnpm build && electron . --bench --city",
+    "dist:dir": "pnpm build && electron-builder --linux dir --publish never"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
@@ -40,7 +41,6 @@
     "linux": {
       "target": [
         "AppImage",
-        "snap",
         "flatpak"
       ],
       "category": "Game",
@@ -49,15 +49,6 @@
       "description": "Command squads, run convoys and hold the last block of a fallen city.",
       "executableName": "vazante",
       "syncDesktopName": true
-    },
-    "snap": {
-      "grade": "devel",
-      "confinement": "strict",
-      "plugs": [
-        "default",
-        "opengl",
-        "audio-playback"
-      ]
     },
     "flatpak": {
       "runtimeVersion": "24.08",
@@ -90,5 +81,7 @@
     "executableName": "vazante",
     "publish": []
   },
-  "desktopName": "io.github.vazante.Vazante.desktop"
+  "desktopName": "io.github.vazante.Vazante.desktop",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/gamestudio42/vazante"
 }

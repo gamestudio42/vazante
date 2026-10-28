@@ -1,0 +1,62 @@
+# Builds the Vazante snap, installs it and runs the desktop smoke test. A version tag (v*)
+# publishes it to the Snap Store's edge channel; promote to stable from the store or with
+# "Run workflow" and channel=stable.
+name: Snap
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths: ['apps/desktop/**', 'apps/game/**', 'packages/**', '.github/workflows/snap.yml']
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Store channel to release to (empty = build and test only)
+        type: choice
+        options: ['', edge, beta, candidate, stable]
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snap:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vazante/desktop dist:dir
+
+      - uses: snapcore/action-build@v1
+        id: build
+        with:
+          path: apps/desktop
+
+      - name: Install and smoke-test
+        run: |
+          sudo snap install --dangerous ${{ steps.build.outputs.snap }}
+          sudo apt-get install -y xvfb
+          xvfb-run -a snap run vazante --smoke 2>&1 | tee smoke.log
+          grep -q '^SMOKE .*"ready":true' smoke.log
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: vazante-snap
+          path: ${{ steps.build.outputs.snap }}
+
+      - uses: snapcore/action-publish@v1
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.channel != ''
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: ${{ inputs.channel || 'edge' }}

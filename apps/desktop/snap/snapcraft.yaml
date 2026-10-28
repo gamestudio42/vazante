@@ -1,0 +1,52 @@
+# Vazante as a snap. Packs the Electron build from `pnpm --filter @vazante/desktop dist:dir`
+# (release/linux-unpacked); .github/workflows/snap.yml builds, smoke-tests and publishes it.
+name: vazante
+title: Vazante
+base: core22
+adopt-info: vazante
+summary: Real-time tactics against the zombie horde
+description: |
+  Command squads, run convoys and hold the last block of a fallen city.
+  Vazante is a real-time tactics game: thousands of infected roam Porto
+  Velário and every shot draws more of them. Escort supply trucks, build
+  walls and machine-gun nests, keep your soldiers' nerve and survive the
+  waves of the Choir. Campaign of four missions, a city-wide sandbox and
+  five languages.
+license: AGPL-3.0-or-later
+website: https://gamestudio42.github.io/vazante/
+source-code: https://github.com/gamestudio42/vazante
+issues: https://github.com/gamestudio42/vazante/issues
+contact: talkgamestudio42@gmail.com
+grade: stable
+confinement: strict
+compression: lzo
+
+architectures:
+  - build-on: amd64
+
+apps:
+  vazante:
+    # Chromium's own sandbox cannot run inside strict confinement; the snap sandbox replaces it.
+    command: vazante/vazante --no-sandbox
+    desktop: meta/gui/vazante.desktop
+    extensions: [gnome]
+    plugs:
+      - browser-support
+      - opengl
+      - audio-playback
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+
+parts:
+  vazante:
+    plugin: dump
+    source: release/linux-unpacked
+    organize:
+      '*': vazante/
+    stage-packages:
+      - libnspr4
+      - libnss3
+      - libxss1
+    override-pull: |
+      craftctl default
+      craftctl set version="$(sed -n 's/^  "version": "\(.*\)",$/\1/p' "$CRAFT_PROJECT_DIR/package.json")"
