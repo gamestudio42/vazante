@@ -27,7 +27,7 @@ import { buildTicks, stepConstruction, stepEmplacements } from './systems/constr
 import { stepFlow } from './systems/flow.ts';
 import { stepHorde } from './systems/horde.ts';
 import { stepInfection } from './systems/infection.ts';
-import { stepResupply, stepVehicles } from './systems/logistics.ts';
+import { stepResupply, stepVehicles, wreckProgress } from './systems/logistics.ts';
 import { stepMedics } from './systems/medics.ts';
 import { stepMorale } from './systems/morale.ts';
 import { districtCounts, stepDistricts, stepMission } from './systems/mission.ts';
@@ -250,6 +250,8 @@ export class SimulationEngine {
       built: st.built,
       open: st.open,
       pile: w.grid.pile[st.cell],
+      ammo: st.ammo ?? -1,
+      fired: st.fired ?? 0,
     }));
     const income = siteIncome(w);
     const bases = w.bases.map((b) => ({ id: b.id, kind: b.kind, name: b.name, role: b.role, control: w.economy ? (b.control ?? 0) : 0, held: w.economy && siteHeld(w, b), soldiers: b.presence?.[0] ?? 0, infected: b.presence?.[1] ?? 0, income: income.get(b.id)!, x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, materials: b.materials, ammo: b.ammo }));
@@ -270,6 +272,7 @@ export class SimulationEngine {
       escort: v.escort ?? 0,
       via: v.via ? v.via.flatMap((p) => [p.x, p.y]) : [],
       passengers: v.passengers,
+      repair: wreckProgress(v),
       path: v.path.slice(v.pathIdx * 2),
     }));
     const mission = w.mission ? missionView(w, w.mission) : null;
@@ -343,10 +346,13 @@ export class SimulationEngine {
       for (const p of v.path) h.f64Value(p);
       if (v.escort !== undefined) h.u32(v.escort);
       if (v.via) for (const p of v.via) h.f64Value(p.x).f64Value(p.y);
+      if (v.repair !== undefined) h.str('repair').u32(v.repair);
     }
     for (const st of w.structures) {
       h.u32(st.id).str(st.kind).u32(st.cell).u32(st.base).f64Value(st.hp).u32(st.work).byte(st.built ? 1 : 0).byte(st.open ? 1 : 0);
       h.u32(st.target + 1).f64Value(st.fireAcc);
+      if (st.ammo !== undefined) h.str('ammo').u32(st.ammo);
+      if (st.fired !== undefined) h.str('fired').u32(st.fired);
     }
     const z = w.zombies;
     h.u32(z.alive).u32(z.highWater);

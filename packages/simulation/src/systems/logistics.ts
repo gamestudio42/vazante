@@ -12,6 +12,7 @@ import {
   TRUCK_ESCORT,
   TRUCK_RESUPPLY_M,
   WEAPONS,
+  WRECK,
   type RiskPolicy,
 } from '@vazante/shared';
 import type { Base, Vehicle } from '../entities.ts';
@@ -333,15 +334,50 @@ function arrive(w: World, v: Vehicle): void {
   w.emit({ type: 'cargo_delivered', source: v.id, target: site.id, x: v.x, y: v.y, value: ammo, reason: String(materials) });
 }
 
+/** Engineers standing at a wreck bring it back on the road. */
+function stepWreck(w: World, v: Vehicle): void {
+  const r2 = WRECK.reachM * WRECK.reachM;
+  let crew = 0;
+  for (const s of w.soldiers) {
+    if (s.role !== 'engineer' || !isActiveSoldier(s) || s.direct) continue;
+    if ((s.x - v.x) * (s.x - v.x) + (s.y - v.y) * (s.y - v.y) <= r2 && ++crew >= WRECK.crew) break;
+  }
+  if (crew === 0) return;
+  v.repair = (v.repair ?? 0) + crew;
+  if (v.repair < WRECK.crew * WRECK.repairS * TICK_HZ) return;
+  v.repair = undefined;
+  v.state = 'idle';
+  v.hp = TRUCK.hp * WRECK.hpShare;
+  v.blockedT = 0;
+  v.rerouted = false;
+  v.blockReported = false;
+  w.emit({ type: 'vehicle_repaired', source: v.id, x: v.x, y: v.y });
+}
+
+/** Work a wreck still needs, 0..1 done (1 when it is not a wreck). */
+export function wreckProgress(v: Vehicle): number {
+  return v.state === 'destroyed' ? Math.min(1, (v.repair ?? 0) / (WRECK.crew * WRECK.repairS * TICK_HZ)) : 1;
+}
+
 export function stepVehicles(w: World): void {
   for (const v of w.vehicles) {
-    if (v.state === 'destroyed') continue;
+    if (v.state === 'destroyed') {
+      stepWreck(w, v);
+      continue;
+    }
     if (v.hp <= 0) {
+      // The wreck keeps its cargo for whoever gets it going again; the people aboard are lost.
+      const lost = v.passengers;
       v.state = 'destroyed';
-      v.cargoAmmo = 0;
-      v.cargoMaterials = 0;
+      v.hp = 0;
+      v.passengers = 0;
       v.path = [];
-      w.emit({ type: 'vehicle_destroyed', source: v.id, x: v.x, y: v.y });
+      v.pathIdx = 0;
+      v.dest = 0;
+      v.escort = undefined;
+      v.via = undefined;
+      v.repair = 0;
+      w.emit({ type: 'vehicle_destroyed', source: v.id, x: v.x, y: v.y, value: lost });
       continue;
     }
     const cap = v.escort !== undefined ? stepEscort(w, v) : TRUCK.speed;

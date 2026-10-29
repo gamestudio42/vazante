@@ -20,6 +20,9 @@ export const ECONOMY = {
   supplyAmmo: 300,
   hospitalHealPerS: 5,
   maxSquads: 8,
+  /** A secured station also sells trucks, paid from the base materials, up to `maxTrucks` on the road. */
+  truckCost: 200,
+  maxTrucks: 3,
   recruitCost: { guard: 150, police: 200, slice: 250, engineers: 300, marines: 450 } as Readonly<Record<SquadKind, number>>,
   /** Squads the station offers, in panel order. */
   recruitKinds: ['police', 'slice', 'engineers', 'marines'] as readonly SquadKind[],

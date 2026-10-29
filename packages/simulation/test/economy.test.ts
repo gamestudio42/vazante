@@ -126,4 +126,27 @@ describe('economy', () => {
     run(e, 1);
     expect(w.squads.length).toBe(squads + 1);
   });
+
+  it('a secured station sells a truck, which takes over from a wrecked mission truck', () => {
+    const e = SimulationEngine.create(3, 'last_train', { zombies: 0 });
+    const w = e.world;
+    const station = site(e, 'station');
+    const home = site(e, 'command');
+    const old = w.mission!.trucks[0];
+    w.vehicle(old)!.hp = 0;
+    run(e, 2);
+    e.enqueue({ type: 'buy_truck' });
+    run(e, 1);
+    expect(w.mission!.trucks[0]).toBe(old);
+
+    station.control = 100;
+    home.materials = ECONOMY.truckCost;
+    e.enqueue({ type: 'buy_truck' });
+    const ev = run(e, 1);
+    expect(ev).toContain('truck_bought');
+    expect(home.materials).toBe(0);
+    const fresh = w.mission!.trucks[0];
+    expect(fresh).not.toBe(old);
+    expect(w.siteAt(w.vehicle(fresh)!.x, w.vehicle(fresh)!.y)?.id).toBe(station.id);
+  });
 });

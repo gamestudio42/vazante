@@ -363,10 +363,16 @@ export class GameRenderer {
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 1.5, 40, { speed: 6, up: 6, life: 1.0, size: 0.35, color: PALETTE.wreck, gravity: 9 });
         this.fire.explode(e.x, e.y!, 1.2);
-        this.fire.addFire(e.x, e.y!, 1, 90);
+        // Short enough to be out before engineers can have it running again (WRECK.repairS).
+        this.fire.addFire(e.x, e.y!, 1, 35);
         this.flashes.push({ x: e.x, y: e.y!, t: 0.6, life: 0.6 });
         this.shakeAt(e.x, e.y!, 0.8);
         this.blood.add(e.x, e.y!, 6, Math.random() * Math.PI, 1.3);
+        return;
+      case 'vehicle_repaired':
+        if (e.x === undefined) return;
+        this.particles.emit(e.x, e.y!, 1.2, 14, { speed: 3, up: 4, life: 0.6, size: 0.15, color: PALETTE.spark, gravity: 8 });
+        this.particles.emit(e.x, e.y!, 0.8, 16, { speed: 2, up: 2, life: 1.2, size: 0.45, color: PALETTE.dust });
         return;
       case 'structure_built':
         if (e.x === undefined) return;

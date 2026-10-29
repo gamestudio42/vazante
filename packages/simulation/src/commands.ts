@@ -8,10 +8,12 @@ import {
 } from "@vazante/shared";
 import {
   demolishStructure,
+  nearestRepair,
+  orderRepair,
   placeStructure,
   toggleGate,
 } from "./systems/construction.ts";
-import { recruitSquad } from "./systems/economy.ts";
+import { buyTruck, recruitSquad } from "./systems/economy.ts";
 import { releaseDirect } from "./systems/lifecycle.ts";
 import {
   loadCargo,
@@ -22,6 +24,9 @@ import {
 } from "./systems/logistics.ts";
 import { groupSquads, planMove } from "./systems/units.ts";
 import type { Squad } from "./entities.ts";
+
+/** An engineer squad sent to repair with no target looks this far for work. */
+const REPAIR_SEARCH_M = 200;
 import { isActiveSoldier, type World } from "./world.ts";
 
 /** Apply one command at the start of a tick. Returns a rejection reason, or null on success. */
@@ -201,6 +206,14 @@ export function applyCommand(w: World, cmd: Command): string | null {
 
     case "recruit":
       return recruitSquad(w, cmd.kind);
+
+    case "buy_truck":
+      return buyTruck(w);
+
+    case "repair": {
+      const target = cmd.target || nearestRepair(w, cmd.squad, REPAIR_SEARCH_M);
+      return target ? orderRepair(w, cmd.squad, target) : "nothing_to_repair";
+    }
 
     case "set_policy": {
       const v = w.vehicle(cmd.vehicle);

@@ -63,6 +63,7 @@ import {
   STRUCTURES,
   ECONOMY,
   STRUCTURE_KINDS,
+  MG_NEST,
   MISSION_IDS,
   TICK_HZ,
   type Frame,
@@ -185,7 +186,9 @@ export function App({ client, input, view, shell }: Props) {
         {!input.inDirect && (
           <div className="bottomcol">
             <BuildPanel frame={f} input={input} />
-            {state.vehicle !== null ? (
+            {state.structure !== null ? (
+              <StructurePanel frame={f} id={state.structure} input={input} />
+            ) : state.vehicle !== null ? (
               <VehiclePanel frame={f} id={state.vehicle} input={input} />
             ) : (
               <SelectionPanel squads={selected} frame={f} input={input} />
@@ -238,6 +241,7 @@ function useHudState(client: GameClient) {
         !shown.frame ||
         s.selected !== shown.selected ||
         s.vehicle !== shown.vehicle ||
+        s.structure !== shown.structure ||
         s.alerts !== shown.alerts ||
         s.map !== shown.map ||
         s.limited !== shown.limited ||
@@ -888,6 +892,9 @@ const ALERT_STYLE: Partial<
   convoy_blocked: { icon: Truck, tone: "warn" },
   cargo_delivered: { icon: Package, tone: "ok" },
   vehicle_destroyed: { icon: Truck, tone: "danger" },
+  vehicle_repaired: { icon: Wrench, tone: "ok" },
+  truck_bought: { icon: Truck, tone: "ok" },
+  nest_empty: { icon: Target, tone: "warn" },
   wave_warning: { icon: Siren, tone: "warn" },
   wave_started: { icon: Siren, tone: "danger" },
   district_lost: { icon: MapIcon, tone: "danger" },
@@ -994,6 +1001,16 @@ function SelectionPanel({
           <Route size={18} />
           <span>{t("sel.route")}</span>
         </button>
+        {squads.some((x) => x.kind === "engineers") && (
+          <button
+            className="cmd"
+            title={t("tip.repair")}
+            onClick={() => input.repair()}
+          >
+            <Wrench size={18} />
+            <span>{t("sel.repair")}</span>
+          </button>
+        )}
         <button
           className="cmd primary"
           title={t("tip.direct")}
@@ -1138,6 +1155,7 @@ function Recruit({ frame, input }: { frame: Frame; input: InputController }) {
   const base = frame.bases.find((b) => b.kind === "base");
   if (!station || !base) return null;
   const full = frame.squads.filter((q) => q.alive > 0).length >= ECONOMY.maxSquads;
+  const trucks = frame.vehicles.filter((v) => v.state !== "destroyed").length;
   return (
     <div className="recruit">
       <div className="cmd-row">
@@ -1162,6 +1180,19 @@ function Recruit({ frame, input }: { frame: Frame; input: InputController }) {
             </button>
           );
         })}
+        <button
+          className="pill"
+          title={t("truck.buy.hint")}
+          disabled={!station.held || trucks >= ECONOMY.maxTrucks || base.materials < ECONOMY.truckCost}
+          onClick={() => input.buyTruck()}
+        >
+          <Truck size={12} />
+          {t("truck.buy")}
+          <span className="cost">
+            <Boxes size={10} />
+            {ECONOMY.truckCost}
+          </span>
+        </button>
       </div>
       <div className={`hint ${station.held && !full ? "muted" : "warn"}`}>
         {full
@@ -1199,7 +1230,7 @@ function VehiclePanel({
     <div className="selection panel vehicle-panel">
       <div className="sel-head">
         <b>
-          <Truck size={15} /> {t("vehicle.truck")}
+          <Truck size={15} /> {t(dead ? "wreck.title" : "vehicle.truck")}
         </b>
         <span className="sel-stats">
           <Stat icon={Heart}>
@@ -1218,6 +1249,25 @@ function VehiclePanel({
           )}
         </span>
       </div>
+      {dead && (
+        <>
+          <Meter value={v.repair} kind="wave" />
+          <div className="cmd-row">
+            <span className="cmd-label">
+              {t("wreck.progress").replace("{n}", String(Math.floor(v.repair * 100)))}
+            </span>
+            <button
+              className="pill go"
+              disabled={!frame.squads.some((q) => q.kind === "engineers" && q.alive > 0)}
+              onClick={() => input.repair(v.id)}
+            >
+              <Wrench size={12} />
+              {t("wreck.send")}
+            </button>
+          </div>
+          <div className="hint muted">{t("wreck.hint")}</div>
+        </>
+      )}
       {!dead && (
         <>
           <div className="cmd-row">
@@ -1308,6 +1358,84 @@ function VehiclePanel({
           <div className="hint muted">{t("convoy.hint")}</div>
         </>
       )}
+    </div>
+  );
+}
+
+/** A clicked structure: its state, a nest's ammunition, and repair or take it down. */
+function StructurePanel({
+  frame,
+  id,
+  input,
+}: {
+  frame: Frame;
+  id: number;
+  input: InputController;
+}) {
+  const st = frame.structures.find((x) => x.id === id);
+  if (!st) return <div className="selection panel muted">{t("sel.none")}</div>;
+  const Icon = st.kind === "command_post" ? Flag : STRUCTURE_ICON[st.kind];
+  const damaged = st.built && st.hp < st.maxHp;
+  const engineers = frame.squads.some((q) => q.kind === "engineers" && q.alive > 0);
+  const nest = st.kind === "mg_nest";
+  const base = frame.bases.find((b) => b.kind === "base");
+  return (
+    <div className="selection panel structure-panel">
+      <div className="sel-head">
+        <b>
+          <Icon size={15} /> {t(`structure.${st.kind}`)}
+        </b>
+        <span className="sel-stats">
+          <Stat icon={Heart}>
+            {Math.max(0, Math.round(st.hp))}/{st.maxHp}
+          </Stat>
+          {!st.built && (
+            <span className="muted">
+              {t("struct.building").replace("{n}", String(Math.floor(st.progress * 100)))}
+            </span>
+          )}
+          {st.pile > 0 && (
+            <Stat icon={Biohazard} className="warn">
+              {st.pile}
+            </Stat>
+          )}
+        </span>
+      </div>
+      <Meter value={st.hp / st.maxHp} />
+      {nest && st.built && (
+        <div className="struct-ammo">
+          <span className={st.ammo === 0 ? "warn" : ""}>
+            <Target size={12} />{" "}
+            {st.ammo >= 0
+              ? t("struct.ammoOwn").replace("{n}", String(st.ammo)).replace("{max}", String(MG_NEST.fieldAmmo))
+              : t("struct.ammoBase").replace("{s}", base?.name ?? "").replace("{n}", String(base?.ammo ?? 0))}
+          </span>
+          <span className="muted">
+            {t("struct.fired").replace("{n}", String(st.fired)).replace("{s}", String(Math.round(st.fired / MG_NEST.shotsPerS)))}
+          </span>
+        </div>
+      )}
+      <div className="cmd-row">
+        {damaged && (
+          <button className="pill go" title={t("struct.repairHint")} disabled={!engineers} onClick={() => input.repair(st.id)}>
+            <Wrench size={12} />
+            {t("sel.repair")}
+          </button>
+        )}
+        {st.kind === "gate" && st.built && (
+          <button className="pill" onClick={() => input.toggleGate(st.id)}>
+            <DoorOpen size={12} />
+            <Key k="G" />
+          </button>
+        )}
+        <button className="pill" title={t("struct.dismantleHint")} onClick={() => input.dismantle(st.id)}>
+          <Hammer size={12} />
+          {t("struct.dismantle")}
+        </button>
+      </div>
+      <div className="hint muted">
+        {nest && st.ammo >= 0 ? t("struct.refillHint") : damaged ? t(engineers ? "struct.repairHint" : "reason.no_engineers") : ""}
+      </div>
     </div>
   );
 }
@@ -1498,6 +1626,9 @@ function alertText(a: GameClient["state"]["alerts"][number]): string {
     case "soldier_cured":
     case "civilians_boarded":
     case "civilians_delivered":
+    case "vehicle_repaired":
+    case "truck_bought":
+    case "nest_empty":
       return base;
     default:
       return a.reason ? `${base} (${t(`reason.${a.reason}`)})` : base;

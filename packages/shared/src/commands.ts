@@ -30,6 +30,10 @@ export type Command =
   | { type: 'set_policy'; vehicle: number; policy: RiskPolicy }
   /** Pay the base's materials for a new squad at the railway station. */
   | { type: 'recruit'; kind: SquadKind }
+  /** A secured station sells a truck; it takes the place of a wrecked mission truck. */
+  | { type: 'buy_truck' }
+  /** Engineers mend a structure or get a wreck going; target 0 = the nearest job. */
+  | { type: 'repair'; squad: number; target: number }
   /** Development helper: spawn a group of zombies around a point. */
   | { type: 'debug_spawn'; at: Vec2; count: number; kind?: number };
 

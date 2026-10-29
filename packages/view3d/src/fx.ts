@@ -271,7 +271,7 @@ export class SiteZones {
     for (const z of zones) {
       let s = this.sites.get(z.id);
       if (!s) {
-        const fill = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.05, depthWrite: false, fog: false });
+        const fill = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.035, depthWrite: false, fog: false });
         const edge = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.7, depthWrite: false, fog: false });
         const d = new THREE.Mesh(this.disc, fill);
         const r = new THREE.Mesh(this.ring, edge);

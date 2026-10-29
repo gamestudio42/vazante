@@ -106,6 +106,10 @@ export interface Structure {
   /** MG nest: zombie slot being engaged (-1 none) and fractional shots owed. */
   target: number;
   fireAcc: number;
+  /** MG nest outside every base: rounds in its own box (absent: it draws on its base). */
+  ammo?: number;
+  /** MG nest: rounds fired since it was built. */
+  fired?: number;
 }
 
 export interface Base {
@@ -154,6 +158,8 @@ export interface Vehicle {
   escort?: number;
   /** Points to drive to, in order, after the current drive; absent without a route. */
   via?: { x: number; y: number }[];
+  /** Wreck: engineer work done towards getting it back on the road (see WRECK). */
+  repair?: number;
 }
 
 /** A mission area in cells. */

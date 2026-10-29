@@ -42,7 +42,16 @@ export const MG_NEST = {
   shotsPerS: 9,
   accuracy: 0.6,
   damage: 35,
+  /**
+   * A nest outside every base cannot draw on base stock: it fires from its own box, filled to
+   * `fieldAmmo` when built, and an idle truck within `refillM` tops it up from its cargo.
+   */
+  fieldAmmo: 1500,
+  refillM: 15,
 } as const;
+
+/** Engineers within BUILD_RADIUS_M of a damaged structure mend `hpPerS` each, `crew` at most at once. */
+export const REPAIR = { hpPerS: 3, crew: 3 } as const;
 
 /** Starting stock of each base. */
 export const BASE_START = { materials: 400, ammo: 4000 } as const;

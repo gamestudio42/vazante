@@ -1694,3 +1694,13 @@ input[type='checkbox'] {
   margin-left: 4px;
   opacity: 0.7;
 }
+.structure-panel .struct-ammo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.structure-panel .struct-ammo .warn {
+  color: var(--warn, #e0b040);
+}

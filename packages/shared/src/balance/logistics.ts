@@ -26,6 +26,13 @@ export const TRUCK = {
 } as const;
 
 /**
+ * A destroyed truck stays as a wreck, cargo and all. Engineers within `reachM` bring it back in
+ * `repairS` when `crew` or more are at it (fewer work proportionally slower); it returns with
+ * `hpShare` of its HP. Passengers aboard when it is destroyed are lost.
+ */
+export const WRECK = { repairS: 40, crew: 3, reachM: 10, hpShare: 0.5 } as const;
+
+/**
  * A truck escorting a squad keeps about `behindM` behind its anchor, re-plans every
  * `replanTicks`, waits once within `nearM`, and only drives faster than the squad (by
  * `paceFactor`) while farther than `catchUpM`.

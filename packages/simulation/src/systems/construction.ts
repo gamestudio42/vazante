@@ -8,7 +8,9 @@ import {
   MG_NEST,
   NOISE_SHOT,
   NOISE_SHOT_RADIUS_M,
+  REPAIR,
   STRUCTURES,
+  WRECK,
   TICK_DT,
   TICK_HZ,
   ZombieState,
@@ -66,6 +68,8 @@ export function placeStructure(w: World, kind: StructureKind, x: number, y: numb
     target: -1,
     fireAcc: 0,
   };
+  // A nest out in the field has no base stock to draw on: it carries its own box.
+  if (kind === 'mg_nest' && !w.bases.some((b) => cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1)) st.ammo = MG_NEST.fieldAmmo;
   w.addStructure(st);
   w.emit({ type: 'structure_placed', source: st.id, x: (cx + 0.5) * CELL_SIZE, y: (cy + 0.5) * CELL_SIZE, reason: kind });
   return null;
@@ -104,7 +108,7 @@ const TASK_INTERVAL_TICKS = 10;
  */
 function assignBuilders(w: World): void {
   for (const q of w.squads) {
-    if (q.buildTask !== 0 && !w.structures.some((st) => st.id === q.buildTask && !st.built)) {
+    if (q.buildTask !== 0 && !taskOpen(w, q.buildTask)) {
       q.buildTask = 0;
       if (q.order.kind === 'move') q.order = { kind: 'hold', at: { x: q.ax, y: q.ay } };
     }
@@ -138,6 +142,70 @@ function assignBuilders(w: World): void {
     const spot = workSpot(w, st.cell, best.ax, best.ay);
     if (spot >= 0 && planMove(w, best, w.grid.cellCenterX(spot), w.grid.cellCenterY(spot))) best.buildTask = st.id;
   }
+}
+
+/** A build or repair job still has work: an unfinished blueprint, a damaged structure, a wreck. */
+function taskOpen(w: World, id: number): boolean {
+  const st = w.structure(id);
+  if (st) return !st.built || st.hp < STRUCTURES[st.kind].hp;
+  return w.vehicle(id)?.state === 'destroyed';
+}
+
+/** Send an engineer squad to mend a damaged structure or get a wreck back on the road. */
+export function orderRepair(w: World, squad: number, target: number): string | null {
+  const q = w.squad(squad);
+  if (!q) return 'no_squad';
+  if (q.kind !== 'engineers') return 'not_engineers';
+  const st = w.structure(target);
+  const v = st ? undefined : w.vehicle(target);
+  if (st ? !st.built || st.hp >= STRUCTURES[st.kind].hp : v?.state !== 'destroyed') return 'nothing_to_repair';
+  let x: number;
+  let y: number;
+  if (st) {
+    const spot = workSpot(w, st.cell, q.ax, q.ay);
+    if (spot < 0) return 'no_route';
+    x = w.grid.cellCenterX(spot);
+    y = w.grid.cellCenterY(spot);
+  } else {
+    // Stand beside the wreck, on the squad's side of it.
+    const dx = q.ax - v!.x;
+    const dy = q.ay - v!.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    x = v!.x + (dx / d) * (WRECK.reachM / 2);
+    y = v!.y + (dy / d) * (WRECK.reachM / 2);
+    if (!w.grid.isWalkableAt(x, y)) {
+      x = v!.x;
+      y = v!.y;
+    }
+  }
+  if (!planMove(w, q, x, y)) return 'no_route';
+  q.buildTask = target;
+  return null;
+}
+
+/** The damaged structure or wreck nearest the squad within `rangeM`, or 0. */
+export function nearestRepair(w: World, squad: number, rangeM: number): number {
+  const q = w.squad(squad);
+  if (!q) return 0;
+  let best = 0;
+  let bd = rangeM * rangeM;
+  for (const st of w.structures) {
+    if (!st.built || st.hp >= STRUCTURES[st.kind].hp) continue;
+    const d = (w.grid.cellCenterX(st.cell) - q.ax) ** 2 + (w.grid.cellCenterY(st.cell) - q.ay) ** 2;
+    if (d < bd) {
+      bd = d;
+      best = st.id;
+    }
+  }
+  for (const v of w.vehicles) {
+    if (v.state !== 'destroyed') continue;
+    const d = (v.x - q.ax) ** 2 + (v.y - q.ay) ** 2;
+    if (d < bd) {
+      bd = d;
+      best = v.id;
+    }
+  }
+  return best;
 }
 
 function squadCanBuild(w: World, q: Squad): boolean {
@@ -183,7 +251,10 @@ export function stepConstruction(w: World): void {
   if (w.tick % TASK_INTERVAL_TICKS === 0) assignBuilders(w);
   const r2 = BUILD_RADIUS_M * BUILD_RADIUS_M;
   for (const st of w.structures) {
-    if (st.built) continue;
+    if (st.built) {
+      if (st.hp < STRUCTURES[st.kind].hp) mend(w, st);
+      continue;
+    }
     const need = buildTicks(st.kind);
     if (st.work < need) {
       const cx = w.grid.cellCenterX(st.cell);
@@ -207,6 +278,19 @@ export function stepConstruction(w: World): void {
       w.emit({ type: 'structure_built', source: st.id, x: w.grid.cellCenterX(st.cell), y: w.grid.cellCenterY(st.cell), reason: st.kind });
     }
   }
+}
+
+/** Engineers beside a damaged structure mend it. */
+function mend(w: World, st: Structure): void {
+  const cx = w.grid.cellCenterX(st.cell);
+  const cy = w.grid.cellCenterY(st.cell);
+  const r2 = BUILD_RADIUS_M * BUILD_RADIUS_M;
+  let crew = 0;
+  for (const s of w.soldiers) {
+    if (s.role !== 'engineer' || !isActiveSoldier(s) || s.direct) continue;
+    if ((s.x - cx) * (s.x - cx) + (s.y - cy) * (s.y - cy) <= r2 && ++crew >= REPAIR.crew) break;
+  }
+  if (crew > 0) st.hp = Math.min(STRUCTURES[st.kind].hp, st.hp + crew * REPAIR.hpPerS * TICK_DT);
 }
 
 export function damageStructure(w: World, st: Structure, dmg: number): void {
@@ -255,16 +339,32 @@ export function computePiles(w: World): void {
   }
 }
 
+/** An idle truck parked beside a field nest tops its box up from the cargo. */
+function refillNest(w: World, st: Structure, x: number, y: number): void {
+  const need = MG_NEST.fieldAmmo - st.ammo!;
+  if (need <= 0) return;
+  const r2 = MG_NEST.refillM * MG_NEST.refillM;
+  for (const v of w.vehicles) {
+    if (v.state !== 'idle' || v.cargoAmmo <= 0 || (v.x - x) * (v.x - x) + (v.y - y) * (v.y - y) > r2) continue;
+    const n = Math.min(need, v.cargoAmmo);
+    v.cargoAmmo -= n;
+    st.ammo! += n;
+    return;
+  }
+}
+
 /** MG nests: crewed emplacements that engage the nearest zombie in range, firing over walls. */
 export function stepEmplacements(w: World): void {
   const z = w.zombies;
   const r2 = MG_NEST.rangeM * MG_NEST.rangeM;
   for (const st of w.structures) {
     if (!st.built || st.kind !== 'mg_nest') continue;
-    const base = w.bases[st.base];
-    if (!base || base.ammo <= 0) continue;
     const x = w.grid.cellCenterX(st.cell);
     const y = w.grid.cellCenterY(st.cell);
+    if (st.ammo !== undefined) refillNest(w, st, x, y);
+    // A field nest fires from its own box, the others from their base stock.
+    const box = st.ammo !== undefined ? st : w.bases[st.base];
+    if (!box || box.ammo! <= 0) continue;
     if (st.target >= 0) {
       const t = st.target;
       const dx = z.x[t] - x;
@@ -287,9 +387,11 @@ export function stepEmplacements(w: World): void {
       }
     }
     st.fireAcc += MG_NEST.shotsPerS * TICK_DT;
-    while (st.fireAcc >= 1 && st.target >= 0 && base.ammo > 0) {
+    while (st.fireAcc >= 1 && st.target >= 0 && box.ammo! > 0) {
       st.fireAcc -= 1;
-      base.ammo--;
+      box.ammo!--;
+      st.fired = (st.fired ?? 0) + 1;
+      if (st.ammo === 0) w.emit({ type: 'nest_empty', source: st.id, x, y });
       w.stats.shotsFired++;
       const t = st.target;
       const tx = z.x[t];

@@ -39,6 +39,9 @@ const ALERT_TYPES = new Set<SimEvent['type']>([
   'site_lost',
   'soldier_cured',
   'squad_recruited',
+  'vehicle_repaired',
+  'truck_bought',
+  'nest_empty',
 ]);
 
 export interface ClientState {
@@ -47,6 +50,8 @@ export interface ClientState {
   selected: number[];
   /** Selected vehicle id (exclusive with squad selection). */
   vehicle: number | null;
+  /** Selected structure id (exclusive with squads and vehicles). */
+  structure: number | null;
   alerts: Alert[];
   limited: boolean;
   /** Set when a save could not be loaded (the game then starts fresh). */
@@ -62,7 +67,7 @@ export class GameClient {
   private alertSeq = 0;
   private lastFrameAt = 0;
   private pendingSaves = new Map<string, (s: SaveGame) => void>();
-  state: ClientState = { map: null, frame: null, selected: [], vehicle: null, alerts: [], limited: false, loadError: null, version: 0 };
+  state: ClientState = { map: null, frame: null, selected: [], vehicle: null, structure: null, alerts: [], limited: false, loadError: null, version: 0 };
 
   constructor(seed: number, save?: SaveGame, difficulty?: DifficultyId, scenario = 'last_convoy') {
     this.worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
@@ -116,11 +121,15 @@ export class GameClient {
   }
 
   select(ids: number[]): void {
-    this.update({ selected: ids, vehicle: ids.length ? null : this.state.vehicle });
+    this.update({ selected: ids, vehicle: ids.length ? null : this.state.vehicle, structure: ids.length ? null : this.state.structure });
   }
 
   selectVehicle(id: number | null): void {
-    this.update({ vehicle: id, selected: id === null ? this.state.selected : [] });
+    this.update({ vehicle: id, selected: id === null ? this.state.selected : [], structure: id === null ? this.state.structure : null });
+  }
+
+  selectStructure(id: number | null): void {
+    this.update({ structure: id, ...(id === null ? {} : { selected: [], vehicle: null }) });
   }
 
   onFrame(fn: (f: Frame) => void): () => void {

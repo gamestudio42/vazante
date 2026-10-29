@@ -35,13 +35,28 @@ describe('O Último Comboio', () => {
     expect(w.vehicles[0].cargoAmmo).toBe(SLICE.truckAmmo);
   });
 
-  it('losing the truck before delivery loses the mission', () => {
+  it('with no engineer left to repair it, losing the truck before delivery loses the mission', () => {
     const e = slice();
+    for (const s of e.world.soldiers) if (s.role === 'engineer') s.role = 'none';
     e.world.vehicles[0].hp = 0;
     e.runTicks(2);
     expect(e.world.mission!.phase).toBe('lost');
     expect(e.world.mission!.reason).toBe('cargo_lost');
     expect(e.world.speed).toBe(0);
+  });
+
+  it('a wrecked truck can still be repaired while an engineer lives', () => {
+    const e = slice();
+    const w = e.world;
+    if (!w.soldiers.some((s) => s.role === 'engineer')) w.soldiers[0].role = 'engineer';
+    w.vehicles[0].hp = 0;
+    e.runTicks(20);
+    expect(w.mission!.phase).toBe('active');
+    // The last engineer falls.
+    for (const s of w.soldiers) if (s.role === 'engineer') s.role = 'none';
+    e.runTicks(20);
+    expect(w.mission!.phase).toBe('lost');
+    expect(w.mission!.reason).toBe('cargo_lost');
   });
 
   it('delivery starts three warned waves; clearing them wins', () => {

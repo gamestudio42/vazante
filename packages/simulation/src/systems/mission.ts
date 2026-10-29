@@ -398,6 +398,13 @@ function advance(w: World, m: Mission): void {
 }
 
 /** A truck the remaining stages still need. */
+/** A wreck can still come back: an engineer is alive, or a held station can sell or recruit. */
+function canRecover(w: World): boolean {
+  if (w.soldiers.some((s) => s.role === "engineer" && isActiveSoldier(s))) return true;
+  const station = w.economy ? w.bases.find((b) => b.role === "station") : undefined;
+  return !!station && siteHeld(w, station);
+}
+
 function truckNeeded(def: MissionDef, stage: number, truck: number): boolean {
   for (let i = stage; i < def.stages.length; i++) {
     const st = def.stages[i];
@@ -428,7 +435,11 @@ export function stepMission(w: World): void {
   }
   for (let i = 0; i < m.trucks.length; i++) {
     const v = w.vehicle(m.trucks[i]);
-    if ((!v || v.state === "destroyed") && truckNeeded(def, m.stage, i)) {
+    if (!truckNeeded(def, m.stage, i)) continue;
+    // A wreck can be repaired (or, at a held station, replaced): the mission goes on while
+    // someone can still do that. Civilians aboard when it was hit are lost for good.
+    const peopleLost = w.events.some((e) => e.type === "vehicle_destroyed" && e.source === m.trucks[i] && (e.value ?? 0) > 0);
+    if (!v || peopleLost || (v.state === "destroyed" && !canRecover(w))) {
       end(
         w,
         m,

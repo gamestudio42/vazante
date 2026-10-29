@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CELL_SIZE, Ground, RESUPPLY_ROUNDS_PER_S, TRUCK, WEAPONS, ZombieKind, ZombieState, type RiskPolicy } from '@vazante/shared';
+import { CELL_SIZE, Ground, MG_NEST, RESUPPLY_ROUNDS_PER_S, STRUCTURES, TICK_HZ, TRUCK, WEAPONS, WRECK, ZombieKind, ZombieState, type RiskPolicy } from '@vazante/shared';
 import { SimulationEngine, spawnTruck } from '../src/index.ts';
 import { addSquad, disarm, fieldEngine, soldiersOf } from './helpers.ts';
 
@@ -72,7 +72,7 @@ describe('trucks and convoys', () => {
     expect(w.vehicle(truckId)!.cargoAmmo).toBe(0);
   });
 
-  it('a destroyed truck delivers nothing', () => {
+  it('a destroyed truck becomes a wreck that keeps its cargo and delivers nothing', () => {
     const { e, truckId, baseId } = roadEngine();
     const w = e.world;
     const v = w.vehicle(truckId)!;
@@ -81,7 +81,7 @@ describe('trucks and convoys', () => {
     e.enqueue({ type: 'convoy', vehicle: truckId, to: baseId, policy: 'push_through' });
     e.runTicks(600);
     expect(v.state).toBe('destroyed');
-    expect(v.cargoAmmo).toBe(0);
+    expect(v.cargoAmmo).toBe(3000);
     expect(w.baseById(baseId)!.ammo).toBe(0);
   });
 
@@ -188,5 +188,99 @@ describe('truck routes', () => {
     expect(reachedFirst).toBe(true);
     expect(v.state).toBe('idle');
     expect(Math.abs(v.x - c(45))).toBeLessThan(CELL_SIZE * 1.5);
+  });
+});
+
+describe('engineers', () => {
+  it('get a wreck back on the road in about 40 s, at half its HP, cargo aboard', () => {
+    const { e, truckId } = roadEngine();
+    const w = e.world;
+    const v = w.vehicle(truckId)!;
+    v.hp = 0;
+    e.tick();
+    expect(v.state).toBe('destroyed');
+    // Nobody near: it stays a wreck.
+    e.runTicks(100);
+    expect(v.state).toBe('destroyed');
+    const q = addSquad(e, 'engineers', v.x - 4, v.y);
+    const events: string[] = [];
+    let at = -1;
+    for (let t = 0; t < 60 * TICK_HZ && at < 0; t++) {
+      e.tick();
+      for (const x of e.frame(false).events) events.push(x.type);
+      if (v.state !== 'destroyed') at = t;
+    }
+    expect(q.members.length).toBeGreaterThanOrEqual(WRECK.crew);
+    expect(at).toBeGreaterThan(WRECK.repairS * TICK_HZ - 5);
+    expect(at).toBeLessThan(WRECK.repairS * TICK_HZ + 5);
+    expect(events).toContain('vehicle_repaired');
+    expect(v.state).toBe('idle');
+    expect(v.hp).toBe(TRUCK.hp * WRECK.hpShare);
+    expect(v.cargoAmmo).toBe(3000);
+  });
+
+  it('are sent to the nearest job, and mend a damaged wall there', () => {
+    const { e } = roadEngine();
+    const w = e.world;
+    e.world.bases[0].materials = 1000;
+    const q = addSquad(e, 'engineers', c(3), c(30));
+    e.enqueue({ type: 'build', kind: 'wall', at: { x: c(3), y: c(26) } });
+    e.tick();
+    const st = w.structures[0];
+    st.work = 1e9;
+    e.runTicks(2);
+    expect(st.built).toBe(true);
+    // Walk them away, damage the wall, then send them back.
+    for (const id of q.members) w.soldier(id)!.y = c(45);
+    q.ay = c(45);
+    st.hp = 100;
+    e.runTicks(10);
+    expect(st.hp).toBe(100);
+    e.enqueue({ type: 'repair', squad: q.id, target: 0 });
+    e.runTicks(60 * TICK_HZ);
+    expect(st.hp).toBeGreaterThan(100 + 30 * 3);
+    e.runTicks(120 * TICK_HZ);
+    expect(st.hp).toBe(STRUCTURES.wall.hp);
+  });
+});
+
+describe('field MG nests', () => {
+  it('fire from their own box, run dry, and an idle truck alongside tops them up', () => {
+    const { e, truckId } = roadEngine();
+    const w = e.world;
+    w.bases[0].materials = 1000;
+    w.bases[0].ammo = 50_000;
+    const q = addSquad(e, 'engineers', c(30), c(30));
+    e.enqueue({ type: 'build', kind: 'mg_nest', at: { x: c(30), y: c(29) } });
+    e.tick();
+    const st = w.structures[0];
+    expect(st.ammo).toBe(MG_NEST.fieldAmmo);
+    st.work = 1e9;
+    e.runTicks(2);
+    expect(st.built).toBe(true);
+    for (const id of q.members) disarm(w.soldier(id)!);
+    // A steady stream of infected in range.
+    const events: string[] = [];
+    for (let t = 0; t < 400 * TICK_HZ && st.ammo! > 0; t++) {
+      if (t % 5 === 0) w.zombies.spawn(c(30) + 30, c(20), ZombieKind.Common, ZombieState.Wandering);
+      e.tick();
+      for (const x of e.frame(false).events) events.push(x.type);
+    }
+    expect(st.ammo).toBe(0);
+    expect(events).toContain('nest_empty');
+    expect(st.fired).toBe(MG_NEST.fieldAmmo);
+    expect(w.bases[0].ammo).toBe(50_000);
+    const view = e.frame(false).structures.find((x) => x.id === st.id)!;
+    expect(view.ammo).toBe(0);
+    expect(view.fired).toBe(MG_NEST.fieldAmmo);
+
+    for (let z = 0; z < w.zombies.highWater; z++) if (w.zombies.isAlive(z)) w.zombies.kill(z);
+    const v = w.vehicle(truckId)!;
+    v.x = c(31);
+    v.y = c(32);
+    e.tick();
+    expect(st.ammo).toBe(MG_NEST.fieldAmmo);
+    // The disarmed engineers alongside take a few rounds from it too.
+    expect(v.cargoAmmo).toBeLessThanOrEqual(3000 - MG_NEST.fieldAmmo);
   });
 });

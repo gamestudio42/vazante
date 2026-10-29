@@ -1,6 +1,7 @@
 import { CELL_SIZE, ECONOMY, siteZone, SoldierCondition, SQUADS, TICK_DT, TICK_HZ, type SquadKind } from '@vazante/shared';
 import type { Base } from '../entities.ts';
 import { spawnSquad } from '../spawn.ts';
+import { spawnTruck } from './logistics.ts';
 import { isActiveSoldier, type World } from '../world.ts';
 
 function centre(r: { x0: number; y0: number; x1: number; y1: number }): [number, number] {
@@ -101,5 +102,26 @@ export function recruitSquad(w: World, kind: SquadKind): string | null {
   const [x, y] = centre(station);
   const q = spawnSquad(w, kind, name, x, y);
   w.emit({ type: 'squad_recruited', source: q.id, x, y, reason: name });
+  return null;
+}
+
+/** A new truck at the held railway station, paid from the home base's materials. */
+export function buyTruck(w: World): string | null {
+  const station = w.economy ? w.bases.find((b) => b.role === 'station') : undefined;
+  if (!station) return 'no_station';
+  if (!siteHeld(w, station)) return 'station_lost';
+  if (w.vehicles.filter((v) => v.state !== 'destroyed').length >= ECONOMY.maxTrucks) return 'truck_cap';
+  const home = w.bases.find((b) => b.kind === 'base')!;
+  if (home.materials < ECONOMY.truckCost) return 'no_materials';
+  home.materials -= ECONOMY.truckCost;
+  const [x, y] = centre(station);
+  const truck = spawnTruck(w, x, y);
+  // It takes over the job of a wrecked mission truck.
+  const m = w.mission;
+  if (m) {
+    const slot = m.trucks.findIndex((id) => (w.vehicle(id)?.state ?? 'destroyed') === 'destroyed');
+    if (slot >= 0) m.trucks[slot] = truck.id;
+  }
+  w.emit({ type: 'truck_bought', source: truck.id, x, y });
   return null;
 }

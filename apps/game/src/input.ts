@@ -7,6 +7,7 @@ import {
   type SquadKind,
   type Stance,
   type StructureKind,
+  type Frame,
 } from "@vazante/shared";
 import { BuildTool } from "./build.ts";
 import type { GameRenderer } from "@vazante/view3d";
@@ -273,6 +274,11 @@ export class InputController {
           this.changed();
           return;
         }
+        const st = this.structureUnderCursor();
+        if (st && st.kind !== "command_post") {
+          this.selectStructure(st.id);
+          return;
+        }
       }
     } else {
       ids = this.view.pickSquadsInRect(s.x, s.y, end.x, end.y, w, h);
@@ -296,6 +302,64 @@ export class InputController {
       this.view.vehicles.selected = null;
       this.feedback("select");
     }
+  }
+
+  selectStructure(id: number | null): void {
+    this.client.selectStructure(id);
+    if (id !== null) {
+      this.view.selectedSquads = new Set();
+      this.view.vehicles.selected = null;
+      this.feedback("select");
+    }
+    this.changed();
+  }
+
+  /**
+   * Engineers repair `target` (a structure or a wreck), or the nearest job when it is 0. The
+   * selected engineer squads go; with none selected, the engineer squad nearest the target.
+   */
+  repair(target = 0): void {
+    const f = this.client.state.frame;
+    if (!f) return;
+    const live = f.squads.filter((q) => q.kind === "engineers" && q.alive > 0);
+    let squads = live.filter((q) => this.client.state.selected.includes(q.id));
+    if (squads.length === 0 && target !== 0) {
+      const at = this.targetPos(f, target);
+      const near = at && live.sort((a, b) => (a.anchorX - at.x) ** 2 + (a.anchorY - at.y) ** 2 - ((b.anchorX - at.x) ** 2 + (b.anchorY - at.y) ** 2))[0];
+      squads = near ? [near] : [];
+    }
+    if (squads.length === 0) {
+      this.feedback("deny");
+      return;
+    }
+    for (const q of squads) this.client.send({ type: "repair", squad: q.id, target });
+    this.feedback("order");
+  }
+
+  private targetPos(f: Frame, id: number): { x: number; y: number } | null {
+    const st = f.structures.find((s) => s.id === id);
+    if (st) return { x: (st.cx + 0.5) * this.view.map.cellSize, y: (st.cy + 0.5) * this.view.map.cellSize };
+    const v = f.vehicles.find((x) => x.id === id);
+    return v ? { x: v.x, y: v.y } : null;
+  }
+
+  /** Take a structure down (blueprints refund in full, finished ones half). */
+  dismantle(id: number): void {
+    this.client.send({ type: "demolish", structure: id });
+    this.client.selectStructure(null);
+    this.feedback("order");
+    this.changed();
+  }
+
+  toggleGate(id: number): void {
+    this.client.send({ type: "toggle_gate", structure: id });
+    this.feedback("stance");
+  }
+
+  /** Buy a truck at the held railway station. */
+  buyTruck(): void {
+    this.client.send({ type: "buy_truck" });
+    this.feedback("order");
   }
 
   selectVehicle(id: number | null): void {
@@ -507,6 +571,7 @@ export class InputController {
       case "Escape":
         if (this.build.active) this.setBuild(null);
         else if (this.client.state.vehicle !== null) this.selectVehicle(null);
+        else if (this.client.state.structure !== null) this.selectStructure(null);
         else if (this.client.state.selected.length > 0) this.select([]);
         else this.onEscape();
         break;

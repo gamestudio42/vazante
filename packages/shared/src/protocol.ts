@@ -73,6 +73,9 @@ export interface StructureView {
   open: boolean;
   /** Zombies stacked against or climbing this structure. */
   pile: number;
+  /** MG nest: rounds in its own box, -1 when it draws on its base stock; rounds fired so far. */
+  ammo: number;
+  fired: number;
 }
 
 export type VehicleState = 'idle' | 'moving' | 'blocked' | 'destroyed';
@@ -98,6 +101,8 @@ export interface VehicleView {
   via: number[];
   /** Civilians aboard. */
   passengers: number;
+  /** Wreck: repair progress 0..1. */
+  repair: number;
   /** Remaining route, flattened x, y pairs. */
   path: number[];
 }
