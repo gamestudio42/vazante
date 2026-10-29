@@ -116,7 +116,7 @@ export function playMission(
         .filter((q) => q.members.some((s) => w.soldier(s)!.hp > 0))
         .map((q) => q.id);
       let target: Pt = [bx, by];
-      if (st.kind === "reach" || st.kind === "hold" || st.kind === "evacuate")
+      if (st.kind === "reach" || st.kind === "hold" || st.kind === "evacuate" || st.kind === "secure")
         target = centreOf(m.zones[st.zone]);
       if (st.kind === "waves" && st.zone !== undefined)
         target = centreOf(m.zones[st.zone]);
@@ -128,7 +128,15 @@ export function playMission(
         // Escort: walk with the truck once it moves, otherwise go to where it is.
         const v = w.vehicle(m.trucks[st.truck]);
         if (v) target = [v.x, v.y];
-        convoy(m.base);
+        const siteOf = (zone: number) => w.bases.find((b) => b.name === m.zones[zone].name)!;
+        const dest = st.to !== undefined ? siteOf(st.to).id : m.base;
+        if (v && st.to === undefined && m.zones.length > 0 && v.cargoAmmo + v.cargoMaterials === 0 && v.passengers === 0) {
+          // An empty truck fetches the stock waiting at the mission's first site.
+          const src = siteOf(0);
+          if (w.siteAt(v.x, v.y)?.id !== src.id) convoy(src.id);
+          else if (v.state === "idle" && src.ammo + src.materials > 0)
+            e.enqueue({ type: "load", vehicle: v.id, ammo: 6000, materials: 400 });
+        } else convoy(dest);
       }
       if (st.kind === "evacuate") {
         const z = m.zones[st.zone];
@@ -179,6 +187,15 @@ export function playMission(
       hist.set(k, (hist.get(k) ?? 0) + 1);
     }
     console.log([...hist].sort((a, b) => b[1] - a[1]).slice(0, 12));
+    for (const q of w.squads) {
+      const ms = q.members.map((id) => w.soldier(id)!).filter((x) => x.hp > 0);
+      console.log(
+        q.name,
+        q.order.kind === "move" ? `move→${Math.round(q.order.to.x)},${Math.round(q.order.to.y)}` : q.order.kind,
+        `anchor ${Math.round(q.ax)},${Math.round(q.ay)} path ${q.pathIdx}/${q.path.length}`,
+        ms.map((x) => `${Math.round(x.x)},${Math.round(x.y)}${x.stuckT ? ` stuck${x.stuckT}` : ""}${x.route ? ` route${x.route.length}` : ""}`).join(" "),
+      );
+    }
   }
   let alive = 0;
   for (const s of w.soldiers) if (s.hp > 0 && s.condition <= 1) alive++;
@@ -199,7 +216,7 @@ export function playMission(
 
 const [only, diffArg, seedsArg] = process.argv.slice(2);
 const missions = (
-  only && only !== "all" ? [only] : ["hospital", "bridge", "retake"]
+  only && only !== "all" ? [only] : ["hospital", "bridge", "retake", "supply_line", "night_shift", "last_train"]
 ) as MissionId[];
 const diffs = (
   diffArg && diffArg !== "all" ? [diffArg] : ["recruit", "veteran", "nightmare"]

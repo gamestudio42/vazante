@@ -116,6 +116,8 @@ export interface ObjectiveView {
   progress: number;
   /** Seconds, civilians or waves the stage asks for (0 when none). */
   total: number;
+  /** A delivery to a site other than the base. */
+  away?: boolean;
 }
 
 /** A mission area in cells, for the map marker and the minimap. */

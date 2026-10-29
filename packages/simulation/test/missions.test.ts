@@ -145,4 +145,36 @@ describe('campaign missions', () => {
     const seen = events(e, 200 * TICK_HZ, () => killDriven(e));
     expect(seen.filter((t) => t === 'wave_started').length).toBeGreaterThan(0);
   });
+
+  it('Linha de Suprimento: soldiers at the depot secure it before the truck can bring its stock home', () => {
+    const e = mission('supply_line');
+    const w = e.world;
+    const m = w.mission!;
+    const depot = w.bases.find((b) => b.name === m.zones[0].name)!;
+    teleportSquads(e, ...centre(m.zones[0]));
+    events(e, 5);
+    expect(m.stage).toBe(1);
+    expect(depot.ammo).toBe(0);
+    const ev = events(e, 60 * TICK_HZ);
+    expect(ev).toContain('site_secured');
+    expect(m.stage).toBe(2);
+    // Secured, the depot produces into its own stock for the truck to fetch.
+    events(e, 60 * TICK_HZ);
+    expect(depot.ammo).toBeGreaterThan(0);
+  });
+
+  it('O Último Trem: the survivors are delivered to the station, not to the base', () => {
+    const e = mission('last_train');
+    const w = e.world;
+    const m = w.mission!;
+    const station = w.bases.find((b) => b.name === m.zones[1].name)!;
+    m.stage = 3;
+    w.emit({ type: 'civilians_delivered', source: m.trucks[0], target: m.base, value: 40 });
+    events(e, 1);
+    expect(m.stage).toBe(3);
+    w.emit({ type: 'civilians_delivered', source: m.trucks[0], target: station.id, value: 40 });
+    events(e, 1);
+    expect(m.stage).toBe(4);
+    expect(m.evacuated).toBe(40);
+  });
 });

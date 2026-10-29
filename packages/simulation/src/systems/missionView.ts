@@ -1,7 +1,7 @@
-import { MISSIONS, SLICE, STRUCTURES, TICK_HZ, type MissionView, type ObjectiveView, type StageDef } from '@vazante/shared';
+import { ECONOMY, MISSIONS, SLICE, STRUCTURES, TICK_HZ, type MissionView, type ObjectiveView, type StageDef } from '@vazante/shared';
 import type { Mission } from '../entities.ts';
 import type { World } from '../world.ts';
-import { drivenAlive, nextHourTick } from './mission.ts';
+import { drivenAlive, nextHourTick, zoneSite } from './mission.ts';
 
 /** What the objectives panel shows for one stage. */
 function objective(w: World, m: Mission, st: StageDef, i: number): ObjectiveView {
@@ -12,7 +12,8 @@ function objective(w: World, m: Mission, st: StageDef, i: number): ObjectiveView
   switch (st.kind) {
     case 'deliver': {
       const v = w.vehicle(m.trucks[st.truck]);
-      o.place = base?.name ?? '';
+      o.place = st.to !== undefined ? m.zones[st.to].name : (base?.name ?? '');
+      o.away = st.to !== undefined;
       o.from = v ? (w.baseById(v.origin)?.name ?? '') : '';
       // After an evacuation the truck leaves from the evacuation zone.
       const evac = MISSIONS[m.id].stages.slice(0, i).find((s) => s.kind === 'evacuate' && s.truck === st.truck);
@@ -22,6 +23,12 @@ function objective(w: World, m: Mission, st: StageDef, i: number): ObjectiveView
     case 'reach':
       o.place = m.zones[st.zone].name;
       break;
+    case 'secure': {
+      o.place = m.zones[st.zone].name;
+      const site = zoneSite(w, m, st.zone);
+      o.progress = state === 'done' ? 1 : site ? Math.min(1, (site.control ?? 0) / (ECONOMY.heldAbove + 1)) : 0;
+      break;
+    }
     case 'hold':
       o.place = m.zones[st.zone].name;
       o.total = st.seconds;
@@ -55,7 +62,7 @@ export function missionView(w: World, m: Mission): MissionView {
   const def = MISSIONS[m.id];
   const st = def.stages[Math.min(m.stage, def.stages.length - 1)];
   const cp = m.commandPost ? w.structure(m.commandPost) : undefined;
-  const activeZone = m.phase === 'active' && (st.kind === 'reach' || st.kind === 'hold' || st.kind === 'evacuate' || st.kind === 'waves') ? (st.zone ?? -1) : -1;
+  const activeZone = m.phase === 'active' && (st.kind === 'reach' || st.kind === 'hold' || st.kind === 'evacuate' || st.kind === 'waves' || st.kind === 'secure') ? (st.zone ?? -1) : st.kind === 'deliver' && m.phase === 'active' ? (st.to ?? -1) : -1;
   return {
     id: m.id,
     phase: m.phase,

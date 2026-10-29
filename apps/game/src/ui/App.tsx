@@ -457,7 +457,7 @@ function MissionPanel({
             </div>
           )}
           {o.state === "active" &&
-            (o.kind === "hold" || o.kind === "evacuate") && (
+            (o.kind === "hold" || o.kind === "evacuate" || o.kind === "secure") && (
               <div className="hint muted">{t(`obj.${o.kind}.hint`)}</div>
             )}
         </Objective>
@@ -497,6 +497,7 @@ function objectiveText(m: MissionView, o: ObjectiveView, i: number): string {
   )
     key = "obj.deliver.evac";
   if (o.kind === "waves" && o.place) key = "obj.waves.at";
+  if (o.kind === "deliver" && o.away) key = key === "obj.deliver.evac" ? "obj.deliver.evacTo" : "obj.deliver.to";
   return t(key)
     .replace("{place}", o.place)
     .replace("{from}", o.from)

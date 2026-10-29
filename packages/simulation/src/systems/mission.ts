@@ -17,7 +17,8 @@ import {
   type SurvivalRules,
   type ZoneRef,
 } from "@vazante/shared";
-import type { Mission, MissionZone } from "../entities.ts";
+import type { Base, Mission, MissionZone } from "../entities.ts";
+import { siteHeld } from "./economy.ts";
 import { FLOW_UNREACHABLE } from "../navigation.ts";
 import { rollZombieKind } from "../spawn.ts";
 import { isActiveSoldier, type World } from "../world.ts";
@@ -444,8 +445,9 @@ export function stepMission(w: World): void {
   switch (st.kind) {
     case "deliver": {
       const id = m.trucks[st.truck];
+      const to = st.to !== undefined ? zoneSite(w, m, st.to)?.id : m.base;
       for (const e of w.events) {
-        if (e.source !== id || e.target !== m.base) continue;
+        if (e.source !== id || e.target !== to) continue;
         if (e.type === "civilians_delivered") m.evacuated += e.value ?? 0;
         if (e.type === "cargo_delivered" || e.type === "civilians_delivered") {
           advance(w, m);
@@ -457,6 +459,11 @@ export function stepMission(w: World): void {
     case "reach":
       if (zoneHeld(w, m.zones[st.zone])) advance(w, m);
       return;
+    case "secure": {
+      const site = zoneSite(w, m, st.zone);
+      if (site && siteHeld(w, site)) advance(w, m);
+      return;
+    }
     case "hold": {
       const z = m.zones[st.zone];
       if (st.pressure) pressure(w, m, z, st.pressure);
@@ -497,6 +504,12 @@ export function stepMission(w: World): void {
       stepSurvival(w, m, st.rules);
       return;
   }
+}
+
+/** The base or depot a site zone stands for. */
+export function zoneSite(w: World, m: Mission, zone: number): Base | undefined {
+  const name = m.zones[zone]?.name;
+  return w.bases.find((b) => b.name === name);
 }
 
 /** The first tick at or after `tick` when the clock reads `hour`. */
@@ -641,15 +654,22 @@ function stepWaves(
     w.zombies.driven.fill(0);
     m.waveState = "calm";
     m.nextAt = w.tick + (m.wave >= waves.length ? 1 : SLICE.calmS * TICK_HZ);
-  } else if (
-    m.waveState === "active" &&
-    w.tick % 10 === 0 &&
-    drivenAlive(w) === 0
-  ) {
-    m.waveState = "calm";
-    m.nextAt = w.tick + (m.wave >= waves.length ? 1 : SLICE.calmS * TICK_HZ);
+  } else if (m.waveState === "active" && w.tick % 10 === 0) {
+    const left = drivenAlive(w);
+    // A few stragglers stuck somewhere in the streets do not hold the stage forever.
+    m.progress = left <= WAVE_STRAGGLERS ? m.progress + 10 : 0;
+    if (left === 0 || m.progress >= WAVE_STRAGGLERS_S * TICK_HZ) {
+      w.zombies.driven.fill(0);
+      m.progress = 0;
+      m.waveState = "calm";
+      m.nextAt = w.tick + (m.wave >= waves.length ? 1 : SLICE.calmS * TICK_HZ);
+    }
   }
 }
+
+/** A wave counts as beaten once no more than this many of it are left for this long. */
+const WAVE_STRAGGLERS = 5;
+const WAVE_STRAGGLERS_S = 45;
 
 /** District control drifts down where zombies outnumber soldiers and back up where soldiers hold. */
 export function stepDistricts(w: World): void {

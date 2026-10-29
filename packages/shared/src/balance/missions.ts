@@ -7,7 +7,15 @@ import { BASIC_ZOMBIE_KINDS, ZOMBIES } from "./zombies.ts";
  * played in order; `systems/mission.ts` runs any of them. Zones and districts are named, so the
  * same definition works on every seed of its map.
  */
-export type MissionId = "last_convoy" | "hospital" | "bridge" | "retake" | "survival";
+export type MissionId =
+  | "last_convoy"
+  | "hospital"
+  | "bridge"
+  | "retake"
+  | "supply_line"
+  | "night_shift"
+  | "last_train"
+  | "survival";
 
 /** The campaign, in order. Survival is played from the main menu and is not part of it. */
 export const MISSION_IDS: readonly MissionId[] = [
@@ -15,6 +23,9 @@ export const MISSION_IDS: readonly MissionId[] = [
   "hospital",
   "bridge",
   "retake",
+  "supply_line",
+  "night_shift",
+  "last_train",
 ];
 
 /**
@@ -34,8 +45,10 @@ export interface Pressure {
 }
 
 export type StageDef =
-  /** Bring truck `truck` to the base (cargo or evacuees). Losing it fails the mission. */
-  | { kind: "deliver"; truck: number }
+  /** Bring truck `truck` to the base, or to the site of zone `to` (cargo or evacuees). Losing it fails the mission. */
+  | { kind: "deliver"; truck: number; to?: number }
+  /** Secure the site of zone `zone` as a strategic point (missions with `economy`). */
+  | { kind: "secure"; zone: number }
   /** Any soldier inside the zone. */
   | { kind: "reach"; zone: number }
   /** Soldiers inside the zone for `seconds` (the clock only runs while held). */
@@ -180,6 +193,92 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
         zone: 0,
         seconds: 300,
         pressure: { everyS: 25, size: 120, grow: 0.2 },
+      },
+    ],
+  },
+  supply_line: {
+    id: "supply_line",
+    map: "city",
+    squads: [
+      { kind: "slice", name: "Alfa" },
+      { kind: "engineers", name: "Bravo" },
+      { kind: "police", name: "Charlie" },
+    ],
+    trucks: [{ at: "base", ammo: 0, materials: 0 }],
+    zones: [{ site: "Depósito Norte" }, { site: "Posto Âncora" }],
+    zombies: 3200,
+    zombieKinds: ZOMBIES.length,
+    clearRadiusM: 250,
+    materials: 200,
+    ammo: 900,
+    commandPost: true,
+    economy: true,
+    stages: [
+      { kind: "reach", zone: 0 },
+      { kind: "secure", zone: 0 },
+      { kind: "deliver", truck: 0 },
+      { kind: "reach", zone: 1 },
+      { kind: "waves", waves: [120, 170] },
+    ],
+  },
+  night_shift: {
+    id: "night_shift",
+    map: "city",
+    squads: [
+      { kind: "slice", name: "Alfa" },
+      { kind: "marines", name: "Bravo" },
+      { kind: "engineers", name: "Charlie" },
+    ],
+    trucks: [{ at: "base", ammo: 2500, materials: 250 }],
+    zones: [{ site: "Hospital São Lucas" }],
+    zombies: 3200,
+    zombieKinds: ZOMBIES.length,
+    clearRadiusM: 250,
+    materials: 200,
+    ammo: 1200,
+    commandPost: false,
+    economy: true,
+    stages: [
+      { kind: "reach", zone: 0 },
+      { kind: "secure", zone: 0 },
+      { kind: "waves", waves: [200, 280, 360], zone: 0 },
+    ],
+  },
+  last_train: {
+    id: "last_train",
+    map: "city",
+    squads: [
+      { kind: "slice", name: "Alfa" },
+      { kind: "marines", name: "Bravo" },
+      { kind: "police", name: "Charlie" },
+      { kind: "engineers", name: "Delta" },
+    ],
+    trucks: [{ at: "base", ammo: 0, materials: 0 }],
+    zones: [{ site: "Posto Âncora" }, { site: "Estação Ferroviária" }],
+    zombies: 4500,
+    zombieKinds: ZOMBIES.length,
+    clearRadiusM: 250,
+    materials: 400,
+    ammo: 1500,
+    commandPost: false,
+    economy: true,
+    stages: [
+      { kind: "reach", zone: 1 },
+      { kind: "secure", zone: 1 },
+      {
+        kind: "evacuate",
+        zone: 0,
+        truck: 0,
+        seconds: 45,
+        civilians: 40,
+        pressure: { everyS: 20, size: 90 },
+      },
+      { kind: "deliver", truck: 0, to: 1 },
+      {
+        kind: "hold",
+        zone: 1,
+        seconds: 180,
+        pressure: { everyS: 15, size: 160, grow: 0.25 },
       },
     ],
   },

@@ -319,7 +319,7 @@ function arrive(w: World, v: Vehicle): void {
   v.pathIdx = 0;
   v.dest = 0;
   if (!site || w.siteAt(v.x, v.y) !== site) return;
-  if (v.passengers > 0 && site.kind === 'base') {
+  if (v.passengers > 0 && (site.kind === 'base' || site.role === 'station')) {
     w.emit({ type: 'civilians_delivered', source: v.id, target: site.id, x: v.x, y: v.y, value: v.passengers });
     v.passengers = 0;
   }
