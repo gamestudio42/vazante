@@ -1,5 +1,7 @@
-# Vazante as a snap. Packs the Electron build from `pnpm --filter @vazante/desktop dist:dir`
-# (release/linux-unpacked); .github/workflows/snap.yml builds, smoke-tests and publishes it.
+# Vazante as a snap, built from source: installs the workspace, runs
+# `pnpm --filter @vazante/desktop dist:dir` and packs release/linux-unpacked. The Snap Store's
+# Builds tab builds and releases it to edge on every push to main; .github/workflows/snap.yml
+# builds the same file and smoke-tests it.
 name: vazante
 title: Vazante
 base: core22
@@ -40,14 +42,22 @@ apps:
 
 parts:
   vazante:
-    plugin: dump
-    source: release/linux-unpacked
-    organize:
-      '*': app/
+    plugin: nil
+    source: .
+    build-snaps:
+      - node/22/stable
     stage-packages:
       - libnspr4
       - libnss3
       - libxss1
     override-pull: |
       craftctl default
-      craftctl set version="$(sed -n 's/^  "version": "\(.*\)",$/\1/p' "$CRAFT_PROJECT_DIR/package.json")"
+      craftctl set version="$(sed -n 's/^  "version": "\(.*\)",$/\1/p' apps/desktop/package.json)"
+    override-build: |
+      # The node snap is read-only: install the pinned pnpm next to the build.
+      npm install --prefix "$CRAFT_PART_BUILD/.tools" "$(sed -n 's/^  "packageManager": "\(.*\)",$/\1/p' package.json)"
+      export PATH="$CRAFT_PART_BUILD/.tools/node_modules/.bin:$PATH"
+      pnpm install --frozen-lockfile
+      pnpm --filter @vazante/desktop dist:dir
+      mkdir -p "$CRAFT_PART_INSTALL/app"
+      cp -a apps/desktop/release/linux-unpacked/. "$CRAFT_PART_INSTALL/app/"
