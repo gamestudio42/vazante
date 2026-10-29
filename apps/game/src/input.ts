@@ -4,6 +4,7 @@ import {
   STRUCTURE_KINDS,
   SoldierField,
   type RiskPolicy,
+  type SquadKind,
   type Stance,
   type StructureKind,
 } from "@vazante/shared";
@@ -333,6 +334,12 @@ export class InputController {
     const v = this.client.state.vehicle;
     if (v === null) return;
     this.client.send({ type: "escort", vehicle: v, squad });
+    this.feedback("order");
+  }
+
+  /** Pay the base's materials for a new squad at the railway station. */
+  recruit(kind: SquadKind): void {
+    this.client.send({ type: "recruit", kind });
     this.feedback("order");
   }
 

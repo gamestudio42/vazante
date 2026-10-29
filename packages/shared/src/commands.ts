@@ -1,5 +1,6 @@
 import type { RiskPolicy } from './balance/logistics.ts';
 import type { StructureKind } from './balance/structures.ts';
+import type { SquadKind } from './balance/units.ts';
 import type { Formation, SimSpeed, Stance, Vec2 } from './types.ts';
 
 export type Command =
@@ -27,6 +28,8 @@ export type Command =
   /** Keep a vehicle behind a squad at the squad's pace (null stops escorting). */
   | { type: 'escort'; vehicle: number; squad: number | null }
   | { type: 'set_policy'; vehicle: number; policy: RiskPolicy }
+  /** Pay the base's materials for a new squad at the railway station. */
+  | { type: 'recruit'; kind: SquadKind }
   /** Development helper: spawn a group of zombies around a point. */
   | { type: 'debug_spawn'; at: Vec2; count: number; kind?: number };
 

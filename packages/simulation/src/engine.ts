@@ -32,6 +32,7 @@ import { stepMedics } from './systems/medics.ts';
 import { stepMorale } from './systems/morale.ts';
 import { districtCounts, stepDistricts, stepMission } from './systems/mission.ts';
 import { missionView } from './systems/missionView.ts';
+import { siteHeld, siteIncome, stepEconomy } from './systems/economy.ts';
 import { restoreWorld, snapshotWorld } from './snapshot.ts';
 import { decayNoise } from './systems/noise.ts';
 import { stepUnits } from './systems/units.ts';
@@ -54,6 +55,7 @@ const STEPS: readonly (readonly [string, (w: World) => void])[] = [
   ['construction', stepConstruction],
   ['resupply', stepResupply],
   ['districts', stepDistricts],
+  ['economy', stepEconomy],
   ['mission', stepMission],
   ['noise', decayNoise],
 ];
@@ -249,7 +251,8 @@ export class SimulationEngine {
       open: st.open,
       pile: w.grid.pile[st.cell],
     }));
-    const bases = w.bases.map((b) => ({ id: b.id, kind: b.kind, name: b.name, x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, materials: b.materials, ammo: b.ammo }));
+    const income = siteIncome(w);
+    const bases = w.bases.map((b) => ({ id: b.id, kind: b.kind, name: b.name, role: b.role, control: w.economy ? (b.control ?? 0) : 0, held: w.economy && siteHeld(w, b), income: income.get(b.id)!, x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, materials: b.materials, ammo: b.ammo }));
     const vehicles: VehicleView[] = w.vehicles.map((v) => ({
       id: v.id,
       kind: v.kind,
@@ -298,6 +301,7 @@ export class SimulationEngine {
       districts,
       directSoldier: w.directSoldier,
       fog: w.fog,
+      economy: w.economy,
       difficulty: w.difficulty,
       events,
       stats: {
@@ -323,6 +327,7 @@ export class SimulationEngine {
     if (w.flowJob.active) h.bytes(w.flowJob.dist);
     for (const b of w.bases) h.u32(b.id).u32(b.materials).u32(b.ammo);
     h.bytes(w.districtControl);
+    if (w.economy) for (const b of w.bases) h.str('economy').u32(b.control ?? 0);
     if (w.mission) {
       const m = w.mission;
       h.byte(1).str(m.id).str(m.phase).u32(m.stage).u32(m.progress).u32(m.pressureAt).u32(m.wave).str(m.waveState).u32(m.nextAt).u32(m.civilians).u32(m.commandPost).u32(m.base);

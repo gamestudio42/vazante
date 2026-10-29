@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { SOLDIER_STRIDE, SoldierField, type Frame } from '@vazante/shared';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from '../client.ts';
+import { t } from '../i18n.ts';
 import { objectiveTarget } from './objective.ts';
 
 /** Labels float this high over the ground, in metres. */
@@ -27,9 +28,12 @@ export function MapLabels({ client, view }: { client: GameClient; view: GameRend
     const sites = map.sites.map((s) => {
       const d = document.createElement('div');
       d.className = `map-label site-${s.kind}`;
-      d.textContent = s.name;
+      const name = document.createElement('span');
+      name.textContent = s.name;
+      const sub = document.createElement('small');
+      d.append(name, sub);
       el.appendChild(d);
-      return { name: s.name, x: ((s.x0 + s.x1 + 1) / 2) * cs, y: ((s.y0 + s.y1 + 1) / 2) * cs, d };
+      return { name: s.name, x: ((s.x0 + s.x1 + 1) / 2) * cs, y: ((s.y0 + s.y1 + 1) / 2) * cs, d, sub, text: '' };
     });
     const obj = document.createElement('div');
     obj.className = 'map-label objective';
@@ -58,7 +62,17 @@ export function MapLabels({ client, view }: { client: GameClient; view: GameRend
         const far = direct && me !== null && Math.hypot(s.x - me.x, s.y - me.y) > DIRECT_LABEL_M;
         const show = !far && p.front && target?.name !== s.name && p.x > -80 && p.x < w + 80 && p.y > -20 && p.y < h + 40;
         s.d.style.display = show ? '' : 'none';
-        if (show) place(s.d, p.x, p.y);
+        if (!show) continue;
+        place(s.d, p.x, p.y);
+        // Strategic points: what the site gives and how firmly it is held.
+        const b = f?.economy ? f.bases.find((x) => x.name === s.name) : undefined;
+        const text = b?.role ? `${t(`site.${b.role}`)} · ${b.held ? t('site.secured') : `${b.control}%`}` : '';
+        if (text !== s.text) {
+          s.text = text;
+          s.sub.textContent = text;
+          s.d.classList.toggle('secured', !!b?.held);
+          s.d.classList.toggle('contested', !!b && !b.held);
+        }
       }
       if (!target) {
         obj.style.display = arrow.style.display = 'none';

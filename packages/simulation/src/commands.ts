@@ -11,6 +11,7 @@ import {
   placeStructure,
   toggleGate,
 } from "./systems/construction.ts";
+import { recruitSquad } from "./systems/economy.ts";
 import { releaseDirect } from "./systems/lifecycle.ts";
 import {
   loadCargo,
@@ -197,6 +198,9 @@ export function applyCommand(w: World, cmd: Command): string | null {
 
     case "escort":
       return orderEscort(w, cmd.vehicle, cmd.squad);
+
+    case "recruit":
+      return recruitSquad(w, cmd.kind);
 
     case "set_policy": {
       const v = w.vehicle(cmd.vehicle);

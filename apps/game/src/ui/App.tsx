@@ -36,6 +36,7 @@ import {
   TriangleAlert,
   Truck,
   Undo2,
+  UserPlus,
   Users,
   Boxes,
   Footprints,
@@ -59,6 +60,7 @@ import {
   SoldierField,
   STANCES,
   STRUCTURES,
+  ECONOMY,
   STRUCTURE_KINDS,
   MISSION_IDS,
   TICK_HZ,
@@ -1115,6 +1117,49 @@ function BuildPanel({
             : t("build.hint")
           : t("build.edit")}
       </div>
+      {frame.economy && <Recruit frame={frame} input={input} />}
+    </div>
+  );
+}
+
+/** Reinforcements: a new squad at the railway station while it is secured, paid from the base. */
+function Recruit({ frame, input }: { frame: Frame; input: InputController }) {
+  const station = frame.bases.find((b) => b.role === "station");
+  const base = frame.bases.find((b) => b.kind === "base");
+  if (!station || !base) return null;
+  const full = frame.squads.filter((q) => q.alive > 0).length >= ECONOMY.maxSquads;
+  return (
+    <div className="recruit">
+      <div className="cmd-row">
+        <span className="cmd-label" title={t("recruit.hint")}>
+          <UserPlus size={12} /> {t("recruit.title")}
+        </span>
+        {ECONOMY.recruitKinds.map((k) => {
+          const cost = ECONOMY.recruitCost[k];
+          return (
+            <button
+              key={k}
+              className="pill"
+              title={t(`squadKind.${k}.hint`)}
+              disabled={!station.held || full || base.materials < cost}
+              onClick={() => input.recruit(k)}
+            >
+              {t(`squadKind.${k}`)}
+              <span className="cost">
+                <Boxes size={10} />
+                {cost}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className={`hint ${station.held && !full ? "muted" : "warn"}`}>
+        {full
+          ? t("recruit.full")
+          : station.held
+            ? t("recruit.ready").replace("{site}", station.name)
+            : t("recruit.locked").replace("{site}", station.name)}
+      </div>
     </div>
   );
 }
@@ -1427,6 +1472,9 @@ function alertText(a: GameClient["state"]["alerts"][number]): string {
       return `${base} (${t(`policy.${a.reason}`)})`;
     case "district_lost":
     case "district_held":
+    case "site_secured":
+    case "site_lost":
+    case "squad_recruited":
       return `${base}: ${a.reason}`;
     case "cargo_delivered":
       return `${base}: ${a.value} ${t("top.ammo").toLowerCase()} · ${a.reason} ${t("build.stock").toLowerCase()}`;
@@ -1437,6 +1485,7 @@ function alertText(a: GameClient["state"]["alerts"][number]): string {
     case "mission_won":
     case "objective_done":
     case "night_survived":
+    case "soldier_cured":
     case "civilians_boarded":
     case "civilians_delivered":
       return base;

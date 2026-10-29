@@ -1,5 +1,5 @@
 import { Rng } from '@vazante/kernel';
-import { Ground, type BuildingRect, type DistrictInfo, type SiteInfo } from '@vazante/shared';
+import { Ground, type BuildingRect, type DistrictInfo, type SiteInfo, type SiteRole } from '@vazante/shared';
 import { Grid } from './grid.ts';
 
 export interface GeneratedMap {
@@ -86,8 +86,8 @@ export function generateSliceMap(seed: number, size = 128): GeneratedMap {
   }
 
   const sites: SiteInfo[] = [
-    { kind: 'base', name: 'Posto Âncora', ...base },
-    { kind: 'depot', name: 'Depósito Norte', ...depot },
+    { kind: 'base', name: 'Posto Âncora', role: 'command', ...base },
+    { kind: 'depot', name: 'Depósito Norte', role: 'supply', ...depot },
   ];
   return { grid, buildings, districts, sites };
 }
@@ -207,12 +207,12 @@ export function generateCityMap(seed: number, size = 512): GeneratedMap {
 
   const midX = Math.floor(size / 2);
   const base: Rect = { x0: midX - 12, y0: size - 70, x1: midX + 11, y1: size - 47 };
-  const depots: Array<[string, Rect]> = [
-    ['Depósito Norte', { x0: size - 60, y0: 10, x1: size - 43, y1: 27 }],
-    ['Hospital São Lucas', { x0: 14, y0: 60, x1: 31, y1: 77 }],
-    ['Estação Ferroviária', { x0: size - 90, y0: Math.floor(size * 0.55), x1: size - 73, y1: Math.floor(size * 0.55) + 17 }],
+  const depots: Array<[string, SiteRole, Rect]> = [
+    ['Depósito Norte', 'supply', { x0: size - 60, y0: 10, x1: size - 43, y1: 27 }],
+    ['Hospital São Lucas', 'hospital', { x0: 14, y0: 60, x1: 31, y1: 77 }],
+    ['Estação Ferroviária', 'station', { x0: size - 90, y0: Math.floor(size * 0.55), x1: size - 73, y1: Math.floor(size * 0.55) + 17 }],
   ];
-  const reserved = [base, ...depots.map(([, r]) => r)];
+  const reserved = [base, ...depots.map(([, , r]) => r)];
   for (const r of reserved) {
     for (let y = r.y0; y <= r.y1; y++) {
       for (let x = r.x0; x <= r.x1; x++) {
@@ -269,7 +269,7 @@ export function generateCityMap(seed: number, size = 512): GeneratedMap {
     for (let y = d.y0; y <= d.y1; y++) for (let x = d.x0; x <= d.x1; x++) grid.district[grid.idx(x, y)] = d.id;
   }
 
-  const sites: SiteInfo[] = [{ kind: 'base', name: 'Posto Âncora', ...base }, ...depots.map(([name, r]) => ({ kind: 'depot' as const, name, ...r }))];
+  const sites: SiteInfo[] = [{ kind: 'base', name: 'Posto Âncora', role: 'command', ...base }, ...depots.map(([name, role, r]) => ({ kind: 'depot' as const, name, role, ...r }))];
   return { grid, buildings, districts, sites };
 }
 

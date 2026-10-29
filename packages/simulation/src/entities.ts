@@ -1,4 +1,4 @@
-import type { Formation, MissionId, RiskPolicy, SoldierActivity, SoldierCondition, SoldierRole, SquadKind, SquadOrder, Stance, StructureKind, VehicleState, WeaponId } from '@vazante/shared';
+import type { Formation, MissionId, RiskPolicy, SoldierActivity, SoldierCondition, SiteRole, SoldierRole, SquadKind, SquadOrder, Stance, StructureKind, VehicleState, WeaponId } from '@vazante/shared';
 
 export interface DirectInput {
   mx: number;
@@ -111,6 +111,9 @@ export interface Structure {
 export interface Base {
   id: number;
   kind: 'base' | 'depot';
+  role?: SiteRole;
+  /** Strategic point control 0..100 (economy modes); secured above ECONOMY.heldAbove. */
+  control?: number;
   /** Depots hold stock but cannot be built on. */
   buildable: boolean;
   name: string;

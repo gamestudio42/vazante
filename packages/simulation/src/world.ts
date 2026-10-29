@@ -40,6 +40,8 @@ export class World {
   difficulty: DifficultyId = 'veteran';
   /** Fog of war: frames carry only the zombies in sight. Presentation only, never read by the rules. */
   fog = false;
+  /** Districts and sites produce (survival, the city sandbox). */
+  economy = false;
   /** How many zombie kinds spawn (ZOMBIES order): the first mission keeps to the basic three. */
   zombieKinds = ZOMBIES.length;
   nextId = 1;
@@ -70,8 +72,8 @@ export class World {
     this.cellCount = new Uint16Array(grid.size);
     this.districtControl = new Uint8Array(256).fill(100);
     for (const site of sites) {
-      if (site.kind === 'base') this.addBase(site.name, site.x0, site.y0, site.x1, site.y1);
-      else this.addBase(site.name, site.x0, site.y0, site.x1, site.y1, 0, 0, 'depot');
+      const b = site.kind === 'base' ? this.addBase(site.name, site.x0, site.y0, site.x1, site.y1) : this.addBase(site.name, site.x0, site.y0, site.x1, site.y1, 0, 0, 'depot');
+      if (site.role) b.role = site.role;
     }
   }
 

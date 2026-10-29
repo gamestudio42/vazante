@@ -1651,3 +1651,30 @@ input[type='checkbox'] {
   color: var(--accent);
   font-weight: 600;
 }
+.map-label small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+.map-label small:empty {
+  display: none;
+}
+.map-label.secured {
+  border-left-color: var(--ok, #6fcf6f);
+}
+.map-label.contested {
+  border-left-style: dashed;
+}
+.build .recruit {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.build .recruit .cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  opacity: 0.7;
+}

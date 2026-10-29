@@ -40,8 +40,10 @@ export function buildMission(id: MissionId, seed: number, opts: ScenarioOptions 
   w.difficulty = opts.difficulty ?? 'veteran';
   w.zombieKinds = def.zombieKinds;
   w.fog = true;
+  w.economy = def.economy === true;
   const diff = DIFFICULTY[w.difficulty];
   const home = w.bases.find((b) => b.kind === 'base')!;
+  if (w.economy) home.control = 100;
   const bx = ((home.x0 + home.x1 + 1) / 2) * CELL_SIZE;
   const by = ((home.y0 + home.y1 + 1) / 2) * CELL_SIZE;
   const gap = def.map === 'city' ? 16 : 20;
@@ -70,8 +72,10 @@ export function cityWar(seed: number, opts: ScenarioOptions = {}): World {
   const w = new World(seed, map.grid, map.buildings, map.districts, map.sites, ZOMBIE_POOL_CAPACITY);
   w.difficulty = opts.difficulty ?? 'veteran';
   w.fog = true;
+  w.economy = true;
   const diff = DIFFICULTY[w.difficulty];
   const home = w.bases.find((b) => b.kind === 'base')!;
+  home.control = 100;
   const bx = ((home.x0 + home.x1 + 1) / 2) * CELL_SIZE;
   const by = ((home.y0 + home.y1 + 1) / 2) * CELL_SIZE;
   const kinds = ['slice', 'marines', 'engineers', 'police'] as const;

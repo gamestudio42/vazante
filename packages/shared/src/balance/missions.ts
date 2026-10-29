@@ -100,6 +100,8 @@ export interface MissionDef {
   ammo: number;
   /** A command post with civilians at the base centre; losing it loses the mission. */
   commandPost: boolean;
+  /** Districts and sites produce (see ECONOMY). */
+  economy?: boolean;
   stages: readonly StageDef[];
 }
 
@@ -201,6 +203,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     materials: 500,
     ammo: 2500,
     commandPost: true,
+    economy: true,
     stages: [
       {
         kind: "endless",

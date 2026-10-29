@@ -35,6 +35,10 @@ const ALERT_TYPES = new Set<SimEvent['type']>([
   'civilians_delivered',
   'objective_done',
   'night_survived',
+  'site_secured',
+  'site_lost',
+  'soldier_cured',
+  'squad_recruited',
 ]);
 
 export interface ClientState {

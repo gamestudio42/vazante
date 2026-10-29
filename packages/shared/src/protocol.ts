@@ -6,7 +6,7 @@ import type { SquadKind } from './balance/units.ts';
 import type { Command } from './commands.ts';
 import type { SaveGame } from './save.ts';
 import type { SimEvent } from './events.ts';
-import type { Formation, MapInfo, SimSpeed, SquadOrder, Stance } from './types.ts';
+import type { Formation, MapInfo, SimSpeed, SiteRole, SquadOrder, Stance } from './types.ts';
 
 /** Stride of the soldier frame array. */
 export const SOLDIER_STRIDE = 13;
@@ -169,6 +169,12 @@ export interface BaseView {
   id: number;
   kind: 'base' | 'depot';
   name: string;
+  role?: SiteRole;
+  /** Strategic point control 0..100, and whether it is secured: it produces and its role works (economy modes only). */
+  control: number;
+  held: boolean;
+  /** Stock this site gains each ECONOMY.everyS while things stay as they are. */
+  income: { materials: number; ammo: number };
   x0: number;
   y0: number;
   x1: number;
@@ -203,6 +209,8 @@ export interface Frame {
   difficulty: DifficultyId;
   /** Fog of war on: `zombies` holds only the ones the player's people can see. */
   fog: boolean;
+  /** Districts and sites produce; the station recruits. */
+  economy: boolean;
   events: SimEvent[];
   stats: FrameStats;
 }

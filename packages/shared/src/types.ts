@@ -82,9 +82,13 @@ export interface DistrictInfo {
   y1: number;
 }
 
+/** What a site gives when its district is held (see ECONOMY). */
+export type SiteRole = 'command' | 'supply' | 'hospital' | 'station';
+
 export interface SiteInfo {
   kind: 'base' | 'depot';
   name: string;
+  role?: SiteRole;
   x0: number;
   y0: number;
   x1: number;
