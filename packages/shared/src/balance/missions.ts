@@ -205,9 +205,9 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
       {
         kind: "endless",
         rules: {
-          nightHorde: 120,
-          grow: 0.35,
-          baseShare: 0.5,
+          nightHorde: 160,
+          grow: 0.6,
+          baseShare: 1,
           warnS: 45,
           nightfallHour: 19,
           dawnHour: 6,
