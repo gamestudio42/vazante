@@ -968,9 +968,18 @@ export class GameRenderer {
       if (!this.selectedSquads.has(q.id) || q.alive === 0 || q.path.length < 2) continue;
       let px = q.anchorX;
       let py = q.anchorY;
-      for (let i = 0; i < q.path.length; i += 2) {
-        const nx = q.path[i];
-        const ny = q.path[i + 1];
+      // The rest of a route runs straight from point to point, each point marked with a cross.
+      const pts = q.via.length > 0 ? q.path.concat(q.via) : q.path;
+      for (let i = q.path.length; i < pts.length && v + 4 <= PATH_VERTS; i += 2) {
+        const r = dash;
+        pos.setXYZ(v++, pts[i] - r, 0.15, pts[i + 1] - r);
+        pos.setXYZ(v++, pts[i] + r, 0.15, pts[i + 1] + r);
+        pos.setXYZ(v++, pts[i] - r, 0.15, pts[i + 1] + r);
+        pos.setXYZ(v++, pts[i] + r, 0.15, pts[i + 1] - r);
+      }
+      for (let i = 0; i < pts.length; i += 2) {
+        const nx = pts[i];
+        const ny = pts[i + 1];
         const len = Math.hypot(nx - px, ny - py);
         for (let d = 0; d < len && v + 2 <= PATH_VERTS; d += dash * 2) {
           const e = Math.min(len, d + dash);

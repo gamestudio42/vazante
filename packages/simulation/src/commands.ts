@@ -39,8 +39,20 @@ export function applyCommand(w: World, cmd: Command): string | null {
       const face = cmd.face ? unit(cmd.face.x, cmd.face.y) : null;
       let ok = 0;
       const moved: Squad[] = [];
+      // A queued point extends the route of squads already on the move.
+      if (cmd.queue) {
+        for (const q of qs.filter((q) => q.order.kind === "move")) {
+          (q.via ??= []).push({ x: cmd.to.x, y: cmd.to.y });
+          if (face) q.face = face;
+          ok++;
+        }
+        const idle = qs.filter((q) => q.order.kind !== "move");
+        if (idle.length === 0) return ok > 0 ? null : "no_path";
+        qs.splice(0, qs.length, ...idle);
+      }
       for (const q of qs) {
         if (!planMove(w, q, cmd.to.x, cmd.to.y)) continue;
+        q.via = undefined;
         q.buildTask = 0;
         q.autoBuild = true;
         moved.push(q);
@@ -67,6 +79,7 @@ export function applyCommand(w: World, cmd: Command): string | null {
         const q = w.squad(id);
         if (!q) continue;
         q.order = { kind: "hold", at: { x: q.ax, y: q.ay } };
+        q.via = undefined;
         q.buildTask = 0;
         q.autoBuild = false;
         q.path = [];
@@ -102,6 +115,7 @@ export function applyCommand(w: World, cmd: Command): string | null {
       const moved = qs.filter((q) => planMove(w, q, cx, cy));
       for (const q of moved) {
         q.face = face;
+        q.via = undefined;
         q.buildTask = 0;
       }
       groupSquads(w, moved, face.x, face.y);
@@ -179,7 +193,7 @@ export function applyCommand(w: World, cmd: Command): string | null {
       return stopVehicle(w, cmd.vehicle);
 
     case "drive":
-      return orderDrive(w, cmd.vehicle, cmd.to.x, cmd.to.y);
+      return orderDrive(w, cmd.vehicle, cmd.to.x, cmd.to.y, cmd.queue === true);
 
     case "escort":
       return orderEscort(w, cmd.vehicle, cmd.squad);

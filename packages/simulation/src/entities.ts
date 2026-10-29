@@ -82,6 +82,8 @@ export interface Squad {
   contactCd: number;
   /** Heading to take on arrival (unit vector), from a right-drag or a group move. */
   face?: { x: number; y: number };
+  /** Route points to walk to, in order, after the current move target; absent without a route. */
+  via?: { x: number; y: number }[];
   /**
    * Several squads ordered together hold one shared formation: this squad fills slots
    * slotBase .. slotBase + members of slotTotal. 0 = its own formation.
@@ -145,6 +147,8 @@ export interface Vehicle {
   passengers: number;
   /** Squad this vehicle follows; absent when it is not escorting. */
   escort?: number;
+  /** Points to drive to, in order, after the current drive; absent without a route. */
+  via?: { x: number; y: number }[];
 }
 
 /** A mission area in cells. */

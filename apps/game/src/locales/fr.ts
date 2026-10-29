@@ -27,8 +27,9 @@ export const fr: Record<Key, string> = {
   "formation.column": "Colonne",
   "formation.wedge": "Coin",
   "formation.circle": "Cercle",
-  "sel.none":
-    "Sélectionnez une escouade (clic ou glisser). Clic droit pour déplacer.",
+  "sel.none": "Sélectionnez une escouade (clic ou glisser). Clic droit pour déplacer, Maj + clic droit pour ajouter un point d’itinéraire.",
+  "sel.route": "Itinéraire",
+  "tip.route": "Mode itinéraire (R) : chaque clic droit ajoute un point par lequel l’escouade passe, dans l’ordre. Maj + clic droit fait de même.",
   "sel.direct": "Prendre le contrôle (TAB)",
   "alerts.title": "Alertes",
   "alert.soldier_bitten": "Soldat mordu",
@@ -146,7 +147,7 @@ export const fr: Record<Key, string> = {
   "help.title": "Commandes",
   "help.toggle": "H : aide",
   "help.body":
-    "Caméra : WASD / flèches / bouton du milieu · Zoom : molette · M : carte des opérations · Q/E pivoter\nSélection : clic ou glisser · Déplacer : clic droit (glisser pour l’orientation) · Posture : Z X C V · Formation : F\nEspace pause · F1 F2 F3 vitesse · TAB contrôle direct (votre escouade vous suit) · K crée une horde de test sous le curseur · N son on/off · B construire · F5/F9 sauvegarde/chargement rapide · Échap menu",
+    "Caméra : WASD / flèches / bouton du milieu · Zoom : molette · M : carte des opérations · Q/E pivoter\nSélection : clic ou glisser · Déplacer : clic droit (glisser pour l’orientation) · Itinéraire : Maj + clic droit, ou R · Posture : Z X C V · Formation : F\nEspace pause · F1 F2 F3 vitesse · TAB contrôle direct (votre escouade vous suit) · K crée une horde de test sous le curseur · N son on/off · B construire · F5/F9 sauvegarde/chargement rapide · Échap menu",
   "menu.subtitle": "Porto Velário",
   "menu.continue": "Continuer",
   "menu.new": "Nouvelle partie",

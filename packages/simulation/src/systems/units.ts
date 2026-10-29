@@ -133,6 +133,7 @@ function follow(w: World, q: Squad, s: Soldier): void {
   q.ay = behind ? by : s.y;
   // Holding where he is, so when control is handed back the squad stays put.
   q.order = { kind: "hold", at: { x: q.ax, y: q.ay } };
+  q.via = undefined;
   q.path = [];
   q.pathIdx = 0;
   q.slotBase = q.slotTotal = 0;
@@ -221,6 +222,12 @@ function stepSquad(w: World, q: Squad): void {
         q.path = [];
         q.pathIdx = 0;
       }
+    }
+    // A route goes on to its next point without waiting for the members to close up.
+    if (q.pathIdx * 2 >= q.path.length && q.order.kind === "move" && q.via) {
+      const next = q.via.shift()!;
+      if (q.via.length === 0) q.via = undefined;
+      if (!planMove(w, q, next.x, next.y)) q.via = undefined;
     }
     // Arrived when the members have caught up, or when none of them can move any closer.
     if (

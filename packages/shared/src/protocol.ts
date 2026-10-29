@@ -54,6 +54,8 @@ export interface SquadView {
   anchorY: number;
   /** Remaining waypoints of the current move, flattened x, y pairs (for path preview). */
   path: number[];
+  /** Route points still to come after the current move target, flattened x, y pairs. */
+  via: number[];
 }
 
 export interface StructureView {
@@ -91,6 +93,8 @@ export interface VehicleView {
   dest: number;
   /** Squad the vehicle follows, 0 = none. */
   escort: number;
+  /** Route points still to come after the current drive, flattened x, y pairs. */
+  via: number[];
   /** Civilians aboard. */
   passengers: number;
   /** Remaining route, flattened x, y pairs. */

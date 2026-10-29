@@ -42,6 +42,7 @@ import {
   Siren,
   Hand,
   LocateFixed,
+  Route,
   Brain,
   ShieldHalf,
   Wrench,
@@ -943,6 +944,15 @@ function SelectionPanel({
           <span>{t(`formation.${q.formation}`)}</span>
         </button>
         <button
+          className={`cmd ${input.routeMode ? "on" : ""}`}
+          title={t("tip.route")}
+          onClick={() => input.toggleRouteMode()}
+        >
+          <Key k="R" />
+          <Route size={18} />
+          <span>{t("sel.route")}</span>
+        </button>
+        <button
           className="cmd primary"
           title={t("tip.direct")}
           onClick={() => input.toggleDirect()}
@@ -1187,6 +1197,14 @@ function VehiclePanel({
             )}
           </div>
           <div className="cmd-row">
+            <button
+              className={`pill ${input.routeMode ? "on" : ""}`}
+              title={t("tip.route")}
+              onClick={() => input.toggleRouteMode()}
+            >
+              <Route size={12} />
+              {t("sel.route")}
+            </button>
             <span className="cmd-label">{t("convoy.escort")}</span>
             {frame.squads.map((q) => (
               <button

@@ -45,6 +45,8 @@ export class InputController {
   /** Right-drag from the move target: the arrow of the direction the squads will face. */
   faceArrow: BoxRect | null = null;
   private rightStart: { x: number; y: number } | null = null;
+  /** Route mode (the panel's Route button): right clicks add points, as with Shift held. */
+  routeMode = false;
   /** The briefing teaches the controls; H brings the full list back. */
   helpVisible = false;
   readonly build: BuildTool;
@@ -232,6 +234,7 @@ export class InputController {
         rs.x,
         rs.y,
         a && b ? { x: b.x - a.x, y: b.y - a.y } : undefined,
+        e.shiftKey || this.routeMode,
       );
       return;
     }
@@ -341,10 +344,18 @@ export class InputController {
     this.feedback("order");
   }
 
+  /** Toggle route mode: while on, right clicks add points to the route. */
+  toggleRouteMode(): void {
+    this.routeMode = !this.routeMode;
+    this.feedback("toggle");
+    this.changed();
+  }
+
   private orderMove(
     x: number,
     y: number,
     face?: { x: number; y: number },
+    queue = false,
   ): void {
     const sel = this.client.state.selected;
     const { w, h } = this.size();
@@ -369,9 +380,9 @@ export class InputController {
         this.escortSquad(squad);
         return;
       }
-      if (site) this.sendConvoy(site.id, v.policy);
+      if (site && !queue) this.sendConvoy(site.id, v.policy);
       else {
-        this.client.send({ type: "drive", vehicle: veh, to: p });
+        this.client.send({ type: "drive", vehicle: veh, to: p, queue });
         this.feedback("order");
       }
       this.view.markOrder(p.x, p.y);
@@ -379,11 +390,13 @@ export class InputController {
     }
     if (sel.length === 0) return;
     if (!p) return;
-    this.client.send(
-      face
-        ? { type: "move", squads: sel, to: p, face }
-        : { type: "move", squads: sel, to: p },
-    );
+    this.client.send({
+      type: "move",
+      squads: sel,
+      to: p,
+      ...(face ? { face } : {}),
+      ...(queue ? { queue } : {}),
+    });
     this.view.markOrder(p.x, p.y);
     this.feedback("order");
   }
@@ -427,6 +440,7 @@ export class InputController {
         return;
       case "KeyR":
         if (this.directId !== null) this.reload = true;
+        else this.toggleRouteMode();
         return;
     }
     if (this.directId !== null) return;

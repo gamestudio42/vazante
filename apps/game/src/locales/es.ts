@@ -27,8 +27,9 @@ export const es: Record<Key, string> = {
   "formation.column": "Columna",
   "formation.wedge": "Cuña",
   "formation.circle": "Círculo",
-  "sel.none":
-    "Selecciona una escuadra (clic o arrastrar). Clic derecho para mover.",
+  "sel.none": "Selecciona una escuadra (clic o arrastrar). Clic derecho para mover, Shift + clic derecho para añadir un punto de ruta.",
+  "sel.route": "Ruta",
+  "tip.route": "Modo ruta (R): cada clic derecho añade un punto por el que pasa la escuadra, en orden. Shift + clic derecho hace lo mismo.",
   "sel.direct": "Tomar el control (TAB)",
   "alerts.title": "Alertas",
   "alert.soldier_bitten": "Soldado mordido",
@@ -145,7 +146,7 @@ export const es: Record<Key, string> = {
   "help.title": "Controles",
   "help.toggle": "H: ayuda",
   "help.body":
-    "Cámara: WASD / flechas / botón central · Zoom: rueda · M: mapa de operaciones · Q/E girar\nSeleccionar: clic o arrastrar · Mover: clic derecho (arrastra para la dirección) · Postura: Z X C V · Formación: F\nEspacio pausa · F1 F2 F3 velocidad · TAB control directo (tu escuadra te sigue) · K crea una horda de prueba en el cursor · N sonido sí/no · B construir · F5/F9 guardado/carga rápida · Esc menú",
+    "Cámara: WASD / flechas / botón central · Zoom: rueda · M: mapa de operaciones · Q/E girar\nSeleccionar: clic o arrastrar · Mover: clic derecho (arrastra para la dirección) · Ruta: Shift + clic derecho, o R · Postura: Z X C V · Formación: F\nEspacio pausa · F1 F2 F3 velocidad · TAB control directo (tu escuadra te sigue) · K crea una horda de prueba en el cursor · N sonido sí/no · B construir · F5/F9 guardado/carga rápida · Esc menú",
   "menu.subtitle": "Porto Velário",
   "menu.continue": "Continuar",
   "menu.new": "Nueva partida",

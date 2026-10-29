@@ -180,9 +180,15 @@ function startTrip(w: World, v: Vehicle): void {
   v.blockReported = false;
 }
 
-export function orderDrive(w: World, id: number, x: number, y: number): string | null {
+export function orderDrive(w: World, id: number, x: number, y: number, queue = false): string | null {
   const v = w.vehicle(id);
   if (!v || v.state === 'destroyed') return 'no_vehicle';
+  // Queued behind a drive already under way: the truck goes there next.
+  if (queue && v.dest === 0 && v.escort === undefined && (v.state === 'moving' || v.state === 'blocked')) {
+    (v.via ??= []).push({ x, y });
+    return null;
+  }
+  v.via = undefined;
   const ok = truckPassable(w);
   const goal = pointTargetCell(w, x, y, ok);
   if (goal < 0) return 'no_road';
@@ -192,6 +198,14 @@ export function orderDrive(w: World, id: number, x: number, y: number): string |
   if (!planRouteTo(w, v, goal, ok, false)) return 'no_route';
   v.state = 'moving';
   return null;
+}
+
+/** Plan the next leg of a drive route, keeping the rest of the route. */
+function orderDriveNext(w: World, v: Vehicle, x: number, y: number): boolean {
+  const ok = truckPassable(w);
+  if (!planRouteTo(w, v, pointTargetCell(w, x, y, ok), ok, false)) return false;
+  v.state = 'moving';
+  return true;
 }
 
 export function orderEscort(w: World, id: number, squad: number | null): string | null {
@@ -205,6 +219,7 @@ export function orderEscort(w: World, id: number, squad: number | null): string 
   startTrip(w, v);
   v.escort = squad;
   v.dest = 0;
+  v.via = undefined;
   return null;
 }
 
@@ -245,6 +260,7 @@ export function orderConvoy(w: World, id: number, to: number, policy: RiskPolicy
   v.policy = policy;
   v.dest = dest.id;
   v.escort = undefined;
+  v.via = undefined;
   if (!planRoute(w, v, dest, false)) return 'no_route';
   v.state = 'moving';
   return null;
@@ -258,6 +274,7 @@ export function stopVehicle(w: World, id: number): string | null {
   v.pathIdx = 0;
   v.dest = 0;
   v.escort = undefined;
+  v.via = undefined;
   return null;
 }
 
@@ -290,6 +307,12 @@ function zombiesAhead(w: World, v: Vehicle, radius: number): number {
 }
 
 function arrive(w: World, v: Vehicle): void {
+  // A route drives on to its next point.
+  while (v.via && v.dest === 0) {
+    const next = v.via.shift()!;
+    if (v.via.length === 0) v.via = undefined;
+    if (orderDriveNext(w, v, next.x, next.y)) return;
+  }
   const site = w.baseById(v.dest);
   v.state = 'idle';
   v.path = [];

@@ -218,6 +218,7 @@ export class SimulationEngine {
         anchorX: q.ax,
         anchorY: q.ay,
         path: q.path.slice(q.pathIdx * 2),
+        via: q.via ? q.via.flatMap((p) => [p.x, p.y]) : [],
       };
     });
     const structures: StructureView[] = w.structures.map((st) => ({
@@ -248,6 +249,7 @@ export class SimulationEngine {
       policy: v.policy,
       dest: v.dest,
       escort: v.escort ?? 0,
+      via: v.via ? v.via.flatMap((p) => [p.x, p.y]) : [],
       passengers: v.passengers,
       path: v.path.slice(v.pathIdx * 2),
     }));
@@ -316,6 +318,7 @@ export class SimulationEngine {
       h.str(v.state).str(v.policy).u32(v.dest).u32(v.origin).u32(v.pathIdx).u32(v.path.length).u32(v.blockedT).byte(v.rerouted ? 1 : 0).byte(v.blockReported ? 1 : 0).u32(v.passengers);
       for (const p of v.path) h.f64Value(p);
       if (v.escort !== undefined) h.u32(v.escort);
+      if (v.via) for (const p of v.via) h.f64Value(p.x).f64Value(p.y);
     }
     for (const st of w.structures) {
       h.u32(st.id).str(st.kind).u32(st.cell).u32(st.base).f64Value(st.hp).u32(st.work).byte(st.built ? 1 : 0).byte(st.open ? 1 : 0);
@@ -361,6 +364,7 @@ export class SimulationEngine {
       for (const m of q.members) h.u32(m);
       if (q.slotTotal) h.u32(q.slotBase ?? 0).u32(q.slotTotal);
       if (q.face) h.f64Value(q.face.x).f64Value(q.face.y);
+      if (q.via) for (const p of q.via) h.f64Value(p.x).f64Value(p.y);
     }
     return h.digest();
   }

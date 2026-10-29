@@ -171,3 +171,22 @@ describe('driving and escorting', () => {
     expect(e.frame(false).vehicles[0].escort).toBe(0);
   });
 });
+
+describe('truck routes', () => {
+  it('drives its queued points in order', () => {
+    const { e, truckId } = roadEngine();
+    const w = e.world;
+    e.enqueue({ type: 'drive', vehicle: truckId, to: { x: c(20), y: c(32) } });
+    e.enqueue({ type: 'drive', vehicle: truckId, to: { x: c(45), y: c(32) }, queue: true });
+    let reachedFirst = false;
+    for (let t = 0; t < 900; t++) {
+      e.tick();
+      const v = w.vehicle(truckId)!;
+      if (Math.abs(v.x - c(20)) < CELL_SIZE) reachedFirst = true;
+    }
+    const v = w.vehicle(truckId)!;
+    expect(reachedFirst).toBe(true);
+    expect(v.state).toBe('idle');
+    expect(Math.abs(v.x - c(45))).toBeLessThan(CELL_SIZE * 1.5);
+  });
+});

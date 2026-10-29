@@ -122,3 +122,42 @@ describe("members caught behind a wall", () => {
     expect(Math.abs(lost.y - my)).toBeLessThan(8);
   });
 });
+
+describe("routes", () => {
+  it("a squad walks its queued points in order before stopping", () => {
+    const e = fieldEngine();
+    const q = addSquad(e, "guard", 40, 40);
+    e.enqueue({ type: "move", squads: [q.id], to: { x: 200, y: 40 } });
+    e.enqueue({ type: "move", squads: [q.id], to: { x: 200, y: 200 }, queue: true });
+    e.enqueue({ type: "move", squads: [q.id], to: { x: 40, y: 200 }, queue: true });
+    const seen: string[] = [];
+    for (let t = 0; t < 3000 && (t < 5 || q.order.kind === "move"); t++) {
+      e.tick();
+      const corner = q.ax > 190 && q.ay < 50 ? "a" : q.ax > 190 && q.ay > 190 ? "b" : q.ax < 50 && q.ay > 190 ? "c" : "";
+      if (corner && seen[seen.length - 1] !== corner) seen.push(corner);
+    }
+    expect(seen).toEqual(["a", "b", "c"]);
+    expect(q.order.kind).toBe("hold");
+    expect(e.frame(false).squads.find((s) => s.id === q.id)!.via).toEqual([]);
+  });
+
+  it("a plain order drops the rest of the route", () => {
+    const e = fieldEngine();
+    const q = addSquad(e, "guard", 40, 40);
+    e.enqueue({ type: "move", squads: [q.id], to: { x: 200, y: 40 } });
+    e.enqueue({ type: "move", squads: [q.id], to: { x: 200, y: 200 }, queue: true });
+    e.runTicks(2);
+    expect(e.frame(false).squads.find((s) => s.id === q.id)!.via).toEqual([200, 200]);
+    e.enqueue({ type: "move", squads: [q.id], to: { x: 60, y: 60 } });
+    e.runTicks(2);
+    expect(e.frame(false).squads.find((s) => s.id === q.id)!.via).toEqual([]);
+  });
+
+  it("a queued point on an idle squad starts the route", () => {
+    const e = fieldEngine();
+    const q = addSquad(e, "guard", 40, 40);
+    e.enqueue({ type: "move", squads: [q.id], to: { x: 120, y: 40 }, queue: true });
+    e.runTicks(2);
+    expect(q.order.kind).toBe("move");
+  });
+});
