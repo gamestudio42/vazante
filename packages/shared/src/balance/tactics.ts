@@ -9,6 +9,17 @@ export const STAGGER_SPEED_FACTOR = 0.15;
 /** Brutes shrug off part of it. */
 export const BRUTE_STAGGER_FACTOR = 0.5;
 
+/**
+ * Suppressive fire (stance 'suppress'): the squad stays put and sweeps the street, firing
+ * `fireRate` times as often at `accuracy` of its usual hit chance. Every burst, hit or miss, pins
+ * the infected within `splashM` of the target for `stagger` times the weapon's stagger. It holds
+ * a crowd back, at a heavy cost in ammunition.
+ */
+export const SUPPRESS = { fireRate: 1.5, accuracy: 0.85, stagger: 2, splashM: 3 } as const;
+
+/** Soldiers shooting on the move fire at this fraction of their rate (and ACCURACY_MOVING). */
+export const MOVING_FIRE_RATE = 0.5;
+
 /** Fire distribution: a zombie already targeted by n squadmates counts as this much farther per mate. */
 export const TARGET_SHARE_PENALTY = 0.8;
 /** Squared-distance factor for Gritadores and Inchados in target choice (lower = sooner). */
@@ -26,6 +37,9 @@ export const COVER_INTERVAL_TICKS = 10;
 export const STRESS = {
   /** Gain per zombie within nearM (counted up to maxNear). */
   perNear: 3,
+  /** A zombie behind the squad's front (outside the arc whose cosine is rearCos) counts this many times. */
+  rearCos: -0.2,
+  rearFactor: 2.5,
   nearM: 8,
   maxNear: 10,
   /** One-off gains when something happens within witnessM. */

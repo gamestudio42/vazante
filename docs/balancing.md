@@ -18,15 +18,15 @@ Perception radius 25 m (line of sight); chase on noise > 40; attack range 1.2 m;
 
 | Weapon | Range (m) | Shots/s | Damage | Accuracy | Area radius (m) | Ammo per soldier |
 | --- | --- | --- | --- | --- | --- | --- |
-| Rifle | 60 | 2 | 34 | 0.55 | 0 | 210 |
-| Light machine gun | 80 | 8 | 30 | 0.35 | 0 | 600 |
+| Rifle | 60 | 2 | 34 | 0.55 | 0 | 180 |
+| Light machine gun | 80 | 8 | 30 | 0.35 | 0 | 500 |
 | Shotgun (police) | 15 | 1 | 60 × 6 pellets | 0.5 | 0 | 40 |
 | .50 HMG (vehicle) | 150 | 8 | 80 | 0.4 | 0 | 1,200 |
 | 25 mm cannon | 300 | 3 | 120 | 0.6 | 2 | 600 |
 | 120 mm tank gun | 400 | 0.15 | 400 | 0.8 | 8 | 40 |
 | 30 mm (attack helicopter) | 500 | 10 | 100 | 0.4 | 3 | 1,200 |
 
-Noise: shot 60 within 40 m; explosion 200 within 150 m; decay 10% per tick.
+Noise: shot 60 within 55 m; explosion 200 within 150 m; decay 10% per tick.
 
 ## Squads (`balance/units.ts`)
 
@@ -122,6 +122,9 @@ Planned (not implemented yet):
 | Nerve | hit chance −35% at full stress | |
 | Panic | at 92 stress: runs from the nearest zombie for 3 s, holds fire; then stress ≤ 60 and no new panic for 30 s | the player keeps control in direct mode |
 | Contact call | `squad_contact` on first engagement, then at most every 30 s per squad | radio blip and alert |
+| Suppress stance (T) | fire ×1.5 at 85% hit chance; every burst staggers all infected within 3 m of the target for 2× the weapon's stagger | holds a crowd back; burns ammunition |
+| Firing on the move | half the fire rate (and hit chance ×0.6) | walking into contact costs; stop and hold |
+| Flank and rear | a zombie within 8 m behind the squad's front counts 2.5× for stress | a squad caught from behind breaks |
 
 ## Difficulty (`balance/difficulty.ts`)
 
@@ -162,3 +165,5 @@ Veteran is the reference; every other table in this file is tuned for it. Chosen
 | 2026-10-26 | cargo truck | 500 HP, 15 m/s, 8 t → 400 HP, 7 m/s | the truck has to be escorted; at 15 m/s it outran every threat |
 | 2026-10-27 | squad tactics | — → table above | suppression, fire distribution, cover and morale; line battle still 10 of 10 |
 | 2026-10-27 | difficulty | — → three levels | recruit for the tutorial and new players, nightmare for veterans of the slice |
+| 2026-10-29 | tactical decisions | — → suppress stance, fire on the move ×0.5, rear stress ×2.5, shot noise 40 → 55 m, rifle ammo 210 → 180, LMG 600 → 500 | the balance bot, which only moves and shoots, won all four missions at veteran with 0 to 3 hits taken; now it loses or bleeds on A Ponte, and a bot that uses suppression there wins |
+| 2026-10-29 | Retomar a Ribeira | pressure 35/45/55 → 55/70/85, waves 180/260/340 → 280/400/520 | four squads walked through it with no losses |

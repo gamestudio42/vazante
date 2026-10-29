@@ -480,6 +480,9 @@ export class InputController {
       case "KeyZ":
         this.setStance("hold");
         break;
+      case "KeyT":
+        this.setStance("suppress");
+        break;
       case "KeyX":
         this.setStance("aggressive");
         break;

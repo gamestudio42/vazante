@@ -249,7 +249,7 @@ function stepSquad(w: World, q: Squad): void {
   const seeksCover =
     !following &&
     q.order.kind === "hold" &&
-    (q.stance === "hold" || q.stance === "defensive");
+    (q.stance === "hold" || q.stance === "defensive" || q.stance === "suppress");
   // Keeping up with the leader takes his pace.
   const speed = following ? q.speed * DIRECT_SPEED_FACTOR : q.speed;
   if (!seeksCover) q.cover.length = 0;

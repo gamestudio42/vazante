@@ -145,7 +145,7 @@ export const de: Record<Key, string> = {
   "help.title": "Steuerung",
   "help.toggle": "H: Hilfe",
   "help.body":
-    "Kamera: WASD / Pfeiltasten / mittlere Maustaste · Zoom: Mausrad · M: Einsatzkarte · Q/E drehen\nAuswählen: klicken oder ziehen · Bewegen: Rechtsklick (ziehen für die Blickrichtung) · Route: Umschalt + Rechtsklick oder R · Haltung: Z X C V · Formation: F\nLeertaste Pause · F1 F2 F3 Tempo · TAB direkte Steuerung (dein Trupp folgt dir) · K erzeugt eine Testhorde am Cursor · N Ton an/aus · B bauen · F5/F9 Schnellspeichern/-laden · Esc Menü",
+    "Kamera: WASD / Pfeiltasten / mittlere Maustaste · Zoom: Mausrad · M: Einsatzkarte · Q/E drehen\nAuswählen: klicken oder ziehen · Bewegen: Rechtsklick (ziehen für die Blickrichtung) · Route: Umschalt + Rechtsklick oder R · Haltung: Z X C V T · Formation: F\nLeertaste Pause · F1 F2 F3 Tempo · TAB direkte Steuerung (dein Trupp folgt dir) · K erzeugt eine Testhorde am Cursor · N Ton an/aus · B bauen · F5/F9 Schnellspeichern/-laden · Esc Menü",
   "menu.subtitle": "Porto Velário",
   "menu.continue": "Fortsetzen",
   "menu.new": "Neues Spiel",
@@ -312,6 +312,8 @@ export const de: Record<Key, string> = {
   "mission.night.active": "Nacht {n}: noch {z} Infizierte",
   "mission.night.survived": "Überstandene Nächte: {n}",
   "summary.nights": "Überstandene Nächte",
+  "stance.suppress": "Niederhalten",
+  "tip.stance.suppress": "Niederhalten: Stellung halten und die Front mit Feuer bestreichen. Jeder Treffer hält Infizierte viel länger auf, frisst aber Munition.",
   "site.command": "Kommando",
   "site.supply": "Nachschub",
   "site.hospital": "Krankenhaus",

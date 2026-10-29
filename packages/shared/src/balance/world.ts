@@ -14,7 +14,7 @@ export const RISE_AFTER_DEATH_S = 20;
 
 /** Noise layer (0..255). */
 export const NOISE_SHOT = 60;
-export const NOISE_SHOT_RADIUS_M = 40;
+export const NOISE_SHOT_RADIUS_M = 55;
 export const NOISE_EXPLOSION = 200;
 export const NOISE_EXPLOSION_RADIUS_M = 150;
 export const NOISE_CHASE_THRESHOLD = 40;

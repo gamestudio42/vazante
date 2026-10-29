@@ -11,6 +11,8 @@ import {
   BRUTE_STAGGER_FACTOR,
   COVER_ACCURACY_BONUS,
   STAGGER_TICKS,
+  SUPPRESS,
+  MOVING_FIRE_RATE,
   STRESS,
   SoldierActivity,
   SPECIAL_PRIORITY,
@@ -84,10 +86,12 @@ export function stepCombat(w: World): void {
       continue;
     }
     s.activity = SoldierActivity.Engaging;
-    s.fireAcc += wpn.shotsPerSecond * TICK_DT;
+    const suppress = stance === 'suppress';
+    const rate = suppress ? SUPPRESS.fireRate : s.moving ? MOVING_FIRE_RATE : 1;
+    s.fireAcc += wpn.shotsPerSecond * rate * TICK_DT;
     while (s.fireAcc >= 1 && s.mag > 0 && w.zombies.isAlive(s.target)) {
       s.fireAcc -= 1;
-      shoot(w, s, wpn, s.target, 0);
+      shoot(w, s, wpn, s.target, 0, suppress);
     }
     if (!w.zombies.isAlive(s.target)) s.target = -1;
   }
@@ -227,8 +231,19 @@ function startReload(w: World, s: Soldier, wpn: WeaponStats): void {
   }
 }
 
+/** Suppressive fire: everything within SUPPRESS.splashM of where the burst lands is staggered. */
+function pin(w: World, x: number, y: number, ticks: number): void {
+  const z = w.zombies;
+  const r2 = SUPPRESS.splashM * SUPPRESS.splashM;
+  w.forZombiesNear(x, y, SUPPRESS.splashM, (slot, d2) => {
+    if (d2 > r2 || !z.isAlive(slot)) return;
+    const t = z.kind[slot] === ZombieKind.Brute ? Math.round(ticks * BRUTE_STAGGER_FACTOR) : ticks;
+    if (z.stagger[slot] < t) z.stagger[slot] = t;
+  });
+}
+
 /** Fire one shot at a zombie slot (or along the facing when slot is -1). */
-function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: number): void {
+function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: number, suppress = false): void {
   s.mag--;
   w.stats.shotsFired++;
   w.grid.stampNoise(s.x, s.y, NOISE_SHOT, NOISE_SHOT_RADIUS_M);
@@ -245,7 +260,8 @@ function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: numb
   const rangeFactor = 1 - r * r * 0.5;
   const stanceFactor = s.moving ? ACCURACY_MOVING : s.inCover ? ACCURACY_STATIONARY * COVER_ACCURACY_BONUS : ACCURACY_STATIONARY;
   const nerve = 1 - (STRESS.aimPenalty * s.stress) / 100;
-  const p = clamp01(wpn.accuracy * clamp01(rangeFactor) * stanceFactor * nerve + bonus);
+  const p = clamp01(wpn.accuracy * clamp01(rangeFactor) * stanceFactor * nerve * (suppress ? SUPPRESS.accuracy : 1) + bonus);
+  if (suppress) pin(w, zx, zy, Math.round(STAGGER_TICKS[s.weapon] * SUPPRESS.stagger));
   let hits = 0;
   for (let i = 0; i < wpn.pellets; i++) if (w.rng.chance(p)) hits++;
   if (hits > 0) {

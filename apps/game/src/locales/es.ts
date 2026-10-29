@@ -146,7 +146,7 @@ export const es: Record<Key, string> = {
   "help.title": "Controles",
   "help.toggle": "H: ayuda",
   "help.body":
-    "Cámara: WASD / flechas / botón central · Zoom: rueda · M: mapa de operaciones · Q/E girar\nSeleccionar: clic o arrastrar · Mover: clic derecho (arrastra para la dirección) · Ruta: Shift + clic derecho, o R · Postura: Z X C V · Formación: F\nEspacio pausa · F1 F2 F3 velocidad · TAB control directo (tu escuadra te sigue) · K crea una horda de prueba en el cursor · N sonido sí/no · B construir · F5/F9 guardado/carga rápida · Esc menú",
+    "Cámara: WASD / flechas / botón central · Zoom: rueda · M: mapa de operaciones · Q/E girar\nSeleccionar: clic o arrastrar · Mover: clic derecho (arrastra para la dirección) · Ruta: Shift + clic derecho, o R · Postura: Z X C V T · Formación: F\nEspacio pausa · F1 F2 F3 velocidad · TAB control directo (tu escuadra te sigue) · K crea una horda de prueba en el cursor · N sonido sí/no · B construir · F5/F9 guardado/carga rápida · Esc menú",
   "menu.subtitle": "Porto Velário",
   "menu.continue": "Continuar",
   "menu.new": "Nueva partida",
@@ -311,6 +311,8 @@ export const es: Record<Key, string> = {
   "mission.night.active": "Noche {n}: quedan {z} infectados",
   "mission.night.survived": "Noches superadas: {n}",
   "summary.nights": "Noches superadas",
+  "stance.suppress": "Supresión",
+  "tip.stance.suppress": "Supresión: se quedan en el sitio y barren el frente con fuego. Cada impacto frena al infectado mucho más tiempo, pero gasta munición rápido.",
   "site.command": "Mando",
   "site.supply": "Suministros",
   "site.hospital": "Hospital",

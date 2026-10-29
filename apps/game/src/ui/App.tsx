@@ -15,6 +15,7 @@ import {
   DoorOpen,
   FastForward,
   Flag,
+  Flame,
   Gamepad2,
   Hammer,
   Heart,
@@ -95,6 +96,14 @@ const STANCE_ICON: Record<Stance, LucideIcon> = {
   aggressive: Swords,
   defensive: Shield,
   withdraw: Undo2,
+  suppress: Flame,
+};
+const STANCE_KEY: Record<Stance, string> = {
+  hold: "Z",
+  aggressive: "X",
+  defensive: "C",
+  withdraw: "V",
+  suppress: "T",
 };
 const STRUCTURE_ICON: Record<StructureKind, LucideIcon> = {
   hesco: Boxes,
@@ -950,7 +959,7 @@ function SelectionPanel({
         </span>
       </div>
       <div className="cmds">
-        {STANCES.map((st, i) => {
+        {STANCES.map((st) => {
           const Icon = STANCE_ICON[st];
           return (
             <button
@@ -959,7 +968,7 @@ function SelectionPanel({
               title={t(`tip.stance.${st}`)}
               onClick={() => input.setStance(st)}
             >
-              <Key k={"ZXCV"[i]} />
+              <Key k={STANCE_KEY[st]} />
               <Icon size={18} />
               <span>{t(`stance.${st}`)}</span>
             </button>

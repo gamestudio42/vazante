@@ -147,7 +147,7 @@ export const fr: Record<Key, string> = {
   "help.title": "Commandes",
   "help.toggle": "H : aide",
   "help.body":
-    "Caméra : WASD / flèches / bouton du milieu · Zoom : molette · M : carte des opérations · Q/E pivoter\nSélection : clic ou glisser · Déplacer : clic droit (glisser pour l’orientation) · Itinéraire : Maj + clic droit, ou R · Posture : Z X C V · Formation : F\nEspace pause · F1 F2 F3 vitesse · TAB contrôle direct (votre escouade vous suit) · K crée une horde de test sous le curseur · N son on/off · B construire · F5/F9 sauvegarde/chargement rapide · Échap menu",
+    "Caméra : WASD / flèches / bouton du milieu · Zoom : molette · M : carte des opérations · Q/E pivoter\nSélection : clic ou glisser · Déplacer : clic droit (glisser pour l’orientation) · Itinéraire : Maj + clic droit, ou R · Posture : Z X C V T · Formation : F\nEspace pause · F1 F2 F3 vitesse · TAB contrôle direct (votre escouade vous suit) · K crée une horde de test sous le curseur · N son on/off · B construire · F5/F9 sauvegarde/chargement rapide · Échap menu",
   "menu.subtitle": "Porto Velário",
   "menu.continue": "Continuer",
   "menu.new": "Nouvelle partie",
@@ -314,6 +314,8 @@ export const fr: Record<Key, string> = {
   "mission.night.active": "Nuit {n} : encore {z} infectés",
   "mission.night.survived": "Nuits survécues : {n}",
   "summary.nights": "Nuits survécues",
+  "stance.suppress": "Suppression",
+  "tip.stance.suppress": "Suppression : rester en place et balayer le front. Chaque impact retient l’infecté bien plus longtemps, mais la munition fond.",
   "site.command": "Commandement",
   "site.supply": "Ravitaillement",
   "site.hospital": "Hôpital",

@@ -27,8 +27,8 @@ export enum Blocked {
 export type Formation = 'line' | 'column' | 'wedge' | 'circle';
 export const FORMATIONS: readonly Formation[] = ['line', 'column', 'wedge', 'circle'];
 
-export type Stance = 'hold' | 'aggressive' | 'defensive' | 'withdraw';
-export const STANCES: readonly Stance[] = ['hold', 'aggressive', 'defensive', 'withdraw'];
+export type Stance = 'hold' | 'aggressive' | 'defensive' | 'withdraw' | 'suppress';
+export const STANCES: readonly Stance[] = ['hold', 'aggressive', 'defensive', 'withdraw', 'suppress'];
 
 export type SimSpeed = 0 | 1 | 2 | 4;
 

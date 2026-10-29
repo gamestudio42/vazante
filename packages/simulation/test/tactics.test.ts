@@ -126,3 +126,46 @@ describe('morale', () => {
     expect(contacts).toBe(1);
   });
 });
+
+describe('suppressive fire', () => {
+  it('pins a whole cluster of brutes, and fires faster than an aggressive squad', () => {
+    const run = (stance: 'aggressive' | 'suppress') => {
+      const e = fieldEngine(5);
+      const q = addSquad(e, 'guard', 128, 160);
+      e.enqueue({ type: 'stance', squads: [q.id], stance });
+      const z = e.world.zombies;
+      const pack: number[] = [];
+      for (let i = 0; i < 5; i++) pack.push(z.spawn(126 + i * 0.8, 120, ZombieKind.Brute, ZombieState.Wandering));
+      let pinned = 0;
+      for (let t = 0; t < 30; t++) {
+        e.tick();
+        pinned = Math.max(pinned, pack.filter((s) => z.isAlive(s) && z.stagger[s] > 0).length);
+      }
+      return { pinned, shots: e.world.stats.shotsFired };
+    };
+    const agg = run('aggressive');
+    const sup = run('suppress');
+    expect(sup.pinned).toBeGreaterThanOrEqual(4);
+    expect(sup.pinned).toBeGreaterThan(agg.pinned);
+    expect(sup.shots).toBeGreaterThan(agg.shots);
+  });
+});
+
+describe('flank', () => {
+  it("infected behind the squad's front wear a soldier down faster than the same number in front", () => {
+    const stress = (behind: boolean) => {
+      const e = fieldEngine(6);
+      const q = addSquad(e, 'guard', 128, 128);
+      const s = soldiersOf(e, q.id)[0];
+      for (const so of e.world.soldiers) so.ammo = so.mag = 0;
+      for (const so of e.world.soldiers) if (so !== s) so.x = 20;
+      for (let i = 0; i < 3; i++) e.world.zombies.spawn(s.x - 1 + i, behind ? s.y + 5 : s.y - 5, ZombieKind.Common, ZombieState.Wandering);
+      q.hx = 0;
+      q.hy = -1;
+      s.stress = 0;
+      e.tick();
+      return s.stress;
+    };
+    expect(stress(true)).toBeGreaterThan(stress(false) * 1.5);
+  });
+});

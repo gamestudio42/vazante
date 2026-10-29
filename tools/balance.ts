@@ -53,6 +53,8 @@ export function playMission(
   const soldiers = w.soldiers.length;
   const sent = new Map<number, string>();
   let truckOrder = "";
+  const tally = new Map<string, number>();
+  let minAmmo = Infinity;
 
   const send = (
     squad: number,
@@ -66,10 +68,15 @@ export function playMission(
     const to = { x: x + ox, y };
     const key = `${Math.round(to.x)},${Math.round(to.y)}`;
     const far = Math.hypot(q.ax - to.x, q.ay - to.y) > 25;
-    if (sent.get(squad) === key && !(far && q.order.kind !== "move")) return;
+    if (sent.get(squad) === key && !(far && q.order.kind !== "move") && q.stance === stanceFor()) return;
     sent.set(squad, key);
     e.enqueue({ type: "move", squads: [squad], to });
-    e.enqueue({ type: "stance", squads: [squad], stance: "aggressive" });
+    e.enqueue({ type: "stance", squads: [squad], stance: stanceFor() });
+  };
+  // TACTIC=1: a slightly better commander that sweeps with suppressive fire while holding a place.
+  const stanceFor = () => {
+    const kind = def.stages[m.stage]?.kind;
+    return process.env.TACTIC && (kind === "hold" || kind === "evacuate" || kind === "waves") ? "suppress" : "aggressive";
   };
   const convoy = (to: number) => {
     const v = w.vehicle(m.trucks[0]);
@@ -148,7 +155,19 @@ export function playMission(
         );
     }
     e.tick();
+    for (const ev of w.events) tally.set(ev.type, (tally.get(ev.type) ?? 0) + 1);
+    w.events = [];
+    let ammo = 0;
+    for (const s of w.soldiers) if (s.hp > 0) ammo += s.mag + s.ammo;
+    minAmmo = Math.min(minAmmo, ammo);
   }
+  if (process.env.TALLY)
+    console.log(
+      `  minAmmo=${minAmmo}`,
+      ["soldier_hit", "soldier_bitten", "soldier_panicked", "out_of_ammo", "soldier_died", "shot"]
+        .map((k) => `${k}=${tally.get(k) ?? 0}`)
+        .join(" "),
+    );
   if (process.env.DEBUG) {
     const z = w.zombies;
     const g = w.grid;

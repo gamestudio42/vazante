@@ -19,10 +19,19 @@ export function stepMorale(w: World): void {
     if (!isActiveSoldier(s)) continue;
     s.inCover = isCover(w.grid, w.grid.cellAt(s.x, s.y));
 
+    // Zombies behind the squad's front weigh more: being caught from the flank or the rear is what breaks men.
+    const q = w.squad(s.squad);
+    const hx = q ? q.hx : s.fx;
+    const hy = q ? q.hy : s.fy;
     let near = 0;
+    let count = 0;
     w.forZombiesNear(s.x, s.y, STRESS.nearM, (slot, d2) => {
       if (d2 > NEAR2 || !w.zombies.isAlive(slot)) return;
-      return ++near >= STRESS.maxNear;
+      const dx = w.zombies.x[slot] - s.x;
+      const dy = w.zombies.y[slot] - s.y;
+      const rear = d2 > 1e-6 && (dx * hx + dy * hy) / Math.sqrt(d2) < STRESS.rearCos;
+      near += rear ? STRESS.rearFactor : 1;
+      return ++count >= STRESS.maxNear;
     });
 
     const atSite = w.bases.some((b) => distToSite(b, s.x, s.y) <= DAY.siteLightM);

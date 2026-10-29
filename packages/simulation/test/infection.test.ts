@@ -20,6 +20,8 @@ describe('infection', () => {
       expect(bittenAt).toBeGreaterThan(0);
       e.world.zombies.kill(z);
       const before = e.world.zombies.alive;
+      const turned = () => e.world.soldiers.filter((x) => x.condition === SoldierCondition.Turned).length;
+      const turnedBefore = turned();
       let turnedAt = -1;
       for (let t = 0; t < 2000 && turnedAt < 0; t++) {
         e.tick();
@@ -28,7 +30,8 @@ describe('infection', () => {
       const dt = turnedAt - bittenAt;
       expect(dt).toBeGreaterThanOrEqual(600);
       expect(dt).toBeLessThanOrEqual(1801);
-      expect(e.world.zombies.alive).toBe(before + 1);
+      // Each soldier who turned (squadmates the zombie also bit included) rose as one infected.
+      expect(e.world.zombies.alive).toBe(before + turned() - turnedBefore);
     }
   });
 
