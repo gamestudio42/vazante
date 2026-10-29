@@ -19,6 +19,7 @@ import {
   type SaveGame,
 } from '@vazante/shared';
 import { applyCommand } from './commands.ts';
+import { markVisible } from './fog.ts';
 import { SCENARIO_IDS, createScenario, type ScenarioId, type ScenarioOptions } from './scenarios/index.ts';
 import { stepCombat } from './systems/combat.ts';
 import { stepInfected } from './systems/infected.ts';
@@ -63,6 +64,8 @@ export class SimulationEngine {
   private queue: CommandEnvelope[] = [];
   private seq = 0;
   private scenario: ScenarioId = 'last_convoy';
+  /** Cells in sight, rebuilt per frame under fog. */
+  private visible: Uint8Array | null = null;
   /** Optional timing hook for benchmarks; the host supplies the clock. Never changes the state. */
   profiler: ((name: string, run: () => void) => void) | null = null;
   /** Wall time spent in the last tick (set by the host, not part of the state). */
@@ -187,10 +190,23 @@ export class SimulationEngine {
       }
     });
     const z = w.zombies;
-    const zombies = new Float32Array(z.alive * ZOMBIE_STRIDE);
+    // Under fog only the zombies in sight go to the client: the minimap and the view show no more.
+    let seen: Uint8Array | null = null;
+    if (w.fog) {
+      if (this.visible?.length !== w.grid.size) this.visible = new Uint8Array(w.grid.size);
+      seen = this.visible;
+      markVisible(w, seen);
+    }
+    let count = z.alive;
+    if (seen) {
+      count = 0;
+      for (let s = 0; s < z.highWater; s++) if (z.isAlive(s) && seen[w.grid.cellAt(z.x[s], z.y[s])]) count++;
+    }
+    const zombies = new Float32Array(count * ZOMBIE_STRIDE);
     let k = 0;
     for (let s = 0; s < z.highWater; s++) {
       if (!z.isAlive(s)) continue;
+      if (seen && !seen[w.grid.cellAt(z.x[s], z.y[s])]) continue;
       const o = k * ZOMBIE_STRIDE;
       zombies[o] = s;
       zombies[o + 1] = z.x[s];
@@ -281,6 +297,7 @@ export class SimulationEngine {
       mission,
       districts,
       directSoldier: w.directSoldier,
+      fog: w.fog,
       difficulty: w.difficulty,
       events,
       stats: {

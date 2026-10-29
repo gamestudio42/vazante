@@ -38,6 +38,12 @@ export const SOLDIER_RADIUS_M = 0.35;
 export const FORMATION_SPACING_M = 2;
 /** Soldier sight radius (reveal) in metres. */
 export const SOLDIER_SIGHT_M = 40;
+
+/**
+ * Fog of war: zombies show only within these distances (metres) of a soldier (marksmen see as far
+ * as they shoot), a vehicle, a built structure, or of the home base's walls.
+ */
+export const FOG = { soldierM: 70, marksmanM: 110, vehicleM: 40, structureM: 40, baseMarginM: 30 } as const;
 /** Direct-control speed multiplier (sprint-like responsiveness). */
 export const DIRECT_SPEED_FACTOR = 1.35;
 /** Player-aimed fire is faster than the squad AI's measured rate. */

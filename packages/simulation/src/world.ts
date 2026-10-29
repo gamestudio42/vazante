@@ -38,6 +38,8 @@ export class World {
   directSoldier: number | null = null;
   /** Fixed at scenario start. */
   difficulty: DifficultyId = 'veteran';
+  /** Fog of war: frames carry only the zombies in sight. Presentation only, never read by the rules. */
+  fog = false;
   /** How many zombie kinds spawn (ZOMBIES order): the first mission keeps to the basic three. */
   zombieKinds = ZOMBIES.length;
   nextId = 1;

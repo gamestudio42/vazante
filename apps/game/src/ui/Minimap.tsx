@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { type Frame, Ground, SOLDIER_STRIDE, SoldierField, ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
+import { FOG, type Frame, Ground, SOLDIER_STRIDE, SoldierField, ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from '../client.ts';
 import { t } from '../i18n.ts';
@@ -8,6 +8,8 @@ import { objectiveTarget } from './objective.ts';
 const SIZE = 192;
 /** Metres across the minimap while controlling a soldier. */
 const DIRECT_SPAN_M = 320;
+/** How long a zombie that left sight stays on the minimap, faded. */
+const GHOST_MS = 4000;
 const GROUND_RGB: Record<number, [number, number, number]> = {
   [Ground.Street]: [52, 56, 60],
   [Ground.Sidewalk]: [70, 72, 72],
@@ -54,6 +56,39 @@ export function Minimap({ client, view, direct = false }: { client: GameClient; 
     const dotCtx = dotLayer.getContext('2d')!;
     // #d84a3a as one RGBA pixel in the platform's byte order.
     const RED = new Uint32Array(new Uint8Array([0xd8, 0x4a, 0x3a, 0xff]).buffer)[0];
+    const GHOST = new Uint32Array(new Uint8Array([0xd8, 0x4a, 0x3a, 0x70]).buffer)[0];
+    /** Under fog: where each zombie was last seen (by slot), and when. */
+    const seen = new Map<number, { x: number; y: number; t: number; frame: number }>();
+    // Fog: a dark layer with the sight of soldiers, vehicles, structures and the base cut out.
+    const fogLayer = document.createElement('canvas');
+    fogLayer.width = fogLayer.height = SIZE;
+    const fogCtx = fogLayer.getContext('2d')!;
+    const drawFog = (f: Frame, X: (m: number) => number, Y: (m: number) => number, k: number) => {
+      fogCtx.globalCompositeOperation = 'source-over';
+      fogCtx.clearRect(0, 0, SIZE, SIZE);
+      fogCtx.fillStyle = 'rgba(8,10,12,0.5)';
+      fogCtx.fillRect(0, 0, SIZE, SIZE);
+      fogCtx.globalCompositeOperation = 'destination-out';
+      fogCtx.fillStyle = '#000';
+      const disc = (x: number, y: number, r: number) => {
+        fogCtx.beginPath();
+        fogCtx.arc(X(x), Y(y), r * k, 0, Math.PI * 2);
+        fogCtx.fill();
+      };
+      const ss = f.soldiers;
+      for (let i = 0; i < ss.length; i += SOLDIER_STRIDE) {
+        if (ss[i + SoldierField.Condition] > 1) continue;
+        disc(ss[i + SoldierField.X], ss[i + SoldierField.Y], ss[i + SoldierField.Flags] & 16 ? FOG.marksmanM : FOG.soldierM);
+      }
+      for (const v of f.vehicles) if (v.state !== 'destroyed') disc(v.x, v.y, FOG.vehicleM);
+      for (const st of f.structures) if (st.built) disc((st.cx + 0.5) * cs, (st.cy + 0.5) * cs, FOG.structureM);
+      for (const b of f.bases) {
+        if (b.kind !== 'base') continue;
+        const m = FOG.baseMarginM;
+        fogCtx.fillRect(X(b.x0 * cs - m), Y(b.y0 * cs - m), ((b.x1 - b.x0 + 1) * cs + 2 * m) * k, ((b.y1 - b.y0 + 1) * cs + 2 * m) * k);
+      }
+      ctx.drawImage(fogLayer, 0, 0);
+    };
     const draw = (now: number) => {
       raf = requestAnimationFrame(draw);
       if (now - last < 100) return;
@@ -90,6 +125,7 @@ export function Minimap({ client, view, direct = false }: { client: GameClient; 
         ctx.lineWidth = 2;
         ctx.strokeRect(X(z.x0 * cs) - 2, Y(z.y0 * cs) - 2, (z.x1 - z.x0 + 1) * cs * k + 4, (z.y1 - z.y0 + 1) * cs * k + 4);
       }
+      if (f.fog) drawFog(f, X, Y, k);
       dotPixels.fill(0);
       const zs = f.zombies;
       for (let i = 0; i < zs.length; i += ZOMBIE_STRIDE) {
@@ -98,6 +134,21 @@ export function Minimap({ client, view, direct = false }: { client: GameClient; 
         if (px < 0 || py < 0 || px >= SIZE - 1 || py >= SIZE - 1) continue;
         const o = py * SIZE + px;
         dotPixels[o] = dotPixels[o + 1] = dotPixels[o + SIZE] = dotPixels[o + SIZE + 1] = RED;
+        if (f.fog) seen.set(zs[i + ZombieField.Slot], { x: zs[i + ZombieField.X], y: zs[i + ZombieField.Y], t: now, frame: f.tick });
+      }
+      // Zombies that left sight stay a few seconds, faded, where they were last seen.
+      if (f.fog) {
+        for (const [slot, g] of seen) {
+          if (g.frame === f.tick) continue;
+          if (now - g.t > GHOST_MS) {
+            seen.delete(slot);
+            continue;
+          }
+          const px = Math.floor(X(g.x));
+          const py = Math.floor(Y(g.y));
+          if (px < 0 || py < 0 || px >= SIZE - 1 || py >= SIZE - 1) continue;
+          dotPixels[py * SIZE + px] = GHOST;
+        }
       }
       dotCtx.putImageData(dots, 0, 0);
       ctx.drawImage(dotLayer, 0, 0);

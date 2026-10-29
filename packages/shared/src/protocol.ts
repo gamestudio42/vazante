@@ -201,6 +201,8 @@ export interface Frame {
   districts: DistrictView[];
   directSoldier: number | null;
   difficulty: DifficultyId;
+  /** Fog of war on: `zombies` holds only the ones the player's people can see. */
+  fog: boolean;
   events: SimEvent[];
   stats: FrameStats;
 }
