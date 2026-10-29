@@ -9,7 +9,7 @@ import { World } from '../world.ts';
 /** Campaign missions, the Porto Velário sandbox, and an empty field for tests. */
 export type ScenarioId = MissionId | 'open_field' | 'city_war';
 
-export const SCENARIO_IDS: readonly ScenarioId[] = [...MISSION_IDS, 'open_field', 'city_war'];
+export const SCENARIO_IDS: readonly ScenarioId[] = [...MISSION_IDS, 'survival', 'open_field', 'city_war'];
 
 export interface ScenarioOptions {
   zombies?: number;

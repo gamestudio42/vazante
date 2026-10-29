@@ -100,9 +100,9 @@ export class Shell {
     this.changed();
   }
 
-  /** Porto Velário, the 2 km city of v0.5 (sandbox while it is built). */
-  openCity(): void {
-    this.openScenario('city_war');
+  /** Survival in Porto Velário: a horde every night until the base falls. */
+  openSurvival(): void {
+    this.openScenario('survival');
   }
 
   /** A campaign mission: a fresh page on its map, straight to the briefing. */

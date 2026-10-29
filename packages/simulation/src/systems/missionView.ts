@@ -1,7 +1,7 @@
 import { MISSIONS, SLICE, STRUCTURES, TICK_HZ, type MissionView, type ObjectiveView, type StageDef } from '@vazante/shared';
 import type { Mission } from '../entities.ts';
 import type { World } from '../world.ts';
-import { drivenAlive } from './mission.ts';
+import { drivenAlive, nextHourTick } from './mission.ts';
 
 /** What the objectives panel shows for one stage. */
 function objective(w: World, m: Mission, st: StageDef, i: number): ObjectiveView {
@@ -42,6 +42,11 @@ function objective(w: World, m: Mission, st: StageDef, i: number): ObjectiveView
       o.total = st.waves.length;
       if (st.zone !== undefined) o.place = m.zones[st.zone].name;
       break;
+    case 'endless':
+      // Nights survived so far.
+      o.total = m.wave;
+      o.place = base?.name ?? '';
+      break;
   }
   return o;
 }
@@ -59,8 +64,8 @@ export function missionView(w: World, m: Mission): MissionView {
     zones: m.zones.map((z, i) => ({ ...z, active: i === activeZone })),
     wave: m.wave,
     waves: st.kind === 'waves' ? st.waves.length : 0,
-    waveState: st.kind === 'waves' ? m.waveState : 'none',
-    secondsToWave: m.waveState === 'warning' ? Math.max(0, Math.ceil((m.nextAt - w.tick) / TICK_HZ)) : 0,
+    waveState: st.kind === 'waves' || st.kind === 'endless' ? m.waveState : 'none',
+    secondsToWave: secondsToWave(w, m, st),
     waveZombies: m.waveState === 'active' ? drivenAlive(w) : 0,
     civilians: m.civilians,
     civiliansMax: m.commandPost ? SLICE.civilians : 0,
@@ -69,4 +74,11 @@ export function missionView(w: World, m: Mission): MissionView {
     evacuated: m.evacuated,
     reason: m.reason,
   };
+}
+
+/** Seconds until the next wave hits; in survival, until nightfall all through the day too. */
+function secondsToWave(w: World, m: Mission, st: StageDef): number {
+  if (st.kind === 'endless' && m.waveState === 'calm')
+    return Math.ceil((nextHourTick(w.tick, st.rules.nightfallHour) - w.tick) / TICK_HZ);
+  return m.waveState === 'warning' ? Math.max(0, Math.ceil((m.nextAt - w.tick) / TICK_HZ)) : 0;
 }

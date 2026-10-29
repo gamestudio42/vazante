@@ -7,8 +7,9 @@ import { BASIC_ZOMBIE_KINDS, ZOMBIES } from "./zombies.ts";
  * played in order; `systems/mission.ts` runs any of them. Zones and districts are named, so the
  * same definition works on every seed of its map.
  */
-export type MissionId = "last_convoy" | "hospital" | "bridge" | "retake";
+export type MissionId = "last_convoy" | "hospital" | "bridge" | "retake" | "survival";
 
+/** The campaign, in order. Survival is played from the main menu and is not part of it. */
 export const MISSION_IDS: readonly MissionId[] = [
   "last_convoy",
   "hospital",
@@ -51,7 +52,32 @@ export type StageDef =
   /** Warned waves of driven zombies, aimed at the base or at a zone; the stage ends when the last one is cleared. */
   | { kind: "waves"; waves: readonly number[]; zone?: number }
   /** Raise a district's control above `control`. */
-  | { kind: "retake"; district: string; control: number };
+  | { kind: "retake"; district: string; control: number }
+  /** Survival: never ends. See SurvivalRules. */
+  | { kind: "endless"; rules: SurvivalRules };
+
+/**
+ * Survival in Porto Velário. Every nightfall a warned horde of `nightHorde` zombies, `grow` bigger
+ * each night, comes at the base from several sides, and `baseShare` of that many infected already
+ * in the city near the base join it. Every `repopEveryS` the city refills by `repopSize` wandering
+ * infected far from the player, while fewer than `cap` (`capGrow` more each night) walk it.
+ */
+export interface SurvivalRules {
+  nightHorde: number;
+  grow: number;
+  baseShare: number;
+  /** Seconds of warning before the horde at nightfall. */
+  warnS: number;
+  /** Hour the horde comes and hour any stragglers give up (the next dawn). */
+  nightfallHour: number;
+  dawnHour: number;
+  repopEveryS: number;
+  repopSize: number;
+  cap: number;
+  capGrow: number;
+  /** Refills keep at least this far from the base and from every soldier. */
+  repopClearM: number;
+}
 
 export type StageKind = StageDef["kind"];
 
@@ -152,6 +178,45 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
         zone: 0,
         seconds: 300,
         pressure: { everyS: 25, size: 120, grow: 0.2 },
+      },
+    ],
+  },
+  survival: {
+    id: "survival",
+    map: "city",
+    squads: [
+      { kind: "slice", name: "Alfa" },
+      { kind: "marines", name: "Bravo" },
+      { kind: "engineers", name: "Charlie" },
+      { kind: "police", name: "Delta" },
+    ],
+    trucks: [
+      { at: "base", ammo: 0, materials: 0 },
+      { at: "Depósito Norte", ammo: 3000, materials: 200 },
+    ],
+    zones: [],
+    zombies: 4000,
+    zombieKinds: ZOMBIES.length,
+    clearRadiusM: 300,
+    materials: 500,
+    ammo: 2500,
+    commandPost: true,
+    stages: [
+      {
+        kind: "endless",
+        rules: {
+          nightHorde: 120,
+          grow: 0.35,
+          baseShare: 0.5,
+          warnS: 45,
+          nightfallHour: 19,
+          dawnHour: 6,
+          repopEveryS: 30,
+          repopSize: 40,
+          cap: 4000,
+          capGrow: 0.1,
+          repopClearM: 180,
+        },
       },
     ],
   },

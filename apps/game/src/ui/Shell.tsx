@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { Building2, Check, ChevronRight, CircleCheck, Lock, Map as MapIcon, Download, FolderOpen, GraduationCap, LogOut, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
+import { Check, ChevronRight, CircleCheck, Lock, Map as MapIcon, Download, FolderOpen, GraduationCap, LogOut, Moon, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { DIFFICULTY_IDS, MISSION_IDS, TICK_HZ, type MissionId, type SaveMeta } from '@vazante/shared';
 import { LOCALES, LOCALE_NAMES, t, type Locale } from '../i18n.ts';
 import type { Settings } from '../settings.ts';
@@ -57,10 +57,10 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
             · {shell.settings.completed.length}/{MISSION_IDS.length}
           </span>
         </button>
-        <button onClick={() => shell.openCity()}>
-          <Building2 size={16} />
-          {t('menu.city.war')}
-          <span className="muted"> · {t('menu.experimental')}</span>
+        <button onClick={() => shell.openSurvival()}>
+          <Moon size={16} />
+          {t('menu.survival')}
+          <span className="muted"> · {t('menu.survival.tag')}</span>
         </button>
         <button onClick={() => shell.newTutorial()}>
           <GraduationCap size={16} />
@@ -95,8 +95,9 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
 
 function Briefing({ shell }: { shell: Shell }) {
   const city = shell.scenario === 'city_war';
-  const id = (MISSION_IDS as readonly string[]).includes(shell.scenario) ? (shell.scenario as MissionId) : 'last_convoy';
-  const kicker = city ? t('menu.experimental') : t('campaign.mission').replace('{n}', String(MISSION_IDS.indexOf(id) + 1)).replace('{t}', String(MISSION_IDS.length));
+  const survival = shell.scenario === 'survival';
+  const id: MissionId = survival ? 'survival' : (MISSION_IDS as readonly string[]).includes(shell.scenario) ? (shell.scenario as MissionId) : 'last_convoy';
+  const kicker = city ? t('menu.experimental') : survival ? t('brief.survival.kicker') : t('campaign.mission').replace('{n}', String(MISSION_IDS.indexOf(id) + 1)).replace('{t}', String(MISSION_IDS.length));
   return (
     <div className="modal">
       <div className="panel card briefing">

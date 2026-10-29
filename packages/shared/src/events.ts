@@ -24,6 +24,7 @@ export type SimEventType =
   | 'civilians_boarded'
   | 'civilians_delivered'
   | 'objective_done'
+  | 'night_survived'
   | 'vehicle_destroyed'
   | 'vehicle_hit'
   | 'wave_warning'

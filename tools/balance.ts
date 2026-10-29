@@ -31,6 +31,8 @@ export interface RunResult {
   phase: string;
   reason: string;
   stage: number;
+  /** Survival: nights survived. */
+  nights: number;
   minutes: number;
   lost: number;
   soldiers: number;
@@ -168,6 +170,7 @@ export function playMission(
     phase: m.phase,
     reason: m.reason,
     stage: m.stage,
+    nights: def.stages.some((st) => st.kind === "endless") ? m.wave : 0,
     minutes: Math.round((w.tick / TICK_HZ / 60) * 10) / 10,
     lost: soldiers - alive,
     soldiers,
@@ -188,6 +191,6 @@ for (const id of missions)
     for (const seed of seeds) {
       const r = playMission(id, d, seed);
       console.log(
-        `${r.mission.padEnd(9)} ${r.difficulty.padEnd(9)} seed=${r.seed} ${r.phase.padEnd(6)} ${(r.reason || "-").padEnd(24)} stage=${r.stage} ${String(r.minutes).padStart(5)} min lost=${r.lost}/${r.soldiers} killed=${r.killed}`,
+        `${r.mission.padEnd(9)} ${r.difficulty.padEnd(9)} seed=${r.seed} ${r.phase.padEnd(6)} ${(r.reason || "-").padEnd(24)} stage=${r.stage}${r.nights ? ` nights=${r.nights}` : ""} ${String(r.minutes).padStart(5)} min lost=${r.lost}/${r.soldiers} killed=${r.killed}`,
       );
     }

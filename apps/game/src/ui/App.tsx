@@ -437,6 +437,7 @@ function MissionPanel({
         >
           {objectiveText(m, o, i)}
           {o.kind === "waves" && <WaveLine m={m} o={o} />}
+          {o.kind === "endless" && <NightLine m={m} />}
           {o.state === "active" && o.progress >= 0 && (
             <div className="obj-meter">
               <Meter value={o.progress} kind="wave" thin />
@@ -536,6 +537,34 @@ function WaveLine({ m, o }: { m: MissionView; o: ObjectiveView }) {
             }
           />
         ))}
+      </div>
+    </>
+  );
+}
+
+/** Survival: the time to nightfall by day, the warning, then what is left of the night's horde. */
+function NightLine({ m }: { m: MissionView }) {
+  let line = t("mission.night.day")
+    .replace("{t}", fmt(m.secondsToWave * TICK_HZ))
+    .replace("{n}", String(m.wave + 1));
+  if (m.waveState === "warning")
+    line = t("mission.waves.warning")
+      .replace("{n}", String(m.wave + 1))
+      .replace("{s}", String(m.secondsToWave));
+  else if (m.waveState === "active")
+    line = t("mission.night.active")
+      .replace("{n}", String(m.wave + 1))
+      .replace("{z}", String(m.waveZombies));
+  return (
+    <>
+      <div
+        className={`wave ${m.waveState === "warning" ? "warn" : m.waveState === "active" ? "danger" : "muted"}`}
+      >
+        {m.waveState === "warning" && <Siren size={12} />}
+        {line}
+      </div>
+      <div className="wave muted">
+        {t("mission.night.survived").replace("{n}", String(m.wave))}
       </div>
     </>
   );
@@ -1298,7 +1327,9 @@ function Summary({
     frame.soldiers.length / SOLDIER_STRIDE - frame.stats.soldiersAlive;
   const done = m.objectives.filter((o) => o.state === "done").length;
   const waves = m.objectives.find((o) => o.kind === "waves");
-  const next = MISSION_IDS[MISSION_IDS.indexOf(m.id) + 1];
+  const index = MISSION_IDS.indexOf(m.id);
+  const next = index >= 0 ? MISSION_IDS[index + 1] : undefined;
+  const endless = m.objectives.some((o) => o.kind === "endless");
   const rows: [LucideIcon, string, ReactNode][] = [
     [Flag, t("summary.objectives"), `${done}/${m.objectives.length}`],
   ];
@@ -1310,6 +1341,7 @@ function Summary({
     ]);
   if (m.evacuated > 0 || m.objectives.some((o) => o.kind === "evacuate"))
     rows.push([Package, t("summary.evacuated"), m.evacuated]);
+  if (endless) rows.push([Siren, t("summary.nights"), m.wave]);
   if (waves)
     rows.push([
       Siren,
@@ -1387,6 +1419,7 @@ function alertText(a: GameClient["state"]["alerts"][number]): string {
     case "wave_started":
     case "mission_won":
     case "objective_done":
+    case "night_survived":
     case "civilians_boarded":
     case "civilians_delivered":
       return base;
