@@ -43,13 +43,18 @@ import { moveWithCollisionInto, type MoveResult } from './movement.ts';
 /** Chasing zombies give up when farther than this (flow units: 10 per cell = 4 m) and no noise. */
 const CHASE_GIVE_UP = 250;
 /**
- * Wave zombies farther than this from the defenders (flow units: 10 per cell) fan out, taking
- * steps at most SPREAD_SLACK worse than the best one.
+ * Wave zombies farther than this from the defenders (flow units: 10 per cell) keep their heading
+ * among the steps at most SPREAD_SLACK worse than the best one.
  */
-const SPREAD_MIN_FLOW = 120;
-const SPREAD_SLACK = 4;
-const downhillX = new Int8Array(8);
-const downhillY = new Int8Array(8);
+const SPREAD_MIN_FLOW = 80;
+const SPREAD_SLACK = 10;
+/** How strongly a wave zombie leans to its side against keeping its heading. */
+const SPREAD_LEAN = 0.15;
+
+/** A wave zombie's side, -2 to 2. */
+function laneSide(slot: number): number {
+  return (Math.imul(slot, 2654435761) >>> 29) % 5 - 2;
+}
 /** Within this distance a chasing zombie steers straight at its target instead of the flow field. */
 const DIRECT_STEER_M = 8;
 const IDLE_DIR = 255;
@@ -136,23 +141,35 @@ export function stepHorde(w: World): void {
             by = oy;
           }
         }
-        // Far from the defenders a wave zombie takes any step nearly as good as the best one
-        // (picked by its slot and cell, so no RNG), which fans a wave out over the street and the
-        // parallel streets instead of a single file down the one shortest path.
+        // The flow field measures 8-way steps, so its best step bends every zombie onto the one
+        // straight row or diagonal that leads to the target: a wave closes into a single file.
+        // Far from the defenders a wave zombie instead keeps going the way it is heading among
+        // the downhill steps at most SPREAD_SLACK worse than the best, leaning to its own side
+        // (fixed by its slot, so no RNG). The wave keeps its width and arrives as a front.
         if (z.driven[s] !== 0 && here > SPREAD_MIN_FLOW && best < here) {
-          let n = 0;
-          for (let k = 0; k < 8; k++) {
-            const ox = NB_X[k];
-            const oy = NB_Y[k];
-            const f = g.flow[c + oy * g.width + ox];
-            if (f >= here || f > best + SPREAD_SLACK || !zombieCanStep(g, cx, cy, ox, oy)) continue;
-            downhillX[n] = ox;
-            downhillY[n] = oy;
-            n++;
+          const vx0 = z.vx[s];
+          const vy0 = z.vy[s];
+          const vl = Math.sqrt(vx0 * vx0 + vy0 * vy0);
+          if (vl > 0.1) {
+            const side = laneSide(s) * SPREAD_LEAN;
+            const fx = bx;
+            const fy = by;
+            let score = -Infinity;
+            for (let k = 0; k < 8; k++) {
+              const ox = NB_X[k];
+              const oy = NB_Y[k];
+              const f = g.flow[c + oy * g.width + ox];
+              if (f >= here || f > best + SPREAD_SLACK || !zombieCanStep(g, cx, cy, ox, oy)) continue;
+              const ol = ox !== 0 && oy !== 0 ? Math.SQRT1_2 : 1;
+              // Heading kept, plus a lean to the zombie's side of the best step (2D cross product).
+              const sc = ((ox * vx0 + oy * vy0) / vl) * ol + (fx * oy - fy * ox) * ol * side;
+              if (sc > score) {
+                score = sc;
+                bx = ox;
+                by = oy;
+              }
+            }
           }
-          const pick = (s + c) % n;
-          bx = downhillX[pick];
-          by = downhillY[pick];
         }
         if (bx !== 0 || by !== 0) {
           unit((cx + bx + 0.5) * CELL_SIZE - x, (cy + by + 0.5) * CELL_SIZE - y);
