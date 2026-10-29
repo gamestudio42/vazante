@@ -1,5 +1,5 @@
 import { Rng } from '@vazante/kernel';
-import { type DifficultyId, BASE_START, Blocked, CELL_SIZE, SoldierCondition, ZOMBIES, type BuildingRect, type DistrictInfo, type SimEvent, type SimSpeed, type SiteInfo } from '@vazante/shared';
+import { type DifficultyId, BASE_START, Blocked, CELL_SIZE, SoldierCondition, ZOMBIES, type BuildingRect, type DistrictInfo, type SimEvent, type SimSpeed, type SiteInfo, type DayClock } from '@vazante/shared';
 import type { Base, Mission, Soldier, Squad, Structure, Vehicle } from './entities.ts';
 import type { Grid } from './grid.ts';
 import { FlowJob } from './navigation.ts';
@@ -42,6 +42,8 @@ export class World {
   fog = false;
   /** Districts and sites produce (survival, the city sandbox). */
   economy = false;
+  /** The day's pace when it is not DAY's. */
+  day?: DayClock;
   /** How many zombie kinds spawn (ZOMBIES order): the first mission keeps to the basic three. */
   zombieKinds = ZOMBIES.length;
   nextId = 1;

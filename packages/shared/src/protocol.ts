@@ -4,6 +4,7 @@ import type { MissionId, StageKind } from './balance/missions.ts';
 import type { StructureKind } from './balance/structures.ts';
 import type { SquadKind } from './balance/units.ts';
 import type { Command } from './commands.ts';
+import type { DayClock } from './daynight.ts';
 import type { SaveGame } from './save.ts';
 import type { SimEvent } from './events.ts';
 import type { Formation, MapInfo, SimSpeed, SiteRole, SquadOrder, Stance } from './types.ts';
@@ -213,6 +214,8 @@ export interface Frame {
   fog: boolean;
   /** Districts and sites produce; the station recruits. */
   economy: boolean;
+  /** The day's pace when it is not DAY's. */
+  day?: DayClock;
   events: SimEvent[];
   stats: FrameStats;
 }

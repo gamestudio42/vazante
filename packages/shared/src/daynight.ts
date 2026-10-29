@@ -12,9 +12,15 @@ export const DAY = {
   siteLightM: 20,
 } as const;
 
+/** A day's pace: real seconds per 24 hours and the clock at tick 0. Survival runs a slower day. */
+export interface DayClock {
+  lengthS: number;
+  startHour: number;
+}
+
 /** Hour of day 0..24 at a tick (fractional). */
-export function clockHours(tick: number): number {
-  const h = DAY.startHour + (tick / (DAY.lengthS * TICK_HZ)) * 24;
+export function clockHours(tick: number, clock: DayClock = DAY): number {
+  const h = clock.startHour + (tick / (clock.lengthS * TICK_HZ)) * 24;
   return h - Math.floor(h / 24) * 24;
 }
 

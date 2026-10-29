@@ -349,7 +349,7 @@ function TopBar({
         <Clock size={13} />
         {fmt(frame.tick)}
       </span>
-      <DayClock tick={frame.tick} />
+      <DayClock tick={frame.tick} day={frame.day} />
       <span className="speed" role="group" aria-label={t("top.time")}>
         {SPEEDS.map((s) => (
           <button
@@ -410,8 +410,8 @@ function TopBar({
   );
 }
 
-function DayClock({ tick }: { tick: number }) {
-  const h = clockHours(tick);
+function DayClock({ tick, day }: { tick: number; day?: Frame["day"] }) {
+  const h = clockHours(tick, day);
   const hh = Math.floor(h);
   const mm = Math.floor((h - hh) * 60);
   const night = daylight(h) < 0.5;

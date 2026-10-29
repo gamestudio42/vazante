@@ -1,3 +1,4 @@
+import type { DayClock } from "../daynight.ts";
 import { SLICE } from "./mission.ts";
 import type { SquadKind } from "./units.ts";
 import { BASIC_ZOMBIE_KINDS, ZOMBIES } from "./zombies.ts";
@@ -72,8 +73,9 @@ export type StageDef =
 /**
  * Survival in Porto Velário. Every nightfall a warned horde of `nightHorde` zombies, `grow` bigger
  * each night, comes at the base from several sides, and `baseShare` of that many infected already
- * in the city near the base join it. Every `repopEveryS` the city refills by `repopSize` wandering
- * infected far from the player, while fewer than `cap` (`capGrow` more each night) walk it.
+ * in the city near the base join it. After `repopGraceS`, every `repopEveryS` the city refills by
+ * `repopSize` wandering infected coming in within `repopEdgeM` of the map edge, far from the
+ * player, while fewer than `cap` (`capGrow` more each night) walk it.
  */
 export interface SurvivalRules {
   nightHorde: number;
@@ -84,8 +86,10 @@ export interface SurvivalRules {
   /** Hour the horde comes and hour any stragglers give up (the next dawn). */
   nightfallHour: number;
   dawnHour: number;
+  repopGraceS: number;
   repopEveryS: number;
   repopSize: number;
+  repopEdgeM: number;
   cap: number;
   capGrow: number;
   /** Refills keep at least this far from the base and from every soldier. */
@@ -115,6 +119,8 @@ export interface MissionDef {
   commandPost: boolean;
   /** Districts and sites produce (see ECONOMY). */
   economy?: boolean;
+  /** A day of its own instead of DAY (survival: a longer day that starts in the morning). */
+  day?: DayClock;
   stages: readonly StageDef[];
 }
 
@@ -303,6 +309,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     ammo: 2500,
     commandPost: true,
     economy: true,
+    day: { lengthS: 2400, startHour: 8 },
     stages: [
       {
         kind: "endless",
@@ -313,8 +320,10 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
           warnS: 45,
           nightfallHour: 19,
           dawnHour: 6,
-          repopEveryS: 30,
+          repopGraceS: 600,
+          repopEveryS: 90,
           repopSize: 40,
+          repopEdgeM: 250,
           cap: 4000,
           capGrow: 0.1,
           repopClearM: 180,

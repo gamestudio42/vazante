@@ -9,11 +9,18 @@ const rules = (() => {
   return st.rules;
 })();
 
-/** First nightfall: 19:00 is three hours after the 16:00 start. */
+/**
+ * The night cycle is tested on the campaign's short day (first nightfall at 19:00, three hours
+ * after the 16:00 start) so the tests run fast; survival's own day is checked on its own.
+ */
 const NIGHTFALL = nextHourTick(0, rules.nightfallHour);
 
 function survival(seed = 3): SimulationEngine {
-  return SimulationEngine.create(seed, 'survival', { zombies: 0 });
+  const e = SimulationEngine.create(seed, 'survival', { zombies: 0 });
+  const w = e.world;
+  w.day = undefined;
+  w.mission!.nextAt = NIGHTFALL - rules.warnS * TICK_HZ;
+  return e;
 }
 
 function run(e: SimulationEngine, ticks: number): string[] {
@@ -38,6 +45,16 @@ describe('survival', () => {
     expect(nextHourTick(day / 8, 19)).toBe(day / 8);
     expect(nextHourTick(day / 8 + 1, 19)).toBe(day / 8 + day);
     expect(nextHourTick(0, 6)).toBe((14 / 24) * day);
+  });
+
+  it('plays on a 40-minute day that starts in the morning, so the first night is 11 game hours away', () => {
+    const e = SimulationEngine.create(3, 'survival', { zombies: 0 });
+    const day = MISSIONS.survival.day!;
+    expect(e.world.day).toEqual(day);
+    const nightfall = nextHourTick(0, rules.nightfallHour, day);
+    expect(nightfall).toBe((11 / 24) * day.lengthS * TICK_HZ);
+    expect(e.world.mission!.nextAt).toBe(nightfall - rules.warnS * TICK_HZ);
+    expect(e.frame(false).day).toEqual(day);
   });
 
   it('warns before nightfall, sends the horde at nightfall and counts the night once it is gone', () => {
@@ -87,12 +104,22 @@ describe('survival', () => {
     expect(near.filter((s) => w.zombies.isAlive(s) && w.zombies.driven[s] === 1).length).toBe(near.length);
   });
 
-  it('refills the city far from the base and from every soldier', () => {
+  it('after a quiet start, refills the city from its edges, far from the base and from every soldier', () => {
     const e = survival();
     const w = e.world;
+    run(e, rules.repopEveryS * TICK_HZ);
     expect(w.zombies.alive).toBe(0);
-    run(e, rules.repopEveryS * TICK_HZ * 3);
+    // Skip ahead to the end of the quiet start.
+    w.tick = rules.repopGraceS * TICK_HZ - 1;
+    run(e, rules.repopEveryS * TICK_HZ * 3 + 1);
     expect(w.zombies.alive).toBe(rules.repopSize * 3);
+    const edge = rules.repopEdgeM;
+    for (let s = 0; s < w.zombies.highWater; s++) {
+      if (!w.zombies.isAlive(s)) continue;
+      const x = w.zombies.x[s];
+      const y = w.zombies.y[s];
+      expect(x < edge || y < edge || x > w.grid.widthM - edge || y > w.grid.heightM - edge).toBe(true);
+    }
     const [bx, by] = baseCentre(e);
     const z = w.zombies;
     const clear = rules.repopClearM - 30;

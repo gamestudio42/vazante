@@ -302,6 +302,7 @@ export class SimulationEngine {
       directSoldier: w.directSoldier,
       fog: w.fog,
       economy: w.economy,
+      day: w.day,
       difficulty: w.difficulty,
       events,
       stats: {
@@ -328,6 +329,7 @@ export class SimulationEngine {
     for (const b of w.bases) h.u32(b.id).u32(b.materials).u32(b.ammo);
     h.bytes(w.districtControl);
     if (w.economy) for (const b of w.bases) h.str('economy').u32(b.control ?? 0);
+    if (w.day) h.str('day').u32(w.day.lengthS).u32(w.day.startHour);
     if (w.mission) {
       const m = w.mission;
       h.byte(1).str(m.id).str(m.phase).u32(m.stage).u32(m.progress).u32(m.pressureAt).u32(m.wave).str(m.waveState).u32(m.nextAt).u32(m.civilians).u32(m.commandPost).u32(m.base);

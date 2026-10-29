@@ -14,6 +14,7 @@ import {
   ZombieState,
   type MissionDef,
   type Pressure,
+  type DayClock,
   type SurvivalRules,
   type ZoneRef,
 } from "@vazante/shared";
@@ -377,7 +378,7 @@ function enterStage(w: World, m: Mission): void {
   }
   if (st.kind === "endless") {
     m.waveState = "calm";
-    m.nextAt = nextHourTick(w.tick, st.rules.nightfallHour) - st.rules.warnS * TICK_HZ;
+    m.nextAt = nextHourTick(w.tick, st.rules.nightfallHour, w.day) - st.rules.warnS * TICK_HZ;
     if (m.nextAt < w.tick) m.nextAt = w.tick;
   }
 }
@@ -513,9 +514,9 @@ export function zoneSite(w: World, m: Mission, zone: number): Base | undefined {
 }
 
 /** The first tick at or after `tick` when the clock reads `hour`. */
-export function nextHourTick(tick: number, hour: number): number {
-  const day = DAY.lengthS * TICK_HZ;
-  const offset = Math.round(((((hour - DAY.startHour) % 24) + 24) % 24) / 24 * day);
+export function nextHourTick(tick: number, hour: number, clock: DayClock = DAY): number {
+  const day = clock.lengthS * TICK_HZ;
+  const offset = Math.round(((((hour - clock.startHour) % 24) + 24) % 24) / 24 * day);
   return offset + Math.max(0, Math.ceil((tick - offset) / day)) * day;
 }
 
@@ -524,10 +525,10 @@ export function nextHourTick(tick: number, hour: number): number {
  * counts as survived once the horde is gone or dawn breaks. The city refills all along.
  */
 function stepSurvival(w: World, m: Mission, r: SurvivalRules): void {
-  if (w.tick % (r.repopEveryS * TICK_HZ) === 0) repopulate(w, m, r);
+  if (w.tick >= r.repopGraceS * TICK_HZ && w.tick % (r.repopEveryS * TICK_HZ) === 0) repopulate(w, m, r);
   if (m.waveState === "calm" && w.tick >= m.nextAt) {
     m.waveState = "warning";
-    m.nextAt = nextHourTick(w.tick, r.nightfallHour);
+    m.nextAt = nextHourTick(w.tick, r.nightfallHour, w.day);
     w.emit({
       type: "wave_warning",
       value: m.wave + 1,
@@ -540,7 +541,7 @@ function stepSurvival(w: World, m: Mission, r: SurvivalRules): void {
     );
     spawnWave(w, m, size);
     rouseNearBase(w, m, Math.round(size * r.baseShare));
-    m.nextAt = nextHourTick(w.tick, r.dawnHour);
+    m.nextAt = nextHourTick(w.tick, r.dawnHour, w.day);
   } else if (
     m.waveState === "active" &&
     (w.tick >= m.nextAt || (w.tick % 10 === 0 && drivenAlive(w) === 0))
@@ -552,7 +553,7 @@ function stepSurvival(w: World, m: Mission, r: SurvivalRules): void {
     w.emit({ type: "night_survived", value: m.wave });
     m.nextAt = Math.max(
       w.tick,
-      nextHourTick(w.tick, r.nightfallHour) - r.warnS * TICK_HZ,
+      nextHourTick(w.tick, r.nightfallHour, w.day) - r.warnS * TICK_HZ,
     );
   }
 }
@@ -584,7 +585,7 @@ function rouseNearBase(w: World, m: Mission, n: number): void {
 /** Infected within this distance of the base can be roused by a night's horde. */
 const ROUSE_M = 600;
 
-/** Wandering infected wander back into the city, out of sight of the base and of every soldier. */
+/** Wandering infected drift back into the city from its edges, out of sight of the base and of every soldier. */
 function repopulate(w: World, m: Mission, r: SurvivalRules): void {
   const cap = Math.round(
     r.cap * (1 + r.capGrow * m.wave) * DIFFICULTY[w.difficulty].cityZombies,
@@ -603,13 +604,16 @@ function repopulate(w: World, m: Mission, r: SurvivalRules): void {
         return false;
     return true;
   };
+  const edge = r.repopEdgeM;
+  const nearEdge = (x: number, y: number): boolean =>
+    x < edge || y < edge || x > g.widthM - edge || y > g.heightM - edge;
   let placed = 0;
-  for (let i = 0; i < n * 20 && placed < n; i++) {
+  for (let i = 0; i < n * 40 && placed < n; i++) {
     const c = w.rng.int(0, g.size - 1);
     if (g.ground[c] !== Ground.Street || !g.isWalkable(c)) continue;
     const x = g.cellCenterX(c);
     const y = g.cellCenterY(c);
-    if (!far(x, y)) continue;
+    if (!nearEdge(x, y) || !far(x, y)) continue;
     if (w.zombies.spawn(x, y, rollZombieKind(w), ZombieState.Wandering) < 0) break;
     placed++;
   }

@@ -86,6 +86,6 @@ export function missionView(w: World, m: Mission): MissionView {
 /** Seconds until the next wave hits; in survival, until nightfall all through the day too. */
 function secondsToWave(w: World, m: Mission, st: StageDef): number {
   if (st.kind === 'endless' && m.waveState === 'calm')
-    return Math.ceil((nextHourTick(w.tick, st.rules.nightfallHour) - w.tick) / TICK_HZ);
+    return Math.ceil((nextHourTick(w.tick, st.rules.nightfallHour, w.day) - w.tick) / TICK_HZ);
   return m.waveState === 'warning' ? Math.max(0, Math.ceil((m.nextAt - w.tick) / TICK_HZ)) : 0;
 }

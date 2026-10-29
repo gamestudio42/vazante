@@ -14,7 +14,7 @@ const COHESION2 = STRESS.cohesionM * STRESS.cohesionM;
  * and holds fire. Also the squad's radio call on first contact. Runs after combat.
  */
 export function stepMorale(w: World): void {
-  const night = daylight(clockHours(w.tick)) < 1;
+  const night = daylight(clockHours(w.tick, w.day)) < 1;
   for (const s of w.soldiers) {
     if (!isActiveSoldier(s)) continue;
     s.inCover = isCover(w.grid, w.grid.cellAt(s.x, s.y));

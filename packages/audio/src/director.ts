@@ -33,6 +33,9 @@ interface Voice {
   out: GainNode;
 }
 
+/** Up to this view span (the default tactical zoom) the ear sits on the map; beyond it, it rises. */
+const EAR_SPAN_M = 160;
+const EAR_HEIGHT_PER_SPAN = 0.4;
 const VOICE_CAP = 24;
 
 /** Weapon id on a shot event to its sample family; turrets and unknown weapons use the rifle. */
@@ -244,11 +247,9 @@ export class AudioDirector {
     this.nearZombies = near;
     this.threat = threat;
     let engine = 0;
-    const ref = this.listener.direct ? 12 : Math.max(18, this.listener.span * 0.3);
     for (const v of f.vehicles) {
       if (v.state !== 'moving') continue;
-      const d = Math.hypot(v.x - this.listener.x, v.y - this.listener.y) / ref;
-      engine = Math.max(engine, 0.5 / (1 + d * d));
+      engine = Math.max(engine, 0.5 * this.falloff(Math.hypot(v.x - this.listener.x, v.y - this.listener.y)));
     }
     this.engineTarget = engine;
     if (this.music) this.music.target = MusicDirector.targetFor(f, threat, this.recentShots);
@@ -260,9 +261,10 @@ export class AudioDirector {
     const ctx = this.ctx!;
     const t = ctx.currentTime;
     const near = this.nearZombies;
-    this.hordeGain.gain.setTargetAtTime(Math.min(0.35, Math.sqrt(near) * 0.03), t, 0.4);
+    const far = this.falloff(0);
+    this.hordeGain.gain.setTargetAtTime(Math.min(0.35, Math.sqrt(near) * 0.03) * far, t, 0.4);
     this.hordeFilter.Q.value = 0.9 + Math.min(2, near / 60);
-    this.droneGain.gain.setTargetAtTime(Math.min(0.18, this.threat * 0.006), t, 1.2);
+    this.droneGain.gain.setTargetAtTime(Math.min(0.18, this.threat * 0.006) * far, t, 1.2);
     // Individual groans from nearby zombies, more often when more are around.
     this.groanTimer -= dt;
     if (this.groanTimer <= 0 && this.nearest.length > 0) {
@@ -280,7 +282,23 @@ export class AudioDirector {
   }
 
   private hearingRadius(): number {
-    return this.listener.direct ? 45 : Math.max(40, this.listener.span * 0.6);
+    return this.listener.direct ? 45 : Math.max(40, Math.min(this.listener.span, EAR_SPAN_M) * 0.6);
+  }
+
+  /** Reference distance: sounds this far away play at half gain. */
+  private refDistance(): number {
+    return this.listener.direct ? 12 : Math.max(18, Math.min(this.listener.span, EAR_SPAN_M) * 0.3);
+  }
+
+  /**
+   * Gain of a sound `d` metres from the focus. Zooming out past EAR_SPAN_M lifts the ear above the
+   * map, so everything gets quieter and duller instead of the whole wider view being heard.
+   */
+  private falloff(d: number): number {
+    const ref = this.refDistance();
+    const h = this.listener.direct ? 0 : Math.max(0, this.listener.span - EAR_SPAN_M) * EAR_HEIGHT_PER_SPAN;
+    const r = Math.sqrt(d * d + h * h) / ref;
+    return 1 / (1 + r * r);
   }
 
   private onEvent(e: SimEvent): void {
@@ -394,8 +412,9 @@ export class AudioDirector {
       const l = this.listener;
       const dx = x - l.x;
       const dy = y - l.y;
-      const d = Math.hypot(dx, dy);
-      const ref = l.direct ? 12 : Math.max(18, l.span * 0.3);
+      const ref = this.refDistance();
+      const h = l.direct ? 0 : Math.max(0, l.span - EAR_SPAN_M) * EAR_HEIGHT_PER_SPAN;
+      const d = Math.sqrt(dx * dx + dy * dy + h * h);
       if (d > ref * 5 && priority < Pri.Alert) return null;
       g *= 1 / (1 + (d / ref) * (d / ref));
       if (priority >= Pri.Alert) g = Math.max(g, gain * 0.25);

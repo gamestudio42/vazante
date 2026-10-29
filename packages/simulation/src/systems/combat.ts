@@ -99,7 +99,7 @@ export function stepCombat(w: World): void {
 
 /** At night soldiers see half as far, except under the floodlights around bases and depots. */
 function sightFactor(w: World, x: number, y: number): number {
-  const day = daylight(clockHours(w.tick));
+  const day = daylight(clockHours(w.tick, w.day));
   if (day >= 1) return 1;
   for (const b of w.bases) if (distToSite(b, x, y) <= DAY.siteLightM) return 1;
   return 1 - (1 - DAY.nightVision) * (1 - day);

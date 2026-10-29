@@ -69,7 +69,7 @@ export class MusicDirector {
     if (m?.waveState === 'warning') i = 0.45;
     else if (m?.waveState === 'active') i = 0.68;
     i += Math.min(0.35, threat / 60) + Math.min(0.2, recentShots / 150);
-    i += 0.08 * (1 - daylight(clockHours(f.tick)));
+    i += 0.08 * (1 - daylight(clockHours(f.tick, f.day)));
     if (m && (m.phase === 'won' || m.phase === 'lost')) i = 0;
     return Math.min(1, i);
   }

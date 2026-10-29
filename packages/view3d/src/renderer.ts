@@ -10,6 +10,7 @@ import {
   ZombieKind,
   ZombieState,
   clockHours,
+  type DayClock,
   daylight,
   type Frame,
   type MapInfo,
@@ -483,7 +484,7 @@ export class GameRenderer {
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);
-    this.updateTimeOfDay(f ? f.tick + this.alpha(nowMs) : 0);
+    this.updateTimeOfDay(f ? f.tick + this.alpha(nowMs) : 0, f?.day);
     this.lights.beginDynamic();
     if (f) this.drawFlashlights(f, this.alpha(nowMs));
     this.drawFireLights(t, dtS);
@@ -497,8 +498,8 @@ export class GameRenderer {
   private readonly cNight = new THREE.Color();
 
   /** Sun or moon, sky, fog and ambient follow the game clock. */
-  private updateTimeOfDay(tick: number): void {
-    const h = clockHours(tick);
+  private updateTimeOfDay(tick: number, clock?: DayClock): void {
+    const h = clockHours(tick, clock);
     const day = daylight(h);
     this.hours = h;
     this.night = 1 - day;

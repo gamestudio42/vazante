@@ -41,6 +41,7 @@ export function buildMission(id: MissionId, seed: number, opts: ScenarioOptions 
   w.zombieKinds = def.zombieKinds;
   w.fog = true;
   w.economy = def.economy === true;
+  if (def.day) w.day = { ...def.day };
   const diff = DIFFICULTY[w.difficulty];
   const home = w.bases.find((b) => b.kind === 'base')!;
   if (w.economy) home.control = 100;
