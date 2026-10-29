@@ -4,7 +4,7 @@ import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
 import { setLocale, t } from './i18n.ts';
 import type { InputController } from './input.ts';
-import { saveSettings, type Settings } from './settings.ts';
+import { saveSettings, type Settings, type SurvivalRecord } from './settings.ts';
 import { Tutorial } from './tutorial.ts';
 import { deleteSave, download, exportSave, getSave, importSave, listSaves, putSave } from './storage.ts';
 
@@ -123,6 +123,14 @@ export class Shell {
     const i = MISSION_IDS.indexOf(id);
     if (i <= 0 || new URLSearchParams(location.search).has('unlock')) return true;
     return this.settings.completed.includes(MISSION_IDS[i - 1]);
+  }
+
+  /** Keep a finished survival run if it beats the best at its difficulty; true when it does. */
+  recordSurvival(difficulty: DifficultyId, run: SurvivalRecord): boolean {
+    const best = this.settings.survivalBest[difficulty];
+    if (best && (best.nights > run.nights || (best.nights === run.nights && best.killed >= run.killed))) return false;
+    this.applySettings({ ...this.settings, survivalBest: { ...this.settings.survivalBest, [difficulty]: run } });
+    return true;
   }
 
   completeMission(id: MissionId): void {

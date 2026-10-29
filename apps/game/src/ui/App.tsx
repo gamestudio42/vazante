@@ -40,6 +40,7 @@ import {
   Boxes,
   Footprints,
   Siren,
+  Trophy,
   Hand,
   LocateFixed,
   Route,
@@ -1330,6 +1331,14 @@ function Summary({
   const index = MISSION_IDS.indexOf(m.id);
   const next = index >= 0 ? MISSION_IDS[index + 1] : undefined;
   const endless = m.objectives.some((o) => o.kind === "endless");
+  const [newBest, setNewBest] = useState(false);
+  useEffect(() => {
+    if (!endless || m.phase !== "lost") return;
+    const run = { nights: m.wave, killed: frame.stats.zombiesKilled };
+    if (shell.recordSurvival(frame.difficulty, run)) setNewBest(true);
+    // Once, when the run ends.
+  }, [endless, m.phase]);
+  const best = endless ? shell.settings.survivalBest[frame.difficulty] : undefined;
   const rows: [LucideIcon, string, ReactNode][] = [
     [Flag, t("summary.objectives"), `${done}/${m.objectives.length}`],
   ];
@@ -1342,6 +1351,14 @@ function Summary({
   if (m.evacuated > 0 || m.objectives.some((o) => o.kind === "evacuate"))
     rows.push([Package, t("summary.evacuated"), m.evacuated]);
   if (endless) rows.push([Siren, t("summary.nights"), m.wave]);
+  if (best)
+    rows.push([
+      Trophy,
+      t("summary.best"),
+      newBest
+        ? t("summary.newBest")
+        : `${best.nights} · ${best.killed} ${t("top.killed").toLowerCase()}`,
+    ]);
   if (waves)
     rows.push([
       Siren,

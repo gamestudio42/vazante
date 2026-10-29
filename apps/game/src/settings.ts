@@ -15,10 +15,17 @@ export interface Settings {
   tutorialSeen: boolean;
   /** Campaign missions won at least once. */
   completed: MissionId[];
+  /** Best survival run per difficulty: most nights, then most kills. */
+  survivalBest: Partial<Record<DifficultyId, SurvivalRecord>>;
+}
+
+export interface SurvivalRecord {
+  nights: number;
+  killed: number;
 }
 
 const KEY = 'vazante.settings';
-const DEFAULTS: Settings = { volume: 0.8, musicVolume: 0.7, locale: 'pt-BR', uiScale: 1, autosaveS: 120, edgePan: false, difficulty: 'veteran', tutorialSeen: false, completed: [] };
+const DEFAULTS: Settings = { volume: 0.8, musicVolume: 0.7, locale: 'pt-BR', uiScale: 1, autosaveS: 120, edgePan: false, difficulty: 'veteran', tutorialSeen: false, completed: [], survivalBest: {} };
 
 export function loadSettings(): Settings {
   try {

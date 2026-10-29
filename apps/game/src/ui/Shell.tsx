@@ -28,6 +28,7 @@ export function ShellOverlay({ shell, seed }: { shell: Shell; seed: number }) {
 
 function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
   const latest = shell.saves[0];
+  const survivalBest = shell.settings.survivalBest[shell.settings.difficulty];
   return (
     <div className="menu-screen">
       <div className="menu-title">
@@ -60,7 +61,10 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
         <button onClick={() => shell.openSurvival()}>
           <Moon size={16} />
           {t('menu.survival')}
-          <span className="muted"> · {t('menu.survival.tag')}</span>
+          <span className="muted">
+            {' '}
+            · {survivalBest ? t('menu.survival.best').replace('{n}', String(survivalBest.nights)) : t('menu.survival.tag')}
+          </span>
         </button>
         <button onClick={() => shell.newTutorial()}>
           <GraduationCap size={16} />
