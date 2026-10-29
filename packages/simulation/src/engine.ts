@@ -252,7 +252,7 @@ export class SimulationEngine {
       pile: w.grid.pile[st.cell],
     }));
     const income = siteIncome(w);
-    const bases = w.bases.map((b) => ({ id: b.id, kind: b.kind, name: b.name, role: b.role, control: w.economy ? (b.control ?? 0) : 0, held: w.economy && siteHeld(w, b), income: income.get(b.id)!, x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, materials: b.materials, ammo: b.ammo }));
+    const bases = w.bases.map((b) => ({ id: b.id, kind: b.kind, name: b.name, role: b.role, control: w.economy ? (b.control ?? 0) : 0, held: w.economy && siteHeld(w, b), soldiers: b.presence?.[0] ?? 0, infected: b.presence?.[1] ?? 0, income: income.get(b.id)!, x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, materials: b.materials, ammo: b.ammo }));
     const vehicles: VehicleView[] = w.vehicles.map((v) => ({
       id: v.id,
       kind: v.kind,

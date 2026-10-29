@@ -31,9 +31,13 @@ export function MapLabels({ client, view }: { client: GameClient; view: GameRend
       const name = document.createElement('span');
       name.textContent = s.name;
       const sub = document.createElement('small');
-      d.append(name, sub);
+      const bar = document.createElement('i');
+      bar.className = 'control';
+      bar.appendChild(document.createElement('b'));
+      const count = document.createElement('small');
+      d.append(name, sub, bar, count);
       el.appendChild(d);
-      return { name: s.name, x: ((s.x0 + s.x1 + 1) / 2) * cs, y: ((s.y0 + s.y1 + 1) / 2) * cs, d, sub, text: '' };
+      return { name: s.name, x: ((s.x0 + s.x1 + 1) / 2) * cs, y: ((s.y0 + s.y1 + 1) / 2) * cs, d, sub, bar, count, text: '' };
     });
     const obj = document.createElement('div');
     obj.className = 'map-label objective';
@@ -64,12 +68,16 @@ export function MapLabels({ client, view }: { client: GameClient; view: GameRend
         s.d.style.display = show ? '' : 'none';
         if (!show) continue;
         place(s.d, p.x, p.y);
-        // Strategic points: what the site gives and how firmly it is held.
+        // Strategic points: what the site gives, how firmly it is held, and who stands in its area.
         const b = f?.economy ? f.bases.find((x) => x.name === s.name) : undefined;
         const text = b?.role ? `${t(`site.${b.role}`)} · ${b.held ? t('site.secured') : `${b.control}%`}` : '';
-        if (text !== s.text) {
-          s.text = text;
+        const count = b?.role ? t('site.presence').replace('{s}', String(b.soldiers)).replace('{z}', String(b.infected)) : '';
+        if (text + count !== s.text) {
+          s.text = text + count;
           s.sub.textContent = text;
+          s.count.textContent = count;
+          s.bar.style.display = b?.role ? '' : 'none';
+          (s.bar.firstElementChild as HTMLElement).style.width = `${b?.control ?? 0}%`;
           s.d.classList.toggle('secured', !!b?.held);
           s.d.classList.toggle('contested', !!b && !b.held);
         }

@@ -167,3 +167,4 @@ Veteran is the reference; every other table in this file is tuned for it. Chosen
 | 2026-10-27 | difficulty | — → three levels | recruit for the tutorial and new players, nightmare for veterans of the slice |
 | 2026-10-29 | tactical decisions | — → suppress stance, fire on the move ×0.5, rear stress ×2.5, shot noise 40 → 55 m, rifle ammo 210 → 180, LMG 600 → 500 | the balance bot, which only moves and shoots, won all four missions at veteran with 0 to 3 hits taken; now it loses or bleeds on A Ponte, and a bot that uses suppression there wins |
 | 2026-10-29 | Retomar a Ribeira | pressure 35/45/55 → 55/70/85, waves 180/260/340 → 280/400/520 | four squads walked through it with no losses |
+| 2026-10-29 | strategic point area | site rectangle + 40 m → circle reaching 40 m past the longer side (r 76 m depot, 88 m base) | the area is drawn on the ground and the minimap as a circle; in economy modes districts no longer raise alerts or count as a goal |

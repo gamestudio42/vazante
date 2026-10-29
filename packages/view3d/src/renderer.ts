@@ -10,6 +10,7 @@ import {
   ZombieKind,
   ZombieState,
   clockHours,
+  siteZone,
   type DayClock,
   daylight,
   type Frame,
@@ -22,7 +23,7 @@ import { buildCity, buildDistrictOverlay, hash } from './city.ts';
 import { LightPools } from './lights.ts';
 import { FireAndSmoke } from './smoke.ts';
 import { buildProps } from './props.ts';
-import { DecalLayer, OrderMarkers, Particles, Pulses, ZoneMarker } from './fx.ts';
+import { DecalLayer, OrderMarkers, Particles, Pulses, SiteZones, ZoneMarker } from './fx.ts';
 import { cityUniforms, toon } from './materials.ts';
 import { PALETTE } from './palette.ts';
 import { PixelPost } from './post.ts';
@@ -100,6 +101,9 @@ export class GameRenderer {
   private readonly fire = new FireAndSmoke();
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
+  private readonly siteZones = new SiteZones();
+  /** Strategic points replace districts as the goal: the district wash stays hidden. */
+  private economy = false;
   private readonly pulses = new Pulses(PALETTE.scream);
   /** Until when (seconds) each zombie slot holds the scream pose. */
   private readonly zScream = new Float32Array(ZOMBIE_POOL_CAPACITY);
@@ -199,7 +203,7 @@ export class GameRenderer {
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
     this.districts = buildDistrictOverlay(map);
-    this.scene.add(this.districts, this.zone.group, this.pulses.group);
+    this.scene.add(this.districts, this.siteZones.group, this.zone.group, this.pulses.group);
 
     const bodyMat = toon({ vertexColors: false });
     this.soldiers = new CharacterBatch(MAX_SOLDIERS, bodyMat, true);
@@ -283,6 +287,12 @@ export class GameRenderer {
     const zone = f.mission?.zones.find((x) => x.active);
     const cs = this.map.cellSize;
     this.zone.set(zone ? { x0: zone.x0 * cs, y0: zone.y0 * cs, x1: (zone.x1 + 1) * cs, y1: (zone.y1 + 1) * cs } : null);
+    this.economy = !!f.economy;
+    this.siteZones.set(
+      f.economy
+        ? f.bases.map((b) => ({ id: b.id, ...siteZone(b, cs), color: b.held ? PALETTE.siteHeld : b.control > 0 ? PALETTE.siteContested : PALETTE.siteLost }))
+        : null,
+    );
     this.prev = this.curr;
     this.curr = f;
     this.currAt = nowMs;
@@ -490,7 +500,7 @@ export class GameRenderer {
     this.drawFireLights(t, dtS);
     this.lights.end(this.night);
     this.updateLighting();
-    this.districts.visible = this.rig.band !== 'tactical' && !this.rig.direct;
+    this.districts.visible = !this.economy && this.rig.band !== 'tactical' && !this.rig.direct;
     this.post.render(this.renderer, this.scene, this.rig.active);
   }
 

@@ -41,6 +41,10 @@ export const PALETTE = {
   selection: 0xffffff,
   orderMarker: 0x8fe08a,
   zone: 0xf0b03f,
+  /** Strategic point areas: secured, contested, overrun. */
+  siteHeld: 0x4fa3ff,
+  siteContested: 0xe0b040,
+  siteLost: 0xd0503c,
   /** Inchado skin and the bile of its burst; Gritador skin; the scream ring. */
   bloaterSkin: 0x8f9c55,
   bile: 0xa9b84a,

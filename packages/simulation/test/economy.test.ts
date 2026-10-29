@@ -64,6 +64,8 @@ describe('economy', () => {
     expect(depot.ammo).toBeGreaterThanOrEqual(before.ammo + ECONOMY.supplyAmmo);
     const view = e.frame(false).bases.find((b) => b.id === depot.id)!;
     expect(view.held).toBe(true);
+    expect(view.soldiers).toBe(w.squads[0].members.length);
+    expect(view.infected).toBe(0);
     expect(view.income.ammo).toBe(ECONOMY.supplyAmmo);
   });
 
@@ -76,6 +78,8 @@ describe('economy', () => {
     for (let i = 0; i < 30; i++) w.zombies.spawn(x + (i % 6) * 2, y + Math.floor(i / 6) * 2, 0);
     const ev = run(e, 30 * TICK_HZ);
     expect(ev).toContain('site_lost');
+    // Districts are only names here: losing ground raises no district alert.
+    expect(ev).not.toContain('district_lost');
     expect(siteHeld(w, depot)).toBe(false);
   });
 

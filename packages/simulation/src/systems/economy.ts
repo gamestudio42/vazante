@@ -1,4 +1,4 @@
-import { CELL_SIZE, ECONOMY, SoldierCondition, SQUADS, TICK_DT, TICK_HZ, type SquadKind } from '@vazante/shared';
+import { CELL_SIZE, ECONOMY, siteZone, SoldierCondition, SQUADS, TICK_DT, TICK_HZ, type SquadKind } from '@vazante/shared';
 import type { Base } from '../entities.ts';
 import { spawnSquad } from '../spawn.ts';
 import { isActiveSoldier, type World } from '../world.ts';
@@ -7,10 +7,9 @@ function centre(r: { x0: number; y0: number; x1: number; y1: number }): [number,
   return [((r.x0 + r.x1 + 1) / 2) * CELL_SIZE, ((r.y0 + r.y1 + 1) / 2) * CELL_SIZE];
 }
 
-/** A site's capture area: its rectangle and ECONOMY.zoneMarginM around it. */
-function inZone(b: Base, x: number, y: number): boolean {
-  const m = ECONOMY.zoneMarginM;
-  return x >= b.x0 * CELL_SIZE - m && x < (b.x1 + 1) * CELL_SIZE + m && y >= b.y0 * CELL_SIZE - m && y < (b.y1 + 1) * CELL_SIZE + m;
+/** Inside a site's capture area (see siteZone). */
+function inZone(zone: { x: number; y: number; r: number }, x: number, y: number): boolean {
+  return (x - zone.x) ** 2 + (y - zone.y) ** 2 < zone.r * zone.r;
 }
 
 /** The site is secured: it produces and its role works. */
@@ -38,10 +37,12 @@ export function siteIncome(w: World): Map<number, { materials: number; ammo: num
 function stepControl(w: World): void {
   const z = w.zombies;
   for (const b of w.bases) {
+    const zone = siteZone(b, CELL_SIZE);
     let soldiers = 0;
-    for (const s of w.soldiers) if (isActiveSoldier(s) && inZone(b, s.x, s.y)) soldiers++;
+    for (const s of w.soldiers) if (isActiveSoldier(s) && inZone(zone, s.x, s.y)) soldiers++;
     let zombies = 0;
-    for (let i = 0; i < z.highWater; i++) if (z.isAlive(i) && inZone(b, z.x[i], z.y[i])) zombies++;
+    for (let i = 0; i < z.highWater; i++) if (z.isAlive(i) && inZone(zone, z.x[i], z.y[i])) zombies++;
+    b.presence = [soldiers, zombies];
     const before = b.control ?? 0;
     let v = before;
     if (soldiers > 0 && zombies <= soldiers) v = Math.min(100, v + ECONOMY.controlStep);

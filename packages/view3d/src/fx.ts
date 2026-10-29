@@ -247,3 +247,47 @@ export class ZoneMarker {
     (this.fill.material as THREE.MeshBasicMaterial).opacity = 0.08 + 0.06 * (0.5 + 0.5 * Math.sin(t * 3));
   }
 }
+
+/**
+ * The capture circles of the strategic points (economy modes): a faint disc and a ring on the
+ * ground, blue while secured, amber while contested, red when the infected hold it.
+ */
+export class SiteZones {
+  readonly group = new THREE.Group();
+  private readonly sites = new Map<number, { fill: THREE.MeshBasicMaterial; edge: THREE.MeshBasicMaterial; color: number }>();
+  private readonly disc = new THREE.CircleGeometry(1, 64).rotateX(-Math.PI / 2);
+  private readonly ring = new THREE.RingGeometry(0.985, 1, 96).rotateX(-Math.PI / 2);
+
+  constructor() {
+    this.group.position.y = 0.1;
+    this.group.renderOrder = 2;
+    this.group.visible = false;
+  }
+
+  /** One entry per site; null hides them all (modes without strategic points). */
+  set(zones: { id: number; x: number; y: number; r: number; color: number }[] | null): void {
+    this.group.visible = zones !== null;
+    if (!zones) return;
+    for (const z of zones) {
+      let s = this.sites.get(z.id);
+      if (!s) {
+        const fill = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.05, depthWrite: false, fog: false });
+        const edge = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.7, depthWrite: false, fog: false });
+        const d = new THREE.Mesh(this.disc, fill);
+        const r = new THREE.Mesh(this.ring, edge);
+        for (const m of [d, r]) {
+          m.position.set(z.x, 0, z.y);
+          m.scale.setScalar(z.r);
+        }
+        this.group.add(d, r);
+        s = { fill, edge, color: -1 };
+        this.sites.set(z.id, s);
+      }
+      if (s.color !== z.color) {
+        s.color = z.color;
+        s.fill.color.setHex(z.color);
+        s.edge.color.setHex(z.color);
+      }
+    }
+  }
+}

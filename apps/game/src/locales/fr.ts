@@ -337,6 +337,7 @@ export const fr: Record<Key, string> = {
   "site.hospital": "Hôpital",
   "site.station": "Renforts",
   "site.secured": "sécurisé",
+  "site.presence": "{s} soldats × {z} infectés",
   "recruit.title": "Renforts",
   "recruit.hint": "Une nouvelle escouade arrive à la gare, payée avec les matériaux de la base.",
   "recruit.full": "Limite d’escouades atteinte",

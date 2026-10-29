@@ -176,6 +176,9 @@ export interface BaseView {
   /** Strategic point control 0..100, and whether it is secured: it produces and its role works (economy modes only). */
   control: number;
   held: boolean;
+  /** Soldiers and infected inside its capture area (economy modes; see siteZone). */
+  soldiers: number;
+  infected: number;
   /** Stock this site gains each ECONOMY.everyS while things stay as they are. */
   income: { materials: number; ammo: number };
   x0: number;

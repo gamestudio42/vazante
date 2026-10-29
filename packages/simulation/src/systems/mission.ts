@@ -688,6 +688,8 @@ export function stepDistricts(w: World): void {
       v = Math.max(0, v - 1);
     else if (ss > 0 && zs <= ss * 2) v = Math.min(100, v + 1);
     w.districtControl[d.id] = v;
+    // Where strategic points are the goal, districts are only names on the map: no alerts.
+    if (w.economy) continue;
     if (before > DISTRICT.lostAt && v <= DISTRICT.lostAt)
       w.emit({ type: "district_lost", source: d.id, reason: d.name });
     if (before <= DISTRICT.heldAbove && v > DISTRICT.heldAbove)

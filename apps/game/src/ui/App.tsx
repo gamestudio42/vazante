@@ -173,7 +173,7 @@ export function App({ client, input, view, shell }: Props) {
               onSelect={(id) => input.selectVehicle(id)}
               onCenter={(x, y) => view.rig.centerOn(x, y)}
             />
-            <DistrictList frame={f} />
+            {!f.economy && <DistrictList frame={f} />}
           </div>
         )}
         {!input.inDirect && (

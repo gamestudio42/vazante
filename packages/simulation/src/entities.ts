@@ -114,6 +114,8 @@ export interface Base {
   role?: SiteRole;
   /** Strategic point control 0..100 (economy modes); secured above ECONOMY.heldAbove. */
   control?: number;
+  /** Soldiers and infected in its capture area at the last control step (economy modes). */
+  presence?: [number, number];
   /** Depots hold stock but cannot be built on. */
   buildable: boolean;
   name: string;

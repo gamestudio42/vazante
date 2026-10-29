@@ -3,7 +3,7 @@ import type { SquadKind } from './units.ts';
 /**
  * Economy of the long modes (survival, the city sandbox). Every site (base and depots) is a
  * strategic point with a control value: it rises by `controlStep` a second while soldiers in its
- * area (its rectangle plus `zoneMarginM`) outnumber the infected there, and falls while at least
+ * area (a circle `zoneMarginM` beyond the site's longer half-side, see siteZone) outnumber the infected there, and falls while at least
  * `overrunMin` infected outnumber them two to one. Above `heldAbove` the site is secured: every
  * `everyS` it adds `siteMaterials` to its own stock, so depot income waits there until a truck
  * brings it in. A secured supply depot also makes `supplyAmmo`; inside a secured hospital soldiers
@@ -25,3 +25,10 @@ export const ECONOMY = {
   recruitKinds: ['police', 'slice', 'engineers', 'marines'] as readonly SquadKind[],
   recruitNames: ['Echo', 'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliett', 'Kilo', 'Lima'] as readonly string[],
 } as const;
+
+/** A site's capture area, in metres: a circle round the site's centre reaching `zoneMarginM` past its longer side. */
+export function siteZone(b: { x0: number; y0: number; x1: number; y1: number }, cellSize: number): { x: number; y: number; r: number } {
+  const w = (b.x1 - b.x0 + 1) * cellSize;
+  const h = (b.y1 - b.y0 + 1) * cellSize;
+  return { x: b.x0 * cellSize + w / 2, y: b.y0 * cellSize + h / 2, r: Math.max(w, h) / 2 + ECONOMY.zoneMarginM };
+}

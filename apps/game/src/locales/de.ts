@@ -335,6 +335,7 @@ export const de: Record<Key, string> = {
   "site.hospital": "Krankenhaus",
   "site.station": "Verstärkung",
   "site.secured": "gesichert",
+  "site.presence": "{s} Soldaten × {z} Infizierte",
   "recruit.title": "Verstärkung",
   "recruit.hint": "Ein neuer Trupp kommt am Bahnhof an, bezahlt mit dem Material der Basis.",
   "recruit.full": "Truppgrenze erreicht",

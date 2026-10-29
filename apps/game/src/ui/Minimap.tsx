@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { FOG, type Frame, Ground, SOLDIER_STRIDE, SoldierField, ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
+import { FOG, type Frame, Ground, siteZone, SOLDIER_STRIDE, SoldierField, ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from '../client.ts';
 import { t } from '../i18n.ts';
@@ -106,8 +106,23 @@ export function Minimap({ client, view, direct = false }: { client: GameClient; 
       ctx.fillRect(0, 0, SIZE, SIZE);
       ctx.drawImage(terrain, X(0), Y(0), worldW * k, worldH * k);
       if (!f) return;
+      // Strategic points: their capture circles, blue when secured, amber contested, red overrun.
+      if (f.economy) {
+        for (const b of f.bases) {
+          const z = siteZone(b, cs);
+          ctx.beginPath();
+          ctx.arc(X(z.x), Y(z.y), z.r * k, 0, Math.PI * 2);
+          const rgb = b.held ? '79,163,255' : b.control > 0 ? '224,176,64' : '208,80,60';
+          ctx.fillStyle = `rgba(${rgb},0.14)`;
+          ctx.fill();
+          ctx.strokeStyle = `rgba(${rgb},0.8)`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
       // Held districts get a blue wash, contested ones amber; lost ones stay as they are.
-      for (const d of f.districts) {
+      // Where strategic points are the goal, districts are only names.
+      for (const d of f.economy ? [] : f.districts) {
         const info = map.districts.find((x) => x.id === d.id);
         if (!info || d.state === 'lost') continue;
         ctx.fillStyle = d.state === 'held' ? 'rgba(79,163,255,0.16)' : 'rgba(220,150,40,0.16)';
