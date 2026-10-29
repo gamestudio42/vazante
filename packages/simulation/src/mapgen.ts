@@ -151,9 +151,21 @@ function fill(grid: Grid, r: Rect, g: Ground): void {
 const CITY_DISTRICTS = ['Cais Velho', 'Alto da Sé', 'Vila Operária', 'Ribeira', 'Centro', 'Porto Novo'];
 
 /**
+ * How far each strategic point lies from the base centre, in cells: about where they stood on the
+ * first fixed map, so every seed plays at a similar scale.
+ */
+const SITE_RANGE: Record<Exclude<SiteRole, 'command'>, [number, number]> = {
+  supply: [360, 500],
+  hospital: [330, 480],
+  station: [170, 300],
+};
+
+/**
  * Porto Velário, the v0.5 city: 512 x 512 cells (2 km). A bay along the south edge, a river running
  * down from the north into it (streets cross it as bridges), wide avenues every few streets, six
- * districts in a 3 x 2 layout, the base on the waterfront and three depots inland.
+ * districts in a 3 x 2 layout, the base on the waterfront and three depots inland. Each seed moves
+ * the river, the base along the shore and the depots (each in its own district, away from the
+ * base's), and changes the block sizes, the avenue rhythm and how many blocks are parks.
  */
 export function generateCityMap(seed: number, size = 512): GeneratedMap {
   const rng = new Rng(seed ^ 0xc17e);
@@ -170,18 +182,20 @@ export function generateCityMap(seed: number, size = 512): GeneratedMap {
   // River: a meandering channel from the top edge down to the coast.
   const riverX = new Int32Array(size);
   const riverW = new Int32Array(size);
-  let rx = Math.floor(size * 0.38) + rng.int(-20, 20);
+  let rx = Math.floor(size * rng.range(0.22, 0.78));
   let drift = 0;
+  const bend = rng.int(16, 32);
   for (let y = 0; y < size; y++) {
-    if (y % 24 === 0) drift = rng.int(-1, 1);
+    if (y % bend === 0) drift = rng.int(-1, 1);
     if (y % 3 === 0) rx += drift;
     rx = Math.max(size >> 2, Math.min((size * 3) >> 2, rx));
     riverX[y] = rx;
     riverW[y] = 5 + ((y >> 5) % 3);
   }
 
-  const vertical = cityStreetLines(rng, size);
-  const horizontal = cityStreetLines(rng, size);
+  const style: CityStyle = { minBlock: rng.int(10, 14), spread: rng.int(4, 9), avenueEvery: rng.int(3, 5), parks: rng.range(0.05, 0.14) };
+  const vertical = cityStreetLines(rng, size, style);
+  const horizontal = cityStreetLines(rng, size, style);
   const isStreetX = new Uint8Array(size);
   const isStreetY = new Uint8Array(size);
   for (const [start, w] of vertical) for (let i = start; i < start + w && i < size; i++) isStreetX[i] = 1;
@@ -205,13 +219,52 @@ export function generateCityMap(seed: number, size = 512): GeneratedMap {
     for (let y = coast[x] - 2; y <= coast[x]; y++) if (y >= 0 && grid.ground[grid.idx(x, y)] !== Ground.Water) grid.ground[grid.idx(x, y)] = Ground.Sidewalk;
   }
 
+  const third = Math.floor(size / 3);
+  const half = size >> 1;
+  const districtOf = (x: number, y: number) => Math.min(2, Math.floor(x / third)) + (y < half ? 0 : 3);
+  // Clear of the river by a few cells on every row the rectangle covers.
+  const dry = (r: Rect) => {
+    for (let y = r.y0; y <= r.y1; y++) if (r.x1 >= riverX[y] - 4 && r.x0 <= riverX[y] + riverW[y] + 4) return false;
+    return true;
+  };
+  // The base sits on the waterfront, somewhere along the middle half of the shore.
   const midX = Math.floor(size / 2);
-  const base: Rect = { x0: midX - 12, y0: size - 70, x1: midX + 11, y1: size - 47 };
-  const depots: Array<[string, SiteRole, Rect]> = [
-    ['Depósito Norte', 'supply', { x0: size - 60, y0: 10, x1: size - 43, y1: 27 }],
-    ['Hospital São Lucas', 'hospital', { x0: 14, y0: 60, x1: 31, y1: 77 }],
-    ['Estação Ferroviária', 'station', { x0: size - 90, y0: Math.floor(size * 0.55), x1: size - 73, y1: Math.floor(size * 0.55) + 17 }],
-  ];
+  let base: Rect = { x0: midX - 12, y0: size - 70, x1: midX + 11, y1: size - 47 };
+  for (let i = 0; i < 200; i++) {
+    const x0 = rng.int(size >> 2, ((size * 3) >> 2) - 24);
+    const r = { x0, y0: size - 70, x1: x0 + 23, y1: size - 47 };
+    if (dry(r)) {
+      base = r;
+      break;
+    }
+  }
+  const bcx = (base.x0 + base.x1) / 2;
+  const bcy = (base.y0 + base.y1) / 2;
+  const used = [districtOf(bcx, bcy)];
+  const depots: Array<[string, SiteRole, Rect]> = [];
+  const fallback: Record<string, Rect> = {
+    supply: { x0: size - 60, y0: 10, x1: size - 43, y1: 27 },
+    hospital: { x0: 14, y0: 60, x1: 31, y1: 77 },
+    station: { x0: size - 90, y0: Math.floor(size * 0.55), x1: size - 73, y1: Math.floor(size * 0.55) + 17 },
+  };
+  for (const [name, role] of [['Depósito Norte', 'supply'], ['Hospital São Lucas', 'hospital'], ['Estação Ferroviária', 'station']] as const) {
+    const [near, far] = SITE_RANGE[role];
+    let pick: Rect | null = null;
+    for (let i = 0; i < 2000 && !pick; i++) {
+      const x0 = rng.int(8, size - 26);
+      const y0 = rng.int(8, size - 100);
+      const r = { x0, y0, x1: x0 + 17, y1: y0 + 17 };
+      const cx = x0 + 8.5;
+      const cy = y0 + 8.5;
+      const d2 = (cx - bcx) * (cx - bcx) + (cy - bcy) * (cy - bcy);
+      if (d2 < near * near || d2 > far * far || used.includes(districtOf(cx, cy)) || !dry(r)) continue;
+      if (depots.some(([, , o]) => overlaps({ x0: o.x0 - 30, y0: o.y0 - 30, x1: o.x1 + 30, y1: o.y1 + 30 }, r))) continue;
+      pick = r;
+    }
+    pick ??= fallback[role];
+    used.push(districtOf((pick.x0 + pick.x1) / 2, (pick.y0 + pick.y1) / 2));
+    depots.push([name, role, pick]);
+  }
   const reserved = [base, ...depots.map(([, , r]) => r)];
   for (const r of reserved) {
     for (let y = r.y0; y <= r.y1; y++) {
@@ -233,7 +286,7 @@ export function generateCityMap(seed: number, size = 512): GeneratedMap {
       const cx = (bx0 + bx1) / 2 / size - 0.5;
       const cy = (by0 + by1) / 2 / size - 0.5;
       const centre = 1 - Math.min(1, Math.sqrt(cx * cx + cy * cy) * 2);
-      if (rng.chance(0.08)) {
+      if (rng.chance(style.parks)) {
         fillLand(grid, block, Ground.Park);
         continue;
       }
@@ -256,8 +309,6 @@ export function generateCityMap(seed: number, size = 512): GeneratedMap {
     }
   }
 
-  const third = Math.floor(size / 3);
-  const half = size >> 1;
   const districts: DistrictInfo[] = [];
   for (let row = 0; row < 2; row++) {
     for (let col = 0; col < 3; col++) {
@@ -273,13 +324,21 @@ export function generateCityMap(seed: number, size = 512): GeneratedMap {
   return { grid, buildings, districts, sites };
 }
 
-/** Like `streetLines`, with an avenue (4 cells) every fourth street. */
-function cityStreetLines(rng: Rng, size: number): Array<[number, number]> {
+/** Per-seed look of the city: block length range (cells), avenue rhythm and park share. */
+interface CityStyle {
+  minBlock: number;
+  spread: number;
+  avenueEvery: number;
+  parks: number;
+}
+
+/** Like `streetLines`, with an avenue (4 cells) every few streets. */
+function cityStreetLines(rng: Rng, size: number, style: CityStyle): Array<[number, number]> {
   const lines: Array<[number, number]> = [[1, 3]];
   let x = 4;
   for (let n = 1; ; n++) {
-    x += rng.int(12, 18);
-    const w = n % 4 === 0 ? 4 : rng.int(2, 3);
+    x += rng.int(style.minBlock, style.minBlock + style.spread);
+    const w = n % style.avenueEvery === 0 ? 4 : rng.int(2, 3);
     if (x + w >= size - 4) break;
     lines.push([x, w]);
     x += w;

@@ -172,3 +172,4 @@ Veteran is the reference; every other table in this file is tuned for it. Chosen
 | 2026-10-29 | engineer repairs | — → 3 HP/s per engineer, 3 at most, on any damaged structure | engineers get a role of their own beyond building |
 | 2026-10-29 | field MG nest | drew on base stock anywhere → own box of 1500 rounds outside every base, topped up by an idle truck within 15 m | a nest far from the base should run dry and need supplying |
 | 2026-10-29 | truck at the station | — → 200 materials, 3 trucks at most; replaces a wrecked mission truck | a second way to get a truck back |
+| 2026-10-29 | Porto Velário layout | fixed river, base and depots → per seed: river course, base along the middle half of the shore, depot 360–500, hospital 330–480, station 170–300 cells from the base, each in its own district; block length, avenue rhythm and park share vary | "generate another city" barely changed the map: the points were always in the same place |

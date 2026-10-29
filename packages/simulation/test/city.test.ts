@@ -34,6 +34,25 @@ describe('Porto Velário', () => {
     expect(m.buildings.length).toBeGreaterThan(2000);
   });
 
+  it('each seed moves the strategic points, each to a district of its own at a playable distance', () => {
+    const layouts = new Set<string>();
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const { grid, sites } = generateCityMap(seed);
+      layouts.add(sites.map((s) => `${s.x0},${s.y0}`).join(' '));
+      const centre = (s: (typeof sites)[number]) => [(s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2];
+      const [bx, by] = centre(sites[0]);
+      const districts = new Set(sites.map((s) => grid.district[grid.idx(Math.round(centre(s)[0]), Math.round(centre(s)[1]))]));
+      expect(districts.size).toBe(sites.length);
+      for (const s of sites.slice(1)) {
+        const [x, y] = centre(s);
+        const d = Math.sqrt((x - bx) ** 2 + (y - by) ** 2);
+        expect(d).toBeGreaterThan(160);
+        expect(d).toBeLessThan(510);
+      }
+    }
+    expect(layouts.size).toBe(6);
+  });
+
   it('every street cell and every depot is reachable from the base, across the river', () => {
     for (const seed of [1, 2, 3]) {
       const { grid, sites } = generateCityMap(seed);

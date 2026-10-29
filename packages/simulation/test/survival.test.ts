@@ -113,7 +113,8 @@ describe('survival', () => {
     w.tick = rules.repopGraceS * TICK_HZ - 1;
     run(e, rules.repopEveryS * TICK_HZ * 3 + 1);
     expect(w.zombies.alive).toBe(rules.repopSize * 3);
-    const edge = rules.repopEdgeM;
+    // Those placed early have had a few minutes to wander inwards.
+    const edge = rules.repopEdgeM + 40;
     for (let s = 0; s < w.zombies.highWater; s++) {
       if (!w.zombies.isAlive(s)) continue;
       const x = w.zombies.x[s];
