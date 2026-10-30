@@ -40,9 +40,22 @@ const CORPSE_FALL_S = 0.35;
 const PATH_VERTS = 4096;
 /** Metres of travel per full walk cycle (two steps). */
 /** Largest half-size of the shadow frustum (metres) before the shadow map gets too coarse. */
-const SHADOW_HALF_MAX_M = 520;
+const SHADOW_HALF_MAX_M = 700;
+/** Screen corners in normalised device coordinates. */
+const SCREEN_CORNERS: readonly (readonly [number, number])[] = [
+  [-1, -1],
+  [1, -1],
+  [1, 1],
+  [-1, 1],
+];
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+/** Roofs seen at the screen edge stand on ground off screen: the fit also covers this height. */
+const SHADOW_ROOF_M = 45;
+/** Slack around the fitted frustum, and room towards the sun for the tallest casters (metres). */
+const SHADOW_MARGIN_M = 12;
+const SHADOW_CASTER_M = 200;
 /** Zooming out this much further (in frustum half-size) fades the cast shadows out entirely. */
-const SHADOW_FADE_M = 110;
+const SHADOW_FADE_M = 150;
 /** Characters this far outside the view are skipped (covers their size and a short shadow). */
 const CULL_RADIUS_M = 6;
 const STRIDE_M = 1.6;
@@ -603,28 +616,76 @@ export class GameRenderer {
     }
   }
 
-  /** Shadow frustum follows what the camera looks at; fog only in the third-person view. */
+  private readonly ndc = new THREE.Vector2();
+  private readonly hit = new THREE.Vector3();
+  private readonly lightView = new THREE.Matrix4();
+  private readonly lightAxes = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly roof = new THREE.Plane(new THREE.Vector3(0, 1, 0), -SHADOW_ROOF_M);
+
+  /**
+   * Shadow frustum fitted to what the camera shows: the screen corners on the ground and at roof
+   * height, in the sun's view, so a wide monitor is covered as well as a square one. Fog only in the
+   * third-person view.
+   */
   private updateLighting(): void {
     const d = this.rig.direct;
     const fx = d ? d.x : this.rig.focusX;
     const fy = d ? d.y : this.rig.focusY;
-    const want = d ? 70 : this.rig.span * 0.95 + 20;
-    const half = Math.min(want, SHADOW_HALF_MAX_M);
-    // Past the cap the shadowed square no longer covers the view and its edge would show: fade the
-    // cast shadows out (the sun still shades the building faces), and stop redrawing the map once gone.
-    const fade = Math.max(0, Math.min(1, 1 - (want - SHADOW_HALF_MAX_M) / SHADOW_FADE_M));
-    this.sun.shadow.intensity = fade;
-    this.renderer.shadowMap.autoUpdate = fade > 0;
     this.sun.position.set(fx - 220, 400 * this.sunHeight, fy - 300);
     this.sun.target.position.set(fx, 0, fy);
     const cam = this.sun.shadow.camera;
-    if (cam.right !== half) {
-      cam.left = -half;
-      cam.right = half;
-      cam.top = half;
-      cam.bottom = -half;
-      cam.near = 10;
-      cam.far = 1000;
+    let left = -70;
+    let right = 70;
+    let bottom = -70;
+    let top = 70;
+    let near = 10;
+    let far = 1000;
+    if (!d) {
+      // The sun camera looks from the sun at the focus with +Y up, as three.js aims it.
+      this.lightView.lookAt(this.sun.position, this.sun.target.position, Y_AXIS);
+      const [ax, ay, az] = this.lightAxes;
+      this.lightView.extractBasis(ax, ay, az);
+      left = bottom = near = Infinity;
+      right = top = far = -Infinity;
+      const view = this.rig.active;
+      for (const plane of [this.plane, this.roof]) {
+        for (const [nx, ny] of SCREEN_CORNERS) {
+          this.raycaster.setFromCamera(this.ndc.set(nx, ny), view);
+          if (!this.raycaster.ray.intersectPlane(plane, this.hit)) continue;
+          this.hit.sub(this.sun.position);
+          const x = this.hit.dot(ax);
+          const y = this.hit.dot(ay);
+          // three.js cameras look down -Z: depth along the view is -(p . z).
+          const depth = -this.hit.dot(az);
+          left = Math.min(left, x);
+          right = Math.max(right, x);
+          bottom = Math.min(bottom, y);
+          top = Math.max(top, y);
+          near = Math.min(near, depth);
+          far = Math.max(far, depth);
+        }
+      }
+      left -= SHADOW_MARGIN_M;
+      bottom -= SHADOW_MARGIN_M;
+      right += SHADOW_MARGIN_M;
+      top += SHADOW_MARGIN_M;
+      // Casters stand between the sun and the ground: leave room for the tallest towers.
+      near = Math.max(1, near - SHADOW_CASTER_M);
+      far += SHADOW_MARGIN_M;
+    }
+    // Past the cap the shadow map grows too coarse: fade the cast shadows out (the sun still shades
+    // the building faces), and stop redrawing the map once they are gone.
+    const half = Math.max(right - left, top - bottom) / 2;
+    const fade = Math.max(0, Math.min(1, 1 - (half - SHADOW_HALF_MAX_M) / SHADOW_FADE_M));
+    this.sun.shadow.intensity = fade;
+    this.renderer.shadowMap.autoUpdate = fade > 0;
+    if (cam.left !== left || cam.right !== right || cam.top !== top || cam.bottom !== bottom || cam.near !== near || cam.far !== far) {
+      cam.left = left;
+      cam.right = right;
+      cam.top = top;
+      cam.bottom = bottom;
+      cam.near = near;
+      cam.far = far;
       cam.updateProjectionMatrix();
     }
     if (d) {
