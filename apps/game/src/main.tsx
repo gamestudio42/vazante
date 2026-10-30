@@ -5,7 +5,7 @@ import { GameRenderer } from '@vazante/view3d';
 import { GameClient } from './client.ts';
 import { setLocale, t } from './i18n.ts';
 import { InputController } from './input.ts';
-import { loadSettings } from './settings.ts';
+import { loadSettings, newGameSeed } from './settings.ts';
 import { Shell, type Screen } from './shell.ts';
 import { getSave } from './storage.ts';
 import { probe } from './probe.ts';
@@ -42,7 +42,7 @@ async function boot(): Promise<void> {
       save = null;
     }
   }
-  const seed = (save?.seed ?? Number(params.get('seed') ?? 1)) >>> 0;
+  const seed = (save?.seed ?? (params.has('seed') ? Number(params.get('seed')) : newGameSeed(settings))) >>> 0;
   const initial: Screen = params.has('bench') ? 'playing' : save ? 'paused' : params.has('play') ? 'briefing' : 'menu';
   const client = new GameClient(seed, save ?? undefined, params.has('bench') ? 'veteran' : settings.difficulty, params.get('scenario') ?? undefined);
   const unsubscribe = client.subscribe(() => {

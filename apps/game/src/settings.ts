@@ -17,6 +17,8 @@ export interface Settings {
   completed: MissionId[];
   /** Best survival run per difficulty: most nights, then most kills. */
   survivalBest: Partial<Record<DifficultyId, SurvivalRecord>>;
+  /** City number every new game uses; absent: a new city each game. */
+  fixedCity?: number;
 }
 
 export interface SurvivalRecord {
@@ -48,4 +50,9 @@ export function saveSettings(s: Settings): void {
   } catch {
     // Private windows can refuse storage; settings then last for the session.
   }
+}
+
+/** The city for a new game: the fixed one when set, otherwise a random one. */
+export function newGameSeed(s: Settings): number {
+  return s.fixedCity ?? 1 + Math.floor(Math.random() * 999_999);
 }

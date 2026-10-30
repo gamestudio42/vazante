@@ -84,9 +84,22 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
             {t('menu.quit')}
           </button>
         )}
-        <div className="row muted city">
+        <div className="row muted city" title={t('menu.cityHint')}>
           {t('menu.city')} #{seed}
-          <button onClick={() => shell.restart(seed + 1, false)}>
+          <label>
+            {t('menu.fixCity')}
+            <input
+              type="number"
+              min={1}
+              placeholder={t('menu.cityRandom')}
+              value={shell.settings.fixedCity ?? ''}
+              onChange={(e) => {
+                const n = Math.floor(Number(e.target.value));
+                shell.applySettings({ ...shell.settings, fixedCity: n > 0 ? n : undefined });
+              }}
+            />
+          </label>
+          <button onClick={() => shell.restart(shell.settings.fixedCity ?? 1 + Math.floor(Math.random() * 999_999), false)}>
             <RefreshCw size={12} />
             {t('menu.newCity')}
           </button>

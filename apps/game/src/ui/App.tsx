@@ -1597,7 +1597,7 @@ function Summary({
           ) : (
             <button
               className="primary"
-              onClick={() => shell.restart(seed + 1, true)}
+              onClick={() => shell.restart(1 + Math.floor(Math.random() * 999_999), true)}
             >
               {t("summary.next")} <ArrowRight size={14} />
             </button>

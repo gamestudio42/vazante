@@ -1713,3 +1713,18 @@ input[type='checkbox'] {
   opacity: 1;
   color: var(--warn, #e0b040);
 }
+.menu-screen .city label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 6px;
+}
+.menu-screen .city input {
+  width: 9em;
+  font: inherit;
+  padding: 1px 4px;
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}

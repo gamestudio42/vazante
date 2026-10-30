@@ -4,7 +4,7 @@ import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
 import { setLocale, t } from './i18n.ts';
 import type { InputController } from './input.ts';
-import { saveSettings, type Settings, type SurvivalRecord } from './settings.ts';
+import { newGameSeed, saveSettings, type Settings, type SurvivalRecord } from './settings.ts';
 import { Tutorial } from './tutorial.ts';
 import { deleteSave, download, exportSave, getSave, importSave, listSaves, putSave } from './storage.ts';
 
@@ -110,9 +110,11 @@ export class Shell {
     this.openScenario(id);
   }
 
+  /** Each new game is on a new city, unless a city number is fixed in the menu. */
   private openScenario(id: string): void {
     const p = new URLSearchParams(location.search);
     p.set('scenario', id);
+    p.set('seed', String(newGameSeed(this.settings)));
     p.set('play', '1');
     p.delete('load');
     location.search = p.toString();
