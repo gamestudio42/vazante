@@ -362,7 +362,7 @@ function pickCover(w: World, q: Squad, n: number): void {
         for (let ox = -r; ox <= r; ox++) {
           if (!g.inBounds(hx + ox, hy + oy)) continue;
           const c = g.idx(hx + ox, hy + oy);
-          if (!isCover(g, c) || !facesFront(w, q, c) || q.cover.includes(c))
+          if (g.structure[c] !== 0 || !isCover(g, c) || !facesFront(w, q, c) || q.cover.includes(c))
             continue;
           const d = ox * ox + oy * oy;
           if (d < bestD) {
@@ -490,7 +490,37 @@ export function slotPosition(
       : formationOffset(q.formation, i, n);
   const x = q.ax + q.hx * fwd - q.hy * lat;
   const y = q.ay + q.hy * fwd + q.hx * lat;
-  return w.grid.isWalkableAt(x, y) ? [x, y] : [q.ax, q.ay];
+  return w.grid.isWalkableAt(x, y) ? offBlueprint(w, x, y) : offBlueprint(w, q.ax, q.ay);
+}
+
+/**
+ * A finished blueprint only rises once its cell is clear, so nobody keeps a slot on one: the slot
+ * moves to the nearest free walkable cell around it.
+ */
+function offBlueprint(w: World, x: number, y: number): [number, number] {
+  const g = w.grid;
+  const c = g.cellAt(x, y);
+  if (c < 0 || g.structure[c] === 0) return [x, y];
+  const cx = c % g.width;
+  const cy = (c - cx) / g.width;
+  for (let r = 1; r <= 2; r++) {
+    let best = -1;
+    let bd = Infinity;
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || !g.inBounds(cx + dx, cy + dy)) continue;
+        const n = g.idx(cx + dx, cy + dy);
+        if (!g.isWalkable(n) || g.structure[n] !== 0) continue;
+        const d = dist2(g.cellCenterX(n), g.cellCenterY(n), x, y);
+        if (d < bd) {
+          bd = d;
+          best = n;
+        }
+      }
+    }
+    if (best >= 0) return [g.cellCenterX(best), g.cellCenterY(best)];
+  }
+  return [x, y];
 }
 
 function dist2(ax: number, ay: number, bx: number, by: number): number {

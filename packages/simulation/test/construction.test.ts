@@ -79,6 +79,21 @@ describe('construction', () => {
     expect(w.grid.isWalkable(st.cell)).toBe(false);
   });
 
+  it('soldiers standing on finished blueprints step off them, so the structures rise', () => {
+    const e = withBase();
+    const w = e.world;
+    // A 3 x 3 patch of blueprints, then a squad told to hold right on top of it.
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) build(e, 'hesco', 20 + dx, 20 + dy);
+    e.tick();
+    expect(w.structures.length).toBe(9);
+    const q = addSquad(e, 'police', c(20), c(20));
+    q.autoBuild = false;
+    q.order = { kind: 'hold', at: { x: c(20), y: c(20) } };
+    for (const st of w.structures) st.work = buildTicks(st.kind);
+    e.runTicks(150);
+    expect(w.structures.every((st) => st.built)).toBe(true);
+  });
+
   it('idle squads in the base walk to blueprints and build them', () => {
     const e = withBase(48);
     const w = e.world;
