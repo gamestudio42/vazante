@@ -345,6 +345,8 @@ function TopBar({
   onSpeed: (s: SimSpeed) => void;
 }) {
   const lowAmmo = frame.bases[0] && frame.bases[0].ammo < 200;
+  // Depot output waits in the depot's own stock until a truck brings it to the base.
+  const away = frame.economy ? frame.bases.slice(1).reduce((n, b) => n + b.materials, 0) : 0;
   return (
     <div className="topbar panel">
       <span className="brand">{t("app.title")}</span>
@@ -394,6 +396,7 @@ function TopBar({
       <span className="chip" title={t("top.ammo")}>
         <Target size={13} />
         {frame.stats.ammoTotal}
+        <small>{t("top.ammoShort")}</small>
       </span>
       {frame.bases[0] && (
         <span
@@ -402,6 +405,15 @@ function TopBar({
         >
           <Package size={13} />
           {frame.bases[0].ammo}
+          <small>{t("top.baseAmmoShort")}</small>
+        </span>
+      )}
+      {frame.bases[0] && (
+        <span className="chip" title={`${t("top.materials")}${away > 0 ? `\n${t("top.materialsAway").replace("{n}", String(away))}` : ""}`}>
+          <Boxes size={13} />
+          {frame.bases[0].materials}
+          <small>{t("top.materialsShort")}</small>
+          {away > 0 && <small className="away">+{away}</small>}
         </span>
       )}
       <span className="sep" />
@@ -1098,15 +1110,15 @@ function BuildPanel({
           base && (
             <>
               <span className="muted">{base.name}</span>
-              <Stat icon={Boxes} title={t("build.stock")}>
-                {base.materials}
+              <Stat icon={Boxes} title={t("top.materials")}>
+                {base.materials} <small className="muted">{t("top.materialsShort")}</small>
               </Stat>
               <Stat
                 icon={Package}
                 title={t("build.ammo")}
                 className={base.ammo < 200 ? "warn" : ""}
               >
-                {base.ammo}
+                {base.ammo} <small className="muted">{t("unit.ammo")}</small>
               </Stat>
             </>
           )
@@ -1615,7 +1627,7 @@ function alertText(a: GameClient["state"]["alerts"][number]): string {
     case "squad_recruited":
       return `${base}: ${a.reason}`;
     case "cargo_delivered":
-      return `${base}: ${a.value} ${t("top.ammo").toLowerCase()} · ${a.reason} ${t("build.stock").toLowerCase()}`;
+      return `${base}: ${a.value} ${t("unit.ammo")} · ${a.reason} ${t("build.stock").toLowerCase()}`;
     case "mission_lost":
       return `${base}: ${t(`loss.${a.reason}`)}`;
     case "wave_warning":

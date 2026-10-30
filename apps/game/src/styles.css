@@ -1704,3 +1704,12 @@ input[type='checkbox'] {
 .structure-panel .struct-ammo .warn {
   color: var(--warn, #e0b040);
 }
+.topbar .chip small {
+  margin-left: 3px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+.topbar .chip small.away {
+  opacity: 1;
+  color: var(--warn, #e0b040);
+}

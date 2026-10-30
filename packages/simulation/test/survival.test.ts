@@ -47,7 +47,7 @@ describe('survival', () => {
     expect(nextHourTick(0, 6)).toBe((14 / 24) * day);
   });
 
-  it('plays on a 40-minute day that starts in the morning, so the first night is 11 game hours away', () => {
+  it('plays on a 30-minute day that starts in the morning, so the first night is 11 game hours away', () => {
     const e = SimulationEngine.create(3, 'survival', { zombies: 0 });
     const day = MISSIONS.survival.day!;
     expect(e.world.day).toEqual(day);

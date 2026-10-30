@@ -309,7 +309,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
     ammo: 2500,
     commandPost: true,
     economy: true,
-    day: { lengthS: 2400, startHour: 8 },
+    day: { lengthS: 1800, startHour: 8 },
     stages: [
       {
         kind: "endless",
