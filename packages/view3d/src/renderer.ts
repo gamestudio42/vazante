@@ -39,8 +39,9 @@ const MAX_CORPSES = 1500;
 const CORPSE_FALL_S = 0.35;
 const PATH_VERTS = 4096;
 /** Metres of travel per full walk cycle (two steps). */
-/** Largest half-size of the shadow frustum (metres) before the shadow map gets too coarse. */
-const SHADOW_HALF_MAX_M = 700;
+/** Shadow texel / screen pixel: full shadows up to OK, none from MAX, a fade between. */
+const SHADOW_COARSE_OK = 1;
+const SHADOW_COARSE_MAX = 1.6;
 /** Screen corners in normalised device coordinates. */
 const SCREEN_CORNERS: readonly (readonly [number, number])[] = [
   [-1, -1],
@@ -54,8 +55,6 @@ const SHADOW_ROOF_M = 45;
 /** Slack around the fitted frustum, and room towards the sun for the tallest casters (metres). */
 const SHADOW_MARGIN_M = 12;
 const SHADOW_CASTER_M = 200;
-/** Zooming out this much further (in frustum half-size) fades the cast shadows out entirely. */
-const SHADOW_FADE_M = 150;
 /** Characters this far outside the view are skipped (covers their size and a short shadow). */
 const CULL_RADIUS_M = 6;
 const STRIDE_M = 1.6;
@@ -673,10 +672,14 @@ export class GameRenderer {
       near = Math.max(1, near - SHADOW_CASTER_M);
       far += SHADOW_MARGIN_M;
     }
-    // Past the cap the shadow map grows too coarse: fade the cast shadows out (the sun still shades
-    // the building faces), and stop redrawing the map once they are gone.
-    const half = Math.max(right - left, top - bottom) / 2;
-    const fade = Math.max(0, Math.min(1, 1 - (half - SHADOW_HALF_MAX_M) / SHADOW_FADE_M));
+    // Once a shadow-map texel grows coarser than a screen pixel the shadows turn blocky: fade them
+    // out (the sun still shades the building faces) and stop redrawing the map once they are gone.
+    // Measured against the pixel size, not the area, so the tilt of a mid zoom (which stretches the
+    // ground the view takes in) does not switch shadows off and on again while zooming.
+    const texel = Math.max(right - left, top - bottom) / this.sun.shadow.mapSize.x;
+    const pixel = d ? 0 : this.rig.span / this.rig.pixelsHigh;
+    const coarse = d ? 0 : texel / pixel;
+    const fade = Math.max(0, Math.min(1, (SHADOW_COARSE_MAX - coarse) / (SHADOW_COARSE_MAX - SHADOW_COARSE_OK)));
     this.sun.shadow.intensity = fade;
     this.renderer.shadowMap.autoUpdate = fade > 0;
     if (cam.left !== left || cam.right !== right || cam.top !== top || cam.bottom !== bottom || cam.near !== near || cam.far !== far) {
