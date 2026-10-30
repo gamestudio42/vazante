@@ -39,6 +39,10 @@ const MAX_CORPSES = 1500;
 const CORPSE_FALL_S = 0.35;
 const PATH_VERTS = 4096;
 /** Metres of travel per full walk cycle (two steps). */
+/** Largest half-size of the shadow frustum (metres) before the shadow map gets too coarse. */
+const SHADOW_HALF_MAX_M = 520;
+/** Zooming out this much further (in frustum half-size) fades the cast shadows out entirely. */
+const SHADOW_FADE_M = 110;
 /** Characters this far outside the view are skipped (covers their size and a short shadow). */
 const CULL_RADIUS_M = 6;
 const STRIDE_M = 1.6;
@@ -604,7 +608,13 @@ export class GameRenderer {
     const d = this.rig.direct;
     const fx = d ? d.x : this.rig.focusX;
     const fy = d ? d.y : this.rig.focusY;
-    const half = d ? 70 : Math.min(this.rig.span * 0.95 + 20, 520);
+    const want = d ? 70 : this.rig.span * 0.95 + 20;
+    const half = Math.min(want, SHADOW_HALF_MAX_M);
+    // Past the cap the shadowed square no longer covers the view and its edge would show: fade the
+    // cast shadows out (the sun still shades the building faces), and stop redrawing the map once gone.
+    const fade = Math.max(0, Math.min(1, 1 - (want - SHADOW_HALF_MAX_M) / SHADOW_FADE_M));
+    this.sun.shadow.intensity = fade;
+    this.renderer.shadowMap.autoUpdate = fade > 0;
     this.sun.position.set(fx - 220, 400 * this.sunHeight, fy - 300);
     this.sun.target.position.set(fx, 0, fy);
     const cam = this.sun.shadow.camera;
