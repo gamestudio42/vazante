@@ -11,6 +11,7 @@ import {
   STRESS,
   TICK_DT,
   TICK_HZ,
+  CLIMB_INTERVAL_S,
   ZOMBIES,
   ZOMBIE_ACCEL,
   ZOMBIE_ATTACK_INTERVAL_S,
@@ -280,6 +281,16 @@ export function stepHorde(w: World): void {
     const from = g.cellAt(x, y);
     const to = g.cellAt(moved.x, moved.y);
     if (to !== from) {
+      // Climbing onto a wall: one zombie per wall cell per CLIMB_INTERVAL_S; the rest keep piling.
+      if (from >= 0 && g.structure[from] === 0 && g.isStructureBlocking(to)) {
+        const climb = (w.climbNext ??= new Uint32Array(g.size));
+        if (w.tick < climb[to]) {
+          z.vx[s] = 0;
+          z.vy[s] = 0;
+          continue;
+        }
+        climb[to] = w.tick + CLIMB_TICKS;
+      }
       if (w.cellCount[to] >= ZOMBIE_MAX_PER_CELL) {
         // Cell full: stay put this tick.
         z.vx[s] = 0;
@@ -295,6 +306,8 @@ export function stepHorde(w: World): void {
     z.vy[s] = vy;
   }
 }
+
+const CLIMB_TICKS = Math.round(CLIMB_INTERVAL_S * TICK_HZ);
 
 function perceive(w: World, s: number, active: readonly Soldier[]): void {
   const z = w.zombies;

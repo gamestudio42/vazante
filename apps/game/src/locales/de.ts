@@ -359,6 +359,8 @@ export const de: Record<Key, string> = {
   "reason.squad_cap": "Truppgrenze erreicht",
   "alert.vehicle_repaired": "Lastwagen wieder fahrbereit",
   "alert.truck_bought": "Neuer Lastwagen am Bahnhof",
+  "alert.ammo_low": "Munition der Basis knapp",
+  "alert.ammo_out": "Basis ohne Munition – Nachschub holen",
   "alert.nest_empty": "MG-Nest ohne Munition",
   "reason.not_engineers": "nur Pioniere reparieren",
   "reason.nothing_to_repair": "nichts in der Nähe zu reparieren",

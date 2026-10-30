@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CELL_SIZE, Ground, MG_NEST, RESUPPLY_ROUNDS_PER_S, STRUCTURES, TICK_HZ, TRUCK, WEAPONS, WRECK, ZombieKind, ZombieState, type RiskPolicy } from '@vazante/shared';
+import { BASE_AMMO_LOW, CELL_SIZE, Ground, MG_NEST, RESUPPLY_ROUNDS_PER_S, STRUCTURES, TICK_HZ, TRUCK, WEAPONS, WRECK, ZombieKind, ZombieState, type RiskPolicy } from '@vazante/shared';
 import { SimulationEngine, spawnTruck } from '../src/index.ts';
 import { addSquad, disarm, fieldEngine, soldiersOf } from './helpers.ts';
 
@@ -282,5 +282,32 @@ describe('field MG nests', () => {
     expect(st.ammo).toBe(MG_NEST.fieldAmmo);
     // The disarmed engineers alongside take a few rounds from it too.
     expect(v.cargoAmmo).toBeLessThanOrEqual(3000 - MG_NEST.fieldAmmo);
+  });
+});
+
+describe('base ammo warnings', () => {
+  it('warns once when ammo runs low, once when it runs out, and rearms after a refill', () => {
+    const e = fieldEngine(1, 32);
+    const w = e.world;
+    const base = w.addBase('Teste', 0, 0, 15, 15, 0, BASE_AMMO_LOW + 100);
+    const seen: string[] = [];
+    const run = (n: number) => {
+      for (let i = 0; i < n; i++) {
+        e.tick();
+        for (const x of e.frame(false).events) if (x.type === 'ammo_low' || x.type === 'ammo_out') seen.push(x.type);
+      }
+    };
+    run(5);
+    expect(seen).toEqual([]);
+    base.ammo = BASE_AMMO_LOW - 1;
+    run(5);
+    base.ammo = 0;
+    run(5);
+    expect(seen).toEqual(['ammo_low', 'ammo_out']);
+    base.ammo = BASE_AMMO_LOW * 2;
+    run(5);
+    base.ammo = 10;
+    run(5);
+    expect(seen).toEqual(['ammo_low', 'ammo_out', 'ammo_low']);
   });
 });

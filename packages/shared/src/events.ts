@@ -33,6 +33,8 @@ export type SimEventType =
   | 'vehicle_repaired'
   | 'truck_bought'
   | 'nest_empty'
+  | 'ammo_low'
+  | 'ammo_out'
   | 'vehicle_hit'
   | 'wave_warning'
   | 'wave_started'

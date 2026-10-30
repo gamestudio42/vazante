@@ -907,6 +907,8 @@ const ALERT_STYLE: Partial<
   vehicle_repaired: { icon: Wrench, tone: "ok" },
   truck_bought: { icon: Truck, tone: "ok" },
   nest_empty: { icon: Target, tone: "warn" },
+  ammo_low: { icon: Target, tone: "warn" },
+  ammo_out: { icon: Target, tone: "danger" },
   wave_warning: { icon: Siren, tone: "warn" },
   wave_started: { icon: Siren, tone: "danger" },
   district_lost: { icon: MapIcon, tone: "danger" },
@@ -1641,6 +1643,8 @@ function alertText(a: GameClient["state"]["alerts"][number]): string {
     case "vehicle_repaired":
     case "truck_bought":
     case "nest_empty":
+    case "ammo_low":
+    case "ammo_out":
       return base;
     default:
       return a.reason ? `${base} (${t(`reason.${a.reason}`)})` : base;

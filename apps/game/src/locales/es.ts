@@ -358,6 +358,8 @@ export const es: Record<Key, string> = {
   "reason.squad_cap": "límite de escuadras alcanzado",
   "alert.vehicle_repaired": "Camión de vuelta en la carretera",
   "alert.truck_bought": "Camión nuevo en la estación",
+  "alert.ammo_low": "Munición de la base baja",
+  "alert.ammo_out": "Base sin munición: trae suministros",
   "alert.nest_empty": "Nido de ametralladora sin munición",
   "reason.not_engineers": "solo los ingenieros reparan",
   "reason.nothing_to_repair": "nada que reparar cerca",

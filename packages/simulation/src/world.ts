@@ -32,6 +32,8 @@ export class World {
   readonly districtControl: Uint8Array;
   /** Set when navigation changed (structure built, destroyed or toggled); forces a flow rebuild. */
   flowDirty = false;
+  /** Per cell, the tick from which the next zombie may climb onto that wall cell (made on first climb). */
+  climbNext?: Uint32Array;
   /** The horde distance field being rebuilt, a slice per tick. */
   readonly flowJob = new FlowJob();
   readonly stats: WorldStats = { zombiesKilled: 0, shotsFired: 0 };

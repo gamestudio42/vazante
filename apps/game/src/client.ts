@@ -42,6 +42,8 @@ const ALERT_TYPES = new Set<SimEvent['type']>([
   'vehicle_repaired',
   'truck_bought',
   'nest_empty',
+  'ammo_low',
+  'ammo_out',
 ]);
 
 export interface ClientState {

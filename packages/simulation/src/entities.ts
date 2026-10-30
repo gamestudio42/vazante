@@ -120,6 +120,8 @@ export interface Base {
   control?: number;
   /** Soldiers and infected in its capture area at the last control step (economy modes). */
   presence?: [number, number];
+  /** Ammo warning already given: 1 low, 2 out (main base only). */
+  ammoWarn?: number;
   /** Depots hold stock but cannot be built on. */
   buildable: boolean;
   name: string;

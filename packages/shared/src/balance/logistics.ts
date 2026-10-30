@@ -1,3 +1,6 @@
+/** The base's ammunition counts as low below this many rounds (an alert, and another at zero). */
+export const BASE_AMMO_LOW = 800;
+
 /** Soldiers within this distance of a base or depot with stock refill their reserve. */
 export const RESUPPLY_RADIUS_M = 30;
 /** Rounds per soldier per second while resupplying. */

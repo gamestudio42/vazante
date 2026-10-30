@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Blocked, CELL_SIZE, Ground, SoldierCondition, STRUCTURES, STRUCTURE_KINDS, ZombieKind, ZombieState, checkPlacement, type StructureKind } from '@vazante/shared';
+import { Blocked, CELL_SIZE, CLIMB_INTERVAL_S, TICK_HZ, Ground, SoldierCondition, STRUCTURES, STRUCTURE_KINDS, ZombieKind, ZombieState, checkPlacement, type StructureKind } from '@vazante/shared';
 import { buildTicks, placementContext, type SimulationEngine } from '../src/index.ts';
 import { addSquad, disarm, fieldEngine, soldiersOf } from './helpers.ts';
 
@@ -206,6 +206,30 @@ describe('wall stacking', () => {
     const { crossedAt } = siege(false);
     expect(crossedAt).toBeGreaterThanOrEqual(0);
     expect(crossedAt).toBeLessThan(600);
+  });
+
+  it('zombies get onto a climbable wall cell at most once per CLIMB_INTERVAL_S', () => {
+    const { engine } = siege(false);
+    const w = engine.world;
+    const z = w.zombies;
+    const prev = new Int32Array(z.highWater).fill(-1);
+    const entries = new Map<number, number[]>();
+    for (let t = 0; t < 400; t++) {
+      engine.tick();
+      for (let s = 0; s < z.highWater; s++) {
+        const cell = z.isAlive(s) ? w.grid.cellAt(z.x[s], z.y[s]) : -1;
+        if (cell >= 0 && prev[s] >= 0 && w.grid.structure[prev[s]] === 0 && w.grid.structure[cell] !== 0) {
+          const list = entries.get(cell) ?? [];
+          list.push(w.tick);
+          entries.set(cell, list);
+        }
+        prev[s] = cell;
+      }
+    }
+    expect(entries.size).toBeGreaterThan(0);
+    for (const ticks of entries.values()) {
+      for (let i = 1; i < ticks.length; i++) expect(ticks[i] - ticks[i - 1]).toBeGreaterThanOrEqual(CLIMB_INTERVAL_S * TICK_HZ);
+    }
   });
 
   it('with an active MG nest the wall holds for 120 s', () => {

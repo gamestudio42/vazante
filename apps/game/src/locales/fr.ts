@@ -361,6 +361,8 @@ export const fr: Record<Key, string> = {
   "reason.squad_cap": "limite d’escouades atteinte",
   "alert.vehicle_repaired": "Camion de nouveau sur la route",
   "alert.truck_bought": "Nouveau camion à la gare",
+  "alert.ammo_low": "Munitions de la base faibles",
+  "alert.ammo_out": "Base à court de munitions : ravitaillez",
   "alert.nest_empty": "Nid de mitrailleuse à court de munitions",
   "reason.not_engineers": "seul le génie répare",
   "reason.nothing_to_repair": "rien à réparer à proximité",

@@ -26,8 +26,10 @@ export const STRUCTURES: Readonly<Record<StructureKind, StructureStats>> = {
 
 /** Damage one zombie attack does to a structure. */
 export const ZOMBIE_STRUCTURE_DAMAGE = 1;
-/** Height each stacked zombie adds to the pile at a wall. */
-export const PILE_UNIT_M = 0.5;
+/** Height each stacked zombie adds to the pile at a wall: 14 stacked top a 3.5 m wall, 9 a hesco. */
+export const PILE_UNIT_M = 0.25;
+/** Once a wall is climbable, one zombie at a time gets onto each of its cells, this often (seconds). */
+export const CLIMB_INTERVAL_S = 1;
 /** Builders must be within this distance of the structure. */
 export const BUILD_RADIUS_M = 10;
 export const BUILDERS_REQUIRED = 2;

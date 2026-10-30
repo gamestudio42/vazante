@@ -329,7 +329,10 @@ export class SimulationEngine {
     h.bytes(w.grid.blocked).bytes(w.grid.noise).bytes(w.grid.flow).bytes(w.grid.structHeight).bytes(w.grid.pile);
     h.byte(w.flowDirty ? 1 : 0).byte(w.flowJob.active ? 1 : 0).u32(w.flowJob.d).u32(w.flowJob.pending);
     if (w.flowJob.active) h.bytes(w.flowJob.dist);
-    for (const b of w.bases) h.u32(b.id).u32(b.materials).u32(b.ammo);
+    for (const b of w.bases) {
+      h.u32(b.id).u32(b.materials).u32(b.ammo);
+      if (b.ammoWarn) h.u32(b.ammoWarn);
+    }
     h.bytes(w.districtControl);
     if (w.economy) for (const b of w.bases) h.str('economy').u32(b.control ?? 0);
     if (w.day) h.str('day').u32(w.day.lengthS).u32(w.day.startHour);
@@ -351,6 +354,7 @@ export class SimulationEngine {
     for (const st of w.structures) {
       h.u32(st.id).str(st.kind).u32(st.cell).u32(st.base).f64Value(st.hp).u32(st.work).byte(st.built ? 1 : 0).byte(st.open ? 1 : 0);
       h.u32(st.target + 1).f64Value(st.fireAcc);
+      if (w.climbNext) h.u32(w.climbNext[st.cell]);
       if (st.ammo !== undefined) h.str('ammo').u32(st.ammo);
       if (st.fired !== undefined) h.str('fired').u32(st.fired);
     }
