@@ -160,6 +160,11 @@ const SITE_RANGE: Record<Exclude<SiteRole, 'command'>, [number, number]> = {
   station: [170, 300],
 };
 
+/** Least distance between two depots (cells; 150 = 600 m), loosened in steps when a seed cannot fit it. */
+const SITE_GAP = [150, 125, 100] as const;
+/** Two depots must lie at least 35 degrees apart as seen from the base (cos 35° ≈ 0.819). */
+const SITE_MIN_ANGLE_COS = 0.819;
+
 /**
  * Porto Velário, the v0.5 city: 512 x 512 cells (2 km). A bay along the south edge, a river running
  * down from the north into it (streets cross it as bridges), wide avenues every few streets, six
@@ -238,32 +243,20 @@ export function generateCityMap(seed: number, size = 512): GeneratedMap {
       break;
     }
   }
-  const bcx = (base.x0 + base.x1) / 2;
-  const bcy = (base.y0 + base.y1) / 2;
-  const used = [districtOf(bcx, bcy)];
-  const depots: Array<[string, SiteRole, Rect]> = [];
-  const fallback: Record<string, Rect> = {
-    supply: { x0: size - 60, y0: 10, x1: size - 43, y1: 27 },
-    hospital: { x0: 14, y0: 60, x1: 31, y1: 77 },
-    station: { x0: size - 90, y0: Math.floor(size * 0.55), x1: size - 73, y1: Math.floor(size * 0.55) + 17 },
-  };
-  for (const [name, role] of [['Depósito Norte', 'supply'], ['Hospital São Lucas', 'hospital'], ['Estação Ferroviária', 'station']] as const) {
-    const [near, far] = SITE_RANGE[role];
-    let pick: Rect | null = null;
-    for (let i = 0; i < 2000 && !pick; i++) {
-      const x0 = rng.int(8, size - 26);
-      const y0 = rng.int(8, size - 100);
-      const r = { x0, y0, x1: x0 + 17, y1: y0 + 17 };
-      const cx = x0 + 8.5;
-      const cy = y0 + 8.5;
-      const d2 = (cx - bcx) * (cx - bcx) + (cy - bcy) * (cy - bcy);
-      if (d2 < near * near || d2 > far * far || used.includes(districtOf(cx, cy)) || !dry(r)) continue;
-      if (depots.some(([, , o]) => overlaps({ x0: o.x0 - 30, y0: o.y0 - 30, x1: o.x1 + 30, y1: o.y1 + 30 }, r))) continue;
-      pick = r;
-    }
-    pick ??= fallback[role];
-    used.push(districtOf((pick.x0 + pick.x1) / 2, (pick.y0 + pick.y1) / 2));
-    depots.push([name, role, pick]);
+  const roles = [['Depósito Norte', 'supply'], ['Hospital São Lucas', 'hospital'], ['Estação Ferroviária', 'station']] as const;
+  // Try the full spacing first, then a little looser; a seed where nothing fits gets the old fixed layout.
+  let depots: Array<[string, SiteRole, Rect]> | null = null;
+  for (const gap of SITE_GAP) {
+    depots = placeSites(rng, size, roles, base, gap, districtOf, dry);
+    if (depots) break;
+  }
+  if (!depots) {
+    base = { x0: midX - 12, y0: size - 70, x1: midX + 11, y1: size - 47 };
+    depots = [
+      ['Depósito Norte', 'supply', { x0: size - 60, y0: 10, x1: size - 43, y1: 27 }],
+      ['Hospital São Lucas', 'hospital', { x0: 14, y0: 60, x1: 31, y1: 77 }],
+      ['Estação Ferroviária', 'station', { x0: size - 90, y0: Math.floor(size * 0.55), x1: size - 73, y1: Math.floor(size * 0.55) + 17 }],
+    ];
   }
   const reserved = [base, ...depots.map(([, , r]) => r)];
   for (const r of reserved) {
@@ -322,6 +315,50 @@ export function generateCityMap(seed: number, size = 512): GeneratedMap {
 
   const sites: SiteInfo[] = [{ kind: 'base', name: 'Posto Âncora', role: 'command', ...base }, ...depots.map(([name, role, r]) => ({ kind: 'depot' as const, name, role, ...r }))];
   return { grid, buildings, districts, sites };
+}
+
+/**
+ * The three depots for one try: each at its SITE_RANGE from the base, in a district of its own, at
+ * least `gap` cells from the others and at least SITE_MIN_ANGLE_COS apart in bearing from the base,
+ * so each pulls towards its own side of the city. Null when some depot finds no place.
+ */
+function placeSites(
+  rng: Rng,
+  size: number,
+  roles: ReadonlyArray<readonly [string, Exclude<SiteRole, 'command'>]>,
+  base: Rect,
+  gap: number,
+  districtOf: (x: number, y: number) => number,
+  dry: (r: Rect) => boolean,
+): Array<[string, SiteRole, Rect]> | null {
+  const bcx = (base.x0 + base.x1) / 2;
+  const bcy = (base.y0 + base.y1) / 2;
+  const used = [districtOf(bcx, bcy)];
+  const out: Array<[string, SiteRole, Rect]> = [];
+  for (const [name, role] of roles) {
+    const [near, far] = SITE_RANGE[role];
+    let pick: Rect | null = null;
+    for (let i = 0; i < 2000 && !pick; i++) {
+      const x0 = rng.int(8, size - 26);
+      const y0 = rng.int(8, size - 100);
+      const r = { x0, y0, x1: x0 + 17, y1: y0 + 17 };
+      const dx = x0 + 8.5 - bcx;
+      const dy = y0 + 8.5 - bcy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < near * near || d2 > far * far || used.includes(districtOf(bcx + dx, bcy + dy)) || !dry(r)) continue;
+      const clash = out.some(([, , o]) => {
+        const ox = (o.x0 + o.x1) / 2 - bcx;
+        const oy = (o.y0 + o.y1) / 2 - bcy;
+        if ((ox - dx) * (ox - dx) + (oy - dy) * (oy - dy) < gap * gap) return true;
+        return (ox * dx + oy * dy) / Math.sqrt((ox * ox + oy * oy) * d2) > SITE_MIN_ANGLE_COS;
+      });
+      if (!clash) pick = r;
+    }
+    if (!pick) return null;
+    used.push(districtOf((pick.x0 + pick.x1) / 2, (pick.y0 + pick.y1) / 2));
+    out.push([name, role, pick]);
+  }
+  return out;
 }
 
 /** Per-seed look of the city: block length range (cells), avenue rhythm and park share. */

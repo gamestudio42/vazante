@@ -53,6 +53,19 @@ describe('Porto Velário', () => {
     expect(layouts.size).toBe(6);
   });
 
+  it('never puts two strategic points close together: 400 m apart at the very least, over 50 seeds', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const { sites } = generateCityMap(seed);
+      const c = sites.slice(1).map((s) => [(s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2]);
+      for (let i = 0; i < c.length; i++) {
+        for (let j = i + 1; j < c.length; j++) {
+          const d = Math.sqrt((c[i][0] - c[j][0]) ** 2 + (c[i][1] - c[j][1]) ** 2) * 4;
+          expect(d, `seed ${seed}`).toBeGreaterThanOrEqual(400);
+        }
+      }
+    }
+  });
+
   it('every street cell and every depot is reachable from the base, across the river', () => {
     for (const seed of [1, 2, 3]) {
       const { grid, sites } = generateCityMap(seed);
