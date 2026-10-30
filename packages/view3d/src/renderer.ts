@@ -668,8 +668,17 @@ export class GameRenderer {
       bottom -= SHADOW_MARGIN_M;
       right += SHADOW_MARGIN_M;
       top += SHADOW_MARGIN_M;
-      // Casters stand between the sun and the ground: leave room for the tallest towers.
-      near = Math.max(1, near - SHADOW_CASTER_M);
+      // Casters stand between the sun and the ground: leave room for the tallest towers. A wide view
+      // reaches behind the sun's own spot, so back the sun off along its ray until all of it is in
+      // front (x and y in its view do not change, only the depths).
+      near -= SHADOW_CASTER_M;
+      if (near < 1) {
+        const back = 1 - near;
+        this.tmpP.subVectors(this.sun.position, this.sun.target.position).setLength(back);
+        this.sun.position.add(this.tmpP);
+        near += back;
+        far += back;
+      }
       far += SHADOW_MARGIN_M;
     }
     // Once a shadow-map texel grows coarser than a screen pixel the shadows turn blocky: fade them
