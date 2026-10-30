@@ -239,6 +239,38 @@ describe('wall stacking', () => {
   });
 });
 
+describe('horde routing', () => {
+  it('a jammed gap sends part of the horde round to another gap', () => {
+    const e = withBase(64);
+    const w = e.world;
+    const q = addSquad(e, 'slice', c(58), c(12));
+    for (const s of w.soldiers) disarm(s);
+    // A wall down x = 32 with a one-cell gap near the squad and another 18 cells away.
+    for (let y = 0; y < 64; y++) if (y !== 12 && y !== 30) build(e, 'wall', 32, y);
+    e.tick();
+    finishAll(e);
+    const victim = soldiersOf(e, q.id)[0].id;
+    let n = 0;
+    for (let y = 4; y < 22 && n < 240; y++) {
+      for (let x = 10; x < 30 && n < 240; x += 2) {
+        const s = w.zombies.spawn(x * CELL_SIZE + 1 + (y % 2), y * CELL_SIZE + 2, ZombieKind.Common, ZombieState.Chasing);
+        w.zombies.target[s] = victim;
+        n++;
+      }
+    }
+    const z = w.zombies;
+    const farGap = new Set<number>();
+    for (let t = 0; t < 600; t++) {
+      for (const sol of w.soldiers) sol.hp = 1000;
+      e.tick();
+      for (let s = 0; s < z.highWater; s++) {
+        if (z.isAlive(s) && z.y[s] > 26 * CELL_SIZE) farGap.add(s);
+      }
+    }
+    expect(farGap.size).toBeGreaterThan(10);
+  });
+});
+
 describe('construction determinism', () => {
   it('same commands give the same hash with structures, piles and nests', () => {
     const run = () => {

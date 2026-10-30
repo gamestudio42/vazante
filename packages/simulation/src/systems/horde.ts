@@ -48,9 +48,9 @@ const CHASE_GIVE_UP = 250;
  * among the steps at most SPREAD_SLACK worse than the best one.
  */
 const SPREAD_MIN_FLOW = 80;
-const SPREAD_SLACK = 10;
+const SPREAD_SLACK = 20;
 /** How strongly a wave zombie leans to its side against keeping its heading. */
-const SPREAD_LEAN = 0.15;
+const SPREAD_LEAN = 0.3;
 
 /** A wave zombie's side, -2 to 2. */
 function laneSide(slot: number): number {

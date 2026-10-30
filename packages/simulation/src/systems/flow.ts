@@ -16,7 +16,7 @@ export function stepFlow(w: World, force = false): void {
     const cp = w.mission ? w.structure(w.mission.commandPost) : undefined;
     if (cp) sources.push(cp.cell);
     for (const v of w.vehicles) if (v.state !== 'destroyed') sources.push(w.grid.cellAt(v.x, v.y));
-    job.begin(w.grid, sources, STRUCTURE_FLOW_PENALTY);
+    job.begin(w.grid, sources, STRUCTURE_FLOW_PENALTY, w.cellCount);
   }
   job.run(w.grid, force ? Infinity : FLOW_BUDGET_PER_TICK);
 }

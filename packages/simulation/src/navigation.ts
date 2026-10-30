@@ -1,3 +1,4 @@
+import { FLOW_CROWD_COST, FLOW_CROWD_FREE, FLOW_CROWD_MAX } from '@vazante/shared';
 import type { Grid } from './grid.ts';
 import { MinHeap } from './heap.ts';
 
@@ -118,7 +119,12 @@ export function zombieCanStep(grid: Grid, cx: number, cy: number, dx: number, dy
   return true;
 }
 
-const BUCKETS = 256; // > largest step cost (14 + structure penalty), so the ring never laps itself
+/** Extra flow cost of an open cell holding `n` zombies. */
+export function crowdCost(n: number): number {
+  return n <= FLOW_CROWD_FREE ? 0 : Math.min(FLOW_CROWD_MAX, (n - FLOW_CROWD_FREE) * FLOW_CROWD_COST);
+}
+
+const BUCKETS = 256; // > largest step cost (14 + max(structure penalty, crowd cost)), so the ring never laps itself
 
 /**
  * A distance field from source cells (Dial's bucket queue: costs are small integers), computed in
@@ -140,8 +146,8 @@ export class FlowJob {
   bucketLen = new Int32Array(BUCKETS);
 
   /** Snapshot the costs and seed the sources. */
-  begin(grid: Grid, sources: readonly number[], structurePenalty: number): void {
-    if (structurePenalty + 14 >= BUCKETS) throw new Error('structure penalty too large for the bucket ring');
+  begin(grid: Grid, sources: readonly number[], structurePenalty: number, crowd?: Uint16Array): void {
+    if (structurePenalty + 14 >= BUCKETS || FLOW_CROWD_MAX + 14 >= BUCKETS) throw new Error('step cost too large for the bucket ring');
     const size = grid.size;
     if (this.cost.length !== size) {
       this.cost = new Int16Array(size);
@@ -150,7 +156,7 @@ export class FlowJob {
     }
     for (let c = 0; c < size; c++) {
       const k = grid.zombieCost(c, 1);
-      this.cost[c] = k < 0 ? -1 : k === 0 ? 0 : structurePenalty;
+      this.cost[c] = k < 0 ? -1 : k === 0 ? (crowd ? crowdCost(crowd[c]) : 0) : structurePenalty;
       this.open[c] = k === 0 ? 1 : 0;
     }
     this.dist.fill(FLOW_UNREACHABLE);
@@ -234,7 +240,7 @@ export class FlowJob {
 const scratchJob = new FlowJob();
 
 /** The whole distance field from all source cells into `grid.flow`, at once. */
-export function computeFlowField(grid: Grid, sources: readonly number[], structurePenalty = 0): void {
-  scratchJob.begin(grid, sources, structurePenalty);
+export function computeFlowField(grid: Grid, sources: readonly number[], structurePenalty = 0, crowd?: Uint16Array): void {
+  scratchJob.begin(grid, sources, structurePenalty, crowd);
   scratchJob.run(grid);
 }

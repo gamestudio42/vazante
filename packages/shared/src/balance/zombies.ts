@@ -41,6 +41,14 @@ export const ZOMBIE_SEPARATION_M = 0.6;
 export const ZOMBIE_MAX_NEIGHBOURS = 6;
 /** A zombie will not step into a 4 m cell that already holds this many. */
 export const ZOMBIE_MAX_PER_CELL = 12;
+/**
+ * Crowding in the horde flow field: each zombie in a cell beyond FLOW_CROWD_FREE adds FLOW_CROWD_COST
+ * (10 = one cell of walking), up to FLOW_CROWD_MAX. A queue through a gap then looks longer than going
+ * round, so the horde splits over other routes and other stretches of wall instead of filing through one.
+ */
+export const FLOW_CROWD_FREE = 1;
+export const FLOW_CROWD_COST = 10;
+export const FLOW_CROWD_MAX = 80;
 export const ZOMBIE_ACCEL = 4; // m/s^2
 export const ZOMBIE_WANDER_SPEED_FACTOR = 0.35;
 /** Damage to vehicles per hit (no bite). */
