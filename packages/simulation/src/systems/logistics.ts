@@ -75,10 +75,16 @@ function warnBaseAmmo(w: World): void {
   for (const b of w.bases) {
     if (b.kind !== 'base') continue;
     const level = b.ammo <= 0 ? 2 : b.ammo < BASE_AMMO_LOW ? 1 : 0;
-    const was = b.ammoWarn ?? 0;
+    // A base that starts the mission short (some keep only a few hundred rounds) is not news: take
+    // its starting level silently and warn only when it gets worse.
+    if (b.ammoWarn === undefined) {
+      b.ammoWarn = level;
+      continue;
+    }
+    const was = b.ammoWarn;
     if (level > was) w.emit({ type: level === 2 ? 'ammo_out' : 'ammo_low', source: b.id, x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 });
     // Rearm the warning only once stock is well clear of the threshold, so it does not chatter.
-    if (level > was || (level < was && (level === 1 || b.ammo >= BASE_AMMO_LOW * 1.5))) b.ammoWarn = level || undefined;
+    if (level > was || (level < was && (level === 1 || b.ammo >= BASE_AMMO_LOW * 1.5))) b.ammoWarn = level;
   }
 }
 

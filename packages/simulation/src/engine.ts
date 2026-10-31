@@ -331,7 +331,7 @@ export class SimulationEngine {
     if (w.flowJob.active) h.bytes(w.flowJob.dist);
     for (const b of w.bases) {
       h.u32(b.id).u32(b.materials).u32(b.ammo);
-      if (b.ammoWarn) h.u32(b.ammoWarn);
+      if (b.ammoWarn !== undefined) h.u32(b.ammoWarn + 1);
     }
     h.bytes(w.districtControl);
     if (w.economy) for (const b of w.bases) h.str('economy').u32(b.control ?? 0);
