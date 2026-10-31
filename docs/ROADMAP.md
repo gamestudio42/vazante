@@ -6,16 +6,13 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started.
 
 ## v0.1 Vertical slice: "O Último Comboio"
 
-### Status (2026-10-26)
+### Status (2026-10-31)
 
-Done with automated tests: M0.1 to M0.4, M1.1, M1.2, M1.5 (engine side: reading frames never changes the hash), M2.1, M2.3, M3.1 to M3.5, M4.1, M5.1 (engine side), M5.2, M5.3, M5.4, M6.1, M6.2, M7.1, M7.2, M7.3 (engine side), M8.1 (save/load hash test, in Node and in Chromium), M8.4 (Electron smoke test: offline, `crossOriginIsolated === true`).
-Playwright e2e (`pnpm e2e`, 8 tests): menu → briefing → pause flow, settings, save/load and quick save with hash checks, squad selection and move (M2.2), build placement (M5.1), convoy planner (M6.3), soak at 4x.
-Done and checked by hand in Chromium (no automated test yet): M1.4 pixel render, M1.5 camera bands, M4.2 direct HUD, M7.3 summary screen.
-Quality pass (see `AUDIT.md`): toon/outline/posterize render, shadows, animated procedural characters, corpses, blood, particles, order markers, path preview, procedural audio.
-Polish pass: day/night cycle (pulled forward from v0.5; night halves sight away from base and depot lights, with street lamps, floodlights, weapon lights and headlights), burning buildings, wreck fires, explosions with camera shake, and an adaptive procedural score (calm, wave warning, battle) with its own volume setting. Shader warm-up at load to remove first-use stalls.
-The slice is playable end to end, in the browser and as a desktop app. Benchmarks on Marcel's laptop are in `benchmarks.md`; the v0.5 simulation gate (8,000 agents under 12 ms) already passes. Next: find the occasional 80 to 130 ms frame hitch, Snap and Flatpak builds on a machine with snapcraft and flatpak-builder, CI (needs a remote repository), then v0.5.
+v0.1 is complete: every milestone below is done, the slice is playable end to end in the browser (GitHub Pages, deployed by CI on every push to main) and as a desktop app (AppImage locally, Snap built in CI). Items checked by hand rather than by a test are marked in their rows.
+Automated: 136 Vitest tests (engine, missions, balance, determinism, saves) and the Playwright e2e suite, run by CI on every push. The headless balance bot (`pnpm balance`) plays every mission; its latest results are in `balancing.md`.
+Still open from v0.1: the occasional 80 to 130 ms frame hitch (M8.2), and Flatpak, Windows and macOS builds in CI (M8.5; the electron-builder targets exist but nothing builds them yet). The Snap is published on the edge channel and waits on a promotion to stable.
 
-### M0. Foundation 🟡 (M0.5 waits for a remote repository)
+### M0. Foundation ✅
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -23,9 +20,9 @@ The slice is playable end to end, in the browser and as a desktop app. Benchmark
 | M0.2 | `kernel`: xoshiro128** RNG, FNV-1a hash | same seed gives same sequence; known hash vectors |
 | M0.3 | Lint rules for `simulation` and `kernel`: forbid `Math.random`, `Date`, `performance`, transcendental Math | a file using `Math.sin` fails lint |
 | M0.4 | Docs and `AGENTS.md` | files exist and are linked from README |
-| M0.5 | CI on GitHub Actions + Pages deploy | needs a remote repository; ask Marcel first |
+| M0.5 | CI on GitHub Actions + Pages deploy | ✅ `pages.yml` checks every push and deploys main; `snap.yml` builds the Snap |
 
-### M1. World core, map and cameras 🟡
+### M1. World core, map and cameras ✅ (M1.4 and the M1.5 bands checked by hand)
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -35,7 +32,7 @@ The slice is playable end to end, in the browser and as a desktop app. Benchmark
 | M1.4 | `view3d`: low-res pixel render, buildings merged per sector | page shows the city at 270 px internal height |
 | M1.5 | Continuous camera: strategic ↔ tactical by height, plus direct rig | changing camera mode never changes `hashState` |
 
-### M2. Units, selection, orders 🟡
+### M2. Units, selection, orders ✅
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -43,7 +40,7 @@ The slice is playable end to end, in the browser and as a desktop app. Benchmark
 | M2.2 | Selection (click, box) and right-click orders in strategic and tactical views | e2e: box-select and move |
 | M2.3 | Stances hold / aggressive / defensive / withdraw | hold fires only in the 90° front arc |
 
-### M3. Zombies and combat 🟡
+### M3. Zombies and combat ✅
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -53,7 +50,7 @@ The slice is playable end to end, in the browser and as a desktop app. Benchmark
 | M3.4 | Infection: bitten soldiers turn after 60 to 180 s; killed-by-zombie rise after 20 s | test for both, explosion kills do not rise |
 | M3.5 | Noise and perception | gunfire 40 m away makes wandering zombies chase |
 
-### M4. Direct control 🟡
+### M4. Direct control ✅ (M4.2 HUD checked by hand)
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -69,7 +66,7 @@ The slice is playable end to end, in the browser and as a desktop app. Benchmark
 | M5.3 | Structures update `blocked`, flow field and paths locally | a new wall reroutes zombies |
 | M5.4 | Wall stacking | 200 zombies vs undefended 3.5 m wall cross within 60 s; with active nest they don't within 120 s |
 
-### M6. Inventories and logistics ✅ (M6.3 e2e pending)
+### M6. Inventories and logistics ✅
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -85,7 +82,7 @@ The slice is playable end to end, in the browser and as a desktop app. Benchmark
 | M7.2 | Wave director with warnings (Choir-lite) | every attack has a 20 to 40 s warning |
 | M7.3 | "O Último Comboio" objectives, victory, defeat, restart | scripted runs reach both victory and defeat |
 
-### M8. Persistence, performance, polish, desktop 🟡 (M8.1 ✅, M8.2 ✅ except the worst-frame hitch, M8.3 ✅, M8.4 ✅, M8.5 AppImage ✅; Snap/Flatpak/CI pending)
+### M8. Persistence, performance, polish, desktop 🟡 (M8.1 ✅, M8.2 ✅ except the worst-frame hitch, M8.3 ✅, M8.4 ✅, M8.5 AppImage ✅ and Snap in CI ✅; Flatpak, Windows and macOS pending)
 
 | ID | Task | Acceptance |
 | --- | --- | --- |
@@ -101,20 +98,32 @@ Porto Velário (2 km procedural city), sector LOD L0/L1/L2 with conservation and
 
 If the v0.5 performance gate fails, stop and re-evaluate the architecture with Marcel before continuing.
 
-Progress (2026-10-27):
+Progress (2026-10-31):
 
-- [x] Porto Velário generator: 512 × 512 cells, bay, meandering river crossed by street bridges, avenues, six districts, waterfront base and three depots (`generateCityMap`).
-- [x] `city_war` sandbox scenario (four squads, a truck per depot, 6,000 infected at veteran); main menu "Porto Velário", desktop `--city`, `pnpm --filter @vazante/desktop bench:city`.
-- [x] Horde flow field rebuilt in per-tick slices (`FlowJob`, 60,000 queue entries per tick), resumable from saves; identical to the one-shot field (test).
-- [x] Simulation gate in the container: 8,000 agents on the 2 km city, mean 6.6 ms, p95 10.3 ms, worst 19 ms.
-- [ ] Render gate (60 fps with 5,000 visible) on Marcel's laptop.
-- [ ] Sector LOD L0/L1/L2 with conservation and calibration tests.
-- [x] Data-driven missions (`balance/missions.ts`, `systems/mission.ts`): ordered stages (deliver, reach, hold, evacuate, waves, retake) with pressure groups; O Último Comboio migrated with an identical run.
-- [x] Campaign of four missions with unlocks, per-mission briefing and summary: O Último Comboio, Hospital São Lucas (evacuation), A Ponte (hold the crossing), Retomar a Ribeira (retake a district, then the final waves). Mission areas are marked on the ground and on the minimap.
-- [x] New infected on the city missions: Gritador (screams at soldiers in sight, waking every wanderer within 110 m) and Inchado (slow, bursts on death and chains). The first mission keeps the basic roster.
-- [x] New roles: marines carry a marksman (DMR, shoots Gritadores and Inchados first) and a medic (heals, slows infection); engineers build outside the bases at double speed; a parked truck resupplies the soldiers around it.
-- [ ] Playtest and balance the three city missions.
-- [ ] Objectives for the city, armored vehicles, helicopters, fire support, evacuation and triage, the full Choir, building damage and rubble.
+Done:
+
+- [x] Porto Velário generator: 512 × 512 cells, bay, meandering river crossed by street bridges, avenues, six districts. Since 2026-10-29 the layout changes with the seed (river course, base, block rhythm, parks); every new game draws a new city unless "Cidade fixa" is set. Strategic points stay at least 600 m and 35° apart.
+- [x] `city_war` sandbox (four squads, a truck per depot, 6,000 infected at veteran); desktop `--city`, `bench:city`.
+- [x] Horde flow field rebuilt in per-tick slices (`FlowJob`), resumable from saves, identical to the one-shot field (test). Crowding now adds cost, so a jammed gap sends the horde round other routes.
+- [x] Simulation gate: 8,000 agents on the 2 km city, mean 6.6 ms, p95 10.3 ms (container); 60 fps on Marcel's laptop with 6,000 zombies in the world.
+- [x] Data-driven missions with ordered stages and pressure groups. Campaign of seven: O Último Comboio, Hospital São Lucas, A Ponte, Retomar a Ribeira, Linha de Suprimento, Turno da Noite, O Último Trem.
+- [x] Survival mode: endless days (30 min) and nights with growing hordes, an economy of strategic points (depots, hospital, station) captured by presence, income, buying reinforcements and trucks, best run kept per difficulty.
+- [x] Infected: Gritador and Inchado. Roles: marines with marksman and medic, engineers (build outside bases, repair structures and truck wrecks), field resupply from parked trucks.
+- [x] Tactics: suppression, fire on the move, flanks, squad follow-the-leader, drag to face, queued routes (Shift + right click or R), trucks that follow a squad.
+- [x] Fog of war on the view and the minimap; waves enter from several sides and spread.
+- [x] Construction: field MG nests with their own ammo, a nest panel, walls that need 14 stacked zombies (9 for a hesco) and let one climber per cell per second; base ammo alerts.
+- [x] Truck wrecks that keep their cargo and can be repaired; mission defeat only when no recovery is possible.
+- [x] Rendering: shadows fitted to the view (wide screens included) and faded when zoomed far out; outline that no longer darkens the scene when zooming.
+- [x] Languages: Portuguese, English, Spanish, French, German. Licence AGPL-3.0-or-later. Recorded CC0 audio with procedural fallback.
+- [x] Balance bot for every mission (veteran, three seeds): all campaign missions win except A Ponte at 2 to 3 of 3; survival reaches about four nights.
+
+Still to do for v0.5:
+
+- [ ] Render gate with a dense on-screen horde (5,000 visible) on Marcel's laptop.
+- [ ] Sector LOD L0/L1/L2 with conservation and calibration tests (only needed if the render gate fails).
+- [ ] Human playtest and balance (Diogo's feedback rounds are under way).
+- [ ] Armored vehicles, helicopters (fast-rope, clinging), fire support.
+- [ ] Evacuation and quarantine triage, the full Choir, building damage and rubble.
 
 ## v1.0 World survival
 
