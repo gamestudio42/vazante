@@ -310,4 +310,16 @@ describe('base ammo warnings', () => {
     run(5);
     expect(seen).toEqual(['ammo_low', 'ammo_out', 'ammo_low']);
   });
+
+  it('a base that starts below the threshold only warns when it runs out', () => {
+    const e = fieldEngine(1, 32);
+    const base = e.world.addBase('Teste', 0, 0, 15, 15, 0, 300);
+    const seen: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      if (i === 5) base.ammo = 0;
+      e.tick();
+      for (const x of e.frame(false).events) if (x.type === 'ammo_low' || x.type === 'ammo_out') seen.push(x.type);
+    }
+    expect(seen).toEqual(['ammo_out']);
+  });
 });

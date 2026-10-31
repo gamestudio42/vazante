@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+/** Smallest depth jump (metres) outlined in the top-down view. */
+const EDGE_THRESHOLD_M = 0.6;
+
 /**
  * Low-resolution composite: depth-edge outline, bloom and a soft shoulder for light above 1.0, colour
  * grade, posterize with ordered dither, vignette.
@@ -12,6 +15,7 @@ export class PixelPost {
   private readonly quad: THREE.Mesh;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  private readonly dir = new THREE.Vector3();
 
   constructor() {
     this.target = new THREE.WebGLRenderTarget(1, 1, {
@@ -29,7 +33,7 @@ export class PixelPost {
         near: { value: 1 },
         far: { value: 1000 },
         ortho: { value: 1 },
-        edgeThreshold: { value: 0.6 },
+        edgeThreshold: { value: EDGE_THRESHOLD_M },
         outline: { value: new THREE.Color(0x0b0d10) },
         levels: { value: 28 },
         vignette: { value: 0.35 },
@@ -131,7 +135,21 @@ export class PixelPost {
     const cam = camera as THREE.PerspectiveCamera | THREE.OrthographicCamera;
     u.near.value = cam.near;
     u.far.value = cam.far;
-    u.ortho.value = (camera as THREE.OrthographicCamera).isOrthographicCamera ? 1 : 0;
+    const ortho = (camera as THREE.OrthographicCamera).isOrthographicCamera;
+    u.ortho.value = ortho ? 1 : 0;
+    // Flat ground seen at a tilt deepens by texel / tan(tilt) from one pixel to the next. Once that
+    // passed the fixed threshold (zoomed out a little at the tactical tilt) every ground pixel became
+    // an "edge" and the whole scene darkened: keep the threshold well above that slope.
+    let thr = EDGE_THRESHOLD_M;
+    if (ortho) {
+      const o = camera as THREE.OrthographicCamera;
+      const texel = (o.top - o.bottom) / o.zoom / u.resolution.value.y;
+      camera.getWorldDirection(this.dir);
+      const sin = Math.max(0.1, -this.dir.y);
+      const cos = Math.sqrt(Math.max(0, 1 - sin * sin));
+      thr = Math.max(thr, 2 * texel * (cos / sin));
+    }
+    u.edgeThreshold.value = thr;
     renderer.setRenderTarget(this.target);
     renderer.render(scene, camera);
     renderer.setRenderTarget(null);
