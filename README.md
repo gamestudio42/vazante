@@ -109,8 +109,10 @@ pnpm dev        # http://localhost:5173
 | `pnpm desktop` | Build and open the Electron desktop app                   |
 | `pnpm audio`   | Rebuild the sound clips from the CC0 sources (needs ffmpeg) |
 
-Every push to `main` runs the checks and publishes `apps/game/dist` to GitHub Pages. The build
-uses relative paths, so it runs from any folder.
+Every push to `main` runs the checks and publishes `apps/game/dist` to the `gh-pages` branch
+(GitHub Pages must deploy from that branch). Each pull request from this repository publishes a
+preview at `/pr-preview/pr-<number>/` and comments the link; closing the pull request removes it.
+The build uses relative paths, so it runs from any folder.
 
 The simulation is deterministic and runs in a Web Worker; the Three.js view and the React
 interface only send commands and read frames. See the [game design](docs/GDD.md),

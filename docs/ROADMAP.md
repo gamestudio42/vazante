@@ -20,7 +20,7 @@ Still open from v0.1: the occasional 80 to 130 ms frame hitch (M8.2), and Flatpa
 | M0.2 | `kernel`: xoshiro128** RNG, FNV-1a hash | same seed gives same sequence; known hash vectors |
 | M0.3 | Lint rules for `simulation` and `kernel`: forbid `Math.random`, `Date`, `performance`, transcendental Math | a file using `Math.sin` fails lint |
 | M0.4 | Docs and `AGENTS.md` | files exist and are linked from README |
-| M0.5 | CI on GitHub Actions + Pages deploy | ✅ `pages.yml` checks every push and deploys main; `snap.yml` builds the Snap |
+| M0.5 | CI on GitHub Actions + Pages deploy | ✅ `pages.yml` checks every push and pull request, deploys main to `gh-pages`, and publishes a preview for each pull request; `snap.yml` builds the Snap |
 
 ### M1. World core, map and cameras ✅ (M1.4 and the M1.5 bands checked by hand)
 

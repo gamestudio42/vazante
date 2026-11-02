@@ -1,21 +1,27 @@
-# Checks every push and pull request; on main also publishes the browser build to GitHub Pages.
+# Checks every push and pull request. On main it publishes the browser build to GitHub Pages
+# (gh-pages branch, site root); on each pull request it publishes a preview under
+# /pr-preview/pr-<number>/ and comments the link, removing it when the PR closes.
 name: CI and Pages
 
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, reopened, synchronize, closed]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Merging a PR fires "push" on main and "pull_request closed" at the same
+  # time; key PR runs by number so the cleanup never cancels the main deploy.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   check:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -27,21 +33,55 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
-      - uses: actions/upload-pages-artifact@v5
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      - uses: actions/upload-artifact@v5
         with:
+          name: web-dist
           path: apps/game/dist
+          include-hidden-files: true
+          retention-days: 3
 
   deploy:
     needs: check
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    concurrency: gh-pages
     permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      contents: write
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v5
+        with:
+          name: web-dist
+          path: site
+      - uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: site
+          branch: gh-pages
+          # Keep the pull request previews that live next to the site.
+          clean-exclude: pr-preview/
+
+  preview:
+    needs: check
+    # Same-repository PRs only: forks cannot push to gh-pages.
+    if: >-
+      always() && github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.action == 'closed' || needs.check.result == 'success')
+    runs-on: ubuntu-latest
+    concurrency: gh-pages
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v5
+        if: github.event.action != 'closed'
+        with:
+          name: web-dist
+          path: preview-site
+      - uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: preview-site
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          action: auto
