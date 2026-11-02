@@ -1,6 +1,7 @@
 # Checks every push and pull request. On main it publishes the browser build to GitHub Pages
-# (gh-pages branch, site root); on each pull request it publishes a preview under
-# /pr-preview/pr-<number>/ and comments the link, removing it when the PR closes.
+# (gh-pages branch, site root). A pull request from this repository publishes a preview under
+# /pr-preview/pr-<number>/ and removes it when the pull request closes. A pull request from a
+# fork only uploads the built site; pages-preview-fork.yml publishes that artifact.
 name: CI and Pages
 
 on:
@@ -34,11 +35,36 @@ jobs:
       - run: pnpm check
       - run: pnpm build
       - uses: actions/upload-artifact@v5
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           name: web-dist
           path: apps/game/dist
           include-hidden-files: true
           retention-days: 3
+      # Fork pull requests cannot push to gh-pages. The artifact name carries the pull request
+      # number, because the workflow_run event does not include it for a fork.
+      - uses: actions/upload-artifact@v5
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        with:
+          name: preview-pr-${{ github.event.pull_request.number }}
+          path: apps/game/dist
+          include-hidden-files: true
+          retention-days: 3
+
+  # Closing a fork pull request has nothing to build. The marker tells the publisher to remove
+  # the preview. The job never checks out the fork.
+  fork-preview-close:
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - run: mkdir -p marker && echo remove > marker/remove.txt
+      - uses: actions/upload-artifact@v5
+        with:
+          name: preview-remove-pr-${{ github.event.pull_request.number }}
+          path: marker
+          retention-days: 1
 
   deploy:
     needs: check
