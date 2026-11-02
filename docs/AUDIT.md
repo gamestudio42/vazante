@@ -1,6 +1,6 @@
 # Quality audit against an AAA bar
 
-2026-10-26 · first audit at build `8069844` (28 tests); progress column updated after the quality pass and M5 (40 tests)
+2026-10-26 · first audit (28 tests); progress column updated after the quality pass and M5 (40 tests)
 
 ## Re-audit 2026-10-27, content milestone (95 unit tests, 13 e2e)
 
@@ -17,7 +17,7 @@
 
 Other areas unchanged. Next for content: playtest and balance the three new missions, then a fifth mission with the helicopter or artillery.
 
-## Re-audit 2026-10-27 (build `fdd5477`, 62 unit tests, 10 e2e)
+## Re-audit 2026-10-27 (62 unit tests, 10 e2e)
 
 **Overall 6.5 / 10: a polished indie vertical slice** (about 4 at the first audit). The slice plays end to end with objectives, three waves, win and loss, saves, animated characters, day and night, adaptive music and a professional HUD. What separates it from AAA now is content volume and tactical depth more than technology.
 

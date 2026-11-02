@@ -16,7 +16,7 @@ Instructions for AI coding agents working on Vazante. Read `docs/GDD.md`, `docs/
 6. Every new system gets: unit tests, a scenario test in `packages/simulation/test/`, and a benchmark entry if it runs per tick.
 7. Run `pnpm check` (typecheck, lint, tests) before each commit. For simulation changes, compare `pnpm bench` with the previous run and justify any slowdown above 10%.
 8. Names, text, assets, maps and UI art are our own. Third-party assets only with a license recorded in `docs/assets.md`.
-9. Code, comments, technical docs and commits in English (conventional commits). Player text through i18n (`pt-BR` default, `en`).
+9. Code, comments, technical docs and commits in English. Commit subjects follow `.gitmessage` (`[TAG] area: short description`). Player text through i18n (`pt-BR` default; `en`, `es`, `fr`, `de`).
 10. If a rule in the docs proves impossible or bad in practice, implement the simplest alternative that keeps the pillars, record it in `docs/DECISIONS.md`, and continue. Stop and ask only at the v0.5 performance gate or if a pillar is at risk.
 11. Inspect the existing code before replacing anything. Do not overwrite working code without a reason written in the commit message.
 

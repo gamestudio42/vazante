@@ -17,7 +17,7 @@ How to reproduce:
 
 Measured on 2026-10-26 with Chrome, the app store and other apps busy (load average 5 to 8), so these are pessimistic.
 
-### Simulation (commit 44e9eb0, before the horde allocation pass)
+### Simulation (2026-10-26, before the horde allocation pass)
 
 | Case | Zombies alive | Mean tick | p95 | Worst | Top systems (ms per tick) |
 | --- | --- | --- | --- | --- | --- |
@@ -47,7 +47,7 @@ The horde pass that followed removed the per-zombie allocations (closures, tuple
 
 ## 2026-10-27: after squad tactics, v0.5 city and the render pass
 
-Marcel's laptop, i7-13620H, ANGLE on Mesa Intel Graphics (RPL-P), desktop app at 1080×852 (Wayland), 20 s per run, build `9f67da0`.
+Marcel's laptop, i7-13620H, ANGLE on Mesa Intel Graphics (RPL-P), desktop app at 1080×852 (Wayland), 20 s per run on 2026-10-27.
 
 ### Frames
 
