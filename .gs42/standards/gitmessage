@@ -1,0 +1,23 @@
+# [TAG] area: short description
+#
+# --- blank line ---
+#
+# WHY this change is needed (player-facing reason, bug root cause, or
+# design hypothesis). Only explain WHAT if a technical choice is not
+# obvious from the diff.
+#
+# Design changes ([GD], [BAL]) name the pillar and the loop beat.
+#
+# References (remove unused lines):
+# task-NNN
+# Fixes #NNN
+# Closes #NNN
+#
+# --- Allowed tags ---
+# [FIX] bug fix              [IMP] improvement         [ADD] new feature
+# [GD] game-design change    [BAL] balance / numbers   [ART] art or shader
+# [AUDIO] sound              [REF] refactoring         [REM] removal
+# [PERF] performance         [TEST] test only          [CLN] cleanup
+#
+# The header should be valid after "if applied, this commit will ..."
+# One system, scene, or feature per commit when feasible.

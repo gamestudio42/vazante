@@ -1,0 +1,27 @@
+---
+description: GameStudio42 Engineering Standards (core)
+alwaysApply: true
+---
+
+# GameStudio42 Engineering Standards
+
+Follow the policies in `.gs42/standards/` for this workspace.
+
+Read, in order:
+
+1. `.gs42/standards/AGENTS.md`
+2. The selected profiles under `.gs42/standards/profiles/`
+3. Applicable files under `.gs42/standards/rules/`, including
+   `rules/design/` before a player-facing change
+
+Repository files in the current tree remain authoritative for
+repository-specific conventions. Art direction and pillars come from
+the game, not from a global default.
+
+Reusable procedures live in `.gs42/standards/skills/` (feature design,
+playtest review, bugfix, asset integration, balance, release). Read the
+matching `SKILL.md` before starting one of those tasks.
+
+Do not push, merge, rebase, or force-push without explicit authorization.
+Do not delete published games, wipe uploads, or reset production data
+without approval.

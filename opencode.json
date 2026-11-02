@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    ".gs42/standards/AGENTS.md",
+    ".gs42/standards/rules/*.md",
+    ".gs42/standards/rules/design/*.md",
+    ".gs42/standards/rules/godot/*.md",
+    ".gs42/standards/rules/web/*.md",
+    ".gs42/standards/rules/server/*.md",
+    ".gs42/standards/profiles/*.md",
+    ".gs42/standards/skills/*/SKILL.md"
+  ]
+}

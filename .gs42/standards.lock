@@ -1,0 +1,37 @@
+version: "1.3.0"
+source: "package"
+profiles:
+  - core
+  - web-game
+files:
+  AGENTS.md: sha256:5214dbb009f2a8bda54f30ffb71ac2536c6dba672fd42d3a64729cee3df2fa82
+  gitmessage: sha256:fed03b05b50482b9630147d52c9c2eb7a49b6df018f89fbb8b9818410ca71a1e
+  profiles/web-game.md: sha256:2d4e29f9852418a0a557f3ebbe5113e621b1b391b0492ed9c11d8fa987ada4b6
+  rules/00-core.md: sha256:2a79986abd0c9d2562324c335a5ecc1c174cfa75dec8052c7897bcfd8043170d
+  rules/01-language.md: sha256:b135a8400dc097bbda7e0cc1bc93fcd73c654b8679fdc4cbd9766343013fe6e2
+  rules/02-git-workflow.md: sha256:cfb6a008432683a642f87297720fb4d06101938ad30135c6bff4409a21e1e1c4
+  rules/03-security.md: sha256:3314403cbb83de4a1d281dc58af4be664f5ff642afc87ac9c632e063de0016a6
+  rules/04-documentation.md: sha256:3b7f94dcb2a7921ff3aeb776c58394cbf5f7fac940e29ce2001e2fd3f0749df3
+  rules/05-ci.md: sha256:81fee50d2c2f7a1aa59d7c37e837f51cfb20bec9cfeec5a3ad4f8f6f6af037c2
+  rules/design/feel.md: sha256:ec10f79809eb12b1b72a44bbc5bc83badebea11de2a0163146b569b386fa1468
+  rules/design/pacing.md: sha256:454dc269e03bdb17a30c6fb1c9c31e6e11e4dc00949df889c2fb45f44c88e6ab
+  rules/design/pillars-and-loop.md: sha256:58306fcb519febd232819a3b7d24f82c549d18c5db28a3ea0c566849fa1f057a
+  rules/design/playtest.md: sha256:3d7790cb11e0138ea8f40356d06f143d95fa667783cf5a21d70ca900fafac998
+  rules/design/production.md: sha256:4cfcdc91818868c56d6846a47badf27865f3aa613938824b1b5334d3eb61f2c5
+  rules/design/systems.md: sha256:1a19e349cef0970526165ef58ad568f326cdd6b2debddcc0992cac701ebfdb15
+  rules/web/deployment.md: sha256:43f79a2e3f5d07d001b8c25b39c2068e6f6d79415bfacdca2a03e510e77d105b
+  rules/web/react-games.md: sha256:9c2923ac2321199dc99a2d0d9715a9c351915adca710741d31ce9e653b1ebf7b
+  skills/feature-design/SKILL.md: sha256:49f37bb831c13b2e8faf9f999fc2d9a1e16706abe647da6fcea026a3e4e69c52
+  skills/playtest-review/SKILL.md: sha256:82b64e8b9f5b90e3bdf665ec80680b49af01f076d03a55927c8efd6e34303f38
+  skills/web-game-release/SKILL.md: sha256:ff47842db3474041b29f7f73fa566dfb699a5bfc9db16dd23b88f70ab7cbccd9
+adapters:
+  agents_md: kept-local
+  claude_md: installed
+  cursor_mdc: installed
+  gitmessage: installed
+  hermes_md: installed
+  hermes_skills: installed
+  opencode_json: installed
+  opencode_skills: installed
+  pi_append: installed
+  pi_skills: installed
