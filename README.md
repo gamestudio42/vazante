@@ -34,16 +34,16 @@
 
 ## Hold the city
 
-1. **Read the map.** Porto Velário is two kilometres from the hills to the bay: six districts, a
-   river, bridges and thousands of infected that follow noise. Zoom out to plan, zoom in to fight.
-   It is one simulation at every scale, never a separate battle screen.
+1. **Read the map.** Press `M` for the operations map. Porto Velário is two kilometres from the hills
+   to the bay: six districts, a river, bridges and thousands of infected that follow noise. Zoom out
+   to plan, zoom in to fight. It is one simulation at every scale, never a separate battle screen.
 2. **Command the squads.** Order moves, stances and formations. Soldiers spread their fire, slow
    the dead with hits, look for cover when holding, and crack under stress: a panicking soldier
    stops shooting and runs.
 3. **Keep the supplies moving.** Trucks carry ammunition and materials between depots and bases.
    The engine draws the horde, so choose the route and what the driver does when blocked.
-4. **Fortify.** Lay HESCO lines, concrete walls, gates and machine-gun nests, then survive the
-   waves the Choir sends against the base.
+4. **Fortify.** Press `B`, then lay HESCO lines, concrete walls, gates and machine-gun nests, and
+   survive the waves the Choir sends against the base.
 5. **Take the rifle.** Press `TAB` on a squad and fight a soldier's battle in third person, then
    give control back without leaving the same world.
 
@@ -59,8 +59,8 @@ the same seed and orders always play out the same way, so saves are exact.
 <table>
 <tr>
 <td align="center" width="50%" valign="top">
-<img src="docs/screenshots/city.jpg" alt="The Posto Âncora base on the waterfront of Porto Velário with four squads" width="460"><br>
-Porto Velário: four squads and three trucks on the 2 km city.
+<img src="docs/screenshots/city.jpg" alt="Posto Âncora on the waterfront, four squads, and three parked cargo trucks in the vehicle list" width="460"><br>
+Porto Velário: four squads, and three cargo trucks parked in the vehicle list.
 </td>
 <td align="center" width="50%" valign="top">
 <img src="docs/screenshots/direct.jpg" alt="Third-person direct control of a soldier behind HESCO barriers" width="460"><br>
@@ -69,12 +69,28 @@ Direct control: one soldier, the same battle.
 </tr>
 </table>
 
+<p align="center">
+  <img src="docs/screenshots/map.jpg" alt="The operations map of Porto Velário: districts, the river and the horde the player can see" width="920">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/walls.jpg" alt="A line of HESCO barriers and a concrete wall inside the base, with the build bar open" width="920">
+</p>
+
+## Status
+
+**v0.1 is done. v0.5, the city war, is playable and still experimental.** The campaign is seven
+missions. From the second one, and in survival, the map is Porto Velário. Still out: armored vehicles,
+helicopters, fire support, evacuation and quarantine, the full Choir, and buildings collapsing
+into rubble. See the [roadmap](docs/ROADMAP.md).
+
 ## Play
 
-Open **[gamestudio42.github.io/vazante](https://gamestudio42.github.io/vazante/)**. Choose
-**Campanha** for the four missions (each win opens the next), **Nova partida** for the first one
-or **Porto Velário** for the full city sandbox, pick a difficulty and start.
-The interface is in Portuguese by default; English is in Settings.
+Open **[gamestudio42.github.io/vazante](https://gamestudio42.github.io/vazante/)**. **Campanha**
+plays the seven missions in order (each win opens the next). **Nova partida** starts the first,
+O Último Comboio, on the smaller map. **Sobrevivência** is Porto Velário with no evacuation:
+hold the waterfront for as many nights as you can. Pick a difficulty and start. The first visit
+follows the browser language; the interface is in Portuguese, English, Spanish, French and German.
 
 | Action                     | Shortcut                                        |
 | -------------------------- | ----------------------------------------------- |
@@ -109,13 +125,6 @@ pnpm dev        # http://localhost:5173
 | `pnpm desktop` | Build and open the Electron desktop app                   |
 | `pnpm audio`   | Rebuild the sound clips from the CC0 sources (needs ffmpeg) |
 
-Every push to `main` runs the checks and publishes `apps/game/dist` to the `gh-pages` branch
-(GitHub Pages must deploy from that branch). Each pull request publishes a preview at
-`/pr-preview/pr-<number>/` and comments the link; closing the pull request removes it. A pull
-request from a fork only uploads the built site, and a workflow on `main` publishes it after
-checking that the artifact belongs to that pull request. The first run from a new contributor
-waits for approval. The build uses relative paths, so it runs from any folder.
-
 The simulation is deterministic and runs in a Web Worker; the Three.js view and the React
 interface only send commands and read frames. See the [game design](docs/GDD.md),
 [architecture](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md), [balancing](docs/balancing.md),
@@ -124,11 +133,9 @@ interface only send commands and read frames. See the [game design](docs/GDD.md)
 ## Licence
 
 Vazante is free software under the GNU Affero General Public License, version 3 or any later
-version ([`AGPL-3.0-or-later`](LICENSE)), following the
-[Game Studio 42](https://github.com/gamestudio42) default for complete games. If you run a modified
-version for other people, including as a website or over a network, you must offer them its source
-under the same licence. Copyright (c) 2026 Marcel Savegnago.
+version ([`AGPL-3.0-or-later`](LICENSE)). Copyright (c) 2026 Marcel Savegnago. If you run a
+modified version for other people, including as a website or over a network, you must offer
+them its source under the same licence.
 
-Its code, city, procedural art and music are original. Third-party models, sounds,
-fonts and icons keep their own licences (CC0, OFL or ISC), each listed in the [asset register](docs/assets.md).
-See [LICENSE](LICENSE) and [AGENTS.md](AGENTS.md) for project rules.
+Code, the city, procedural art and music are original. Third-party models, sounds, fonts and
+icons keep their own licences, listed in the [asset register](docs/assets.md).
