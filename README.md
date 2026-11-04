@@ -106,6 +106,10 @@ follows the browser language; the interface is in Portuguese, English, Spanish, 
 | Menu / sound               | `Esc` / `N`                                     |
 
 Games save in the browser. A desktop build (Electron) runs the same game offline.
+`snapcraft pack` builds the Linux snap from source. The store banner is `snap/store/banner.jpg`:
+upload that file, still named `banner.jpg`. It is not inside the snap.
+`snapcraft pack` builds the Linux snap from source. The store banner is `snap/store/banner.jpg`:
+upload that file, still named `banner.jpg`. It is not inside the snap.
 
 ## Develop
 
