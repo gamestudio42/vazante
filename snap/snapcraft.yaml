@@ -2,6 +2,11 @@
 # `pnpm --filter @vazante/desktop dist:dir` and packs release/linux-unpacked. The Snap Store's
 # Builds tab builds and releases it to edge on every push to main; .github/workflows/snap.yml
 # builds the same file and smoke-tests it.
+#
+# The store banner is not part of the snap. snap/gui is only the desktop entry and the icon,
+# which snapcraft copies to meta/gui. Upload snap/store/banner.jpg in the listing media and
+# keep the name banner.jpg: 3840×1280, 3:1, under the 2 MB limit. snap/store/banner.png is
+# the same picture; upload the jpg.
 name: vazante
 title: Vazante
 base: core22
