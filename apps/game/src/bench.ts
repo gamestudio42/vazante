@@ -10,6 +10,11 @@ export interface FrameBenchResult {
   frames: number;
   seconds: number;
   fps: number;
+  /**
+   * Refresh rate of the display the window ran on, from its shortest frames. Frame times are
+   * multiples of its interval, so results from displays at different rates do not compare.
+   */
+  refreshHz: number;
   p50Ms: number;
   p95Ms: number;
   worstMs: number;
@@ -102,6 +107,7 @@ export async function runFrameBench(client: GameClient, view: GameRenderer, atta
     frames: sorted.length,
     seconds,
     fps: (sorted.length * 1000) / total,
+    refreshHz: 1000 / sorted[Math.floor(sorted.length * 0.01)],
     p50Ms: sorted[Math.floor(sorted.length * 0.5)],
     p95Ms: sorted[Math.floor(sorted.length * 0.95)],
     worstMs: sorted[sorted.length - 1],

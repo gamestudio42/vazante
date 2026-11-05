@@ -73,14 +73,18 @@ function createWindow(): BrowserWindow {
     title: 'Vazante',
     show: !smoke,
     autoHideMenuBar: true,
+    // A covered benchmark window gets no frames from the compositor and the run stalls: keep it on top.
+    alwaysOnTop: bench,
     webPreferences: {
       preload: path.join(here, '..', 'preload.cjs'),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
       devTools: !app.isPackaged,
+      backgroundThrottling: !bench,
     },
   });
+  if (bench) win.once('ready-to-show', () => win.focus());
   // Stay inside the game: external links open in the browser, nothing else navigates.
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://')) void shell.openExternal(url);
@@ -112,7 +116,13 @@ async function runBench(win: BrowserWindow): Promise<void> {
     }
     await new Promise((res) => setTimeout(res, 500));
   }
-  console.log('BENCH timeout');
+  // Say where it stalled: a page that never booted, a hidden window without frames, or a sim that never ran.
+  const state = await win.webContents
+    .executeJavaScript(
+      `new Promise((r) => { let raf = false; requestAnimationFrame(() => (raf = true)); setTimeout(() => r({ visibility: document.visibilityState, focused: document.hasFocus(), booted: !!window.vazante, tick: window.vazante?.view?.latest?.tick ?? -1, raf }), 1000); })`,
+    )
+    .catch((err: unknown) => String(err));
+  console.log(`BENCH timeout ${JSON.stringify({ visible: win.isVisible(), minimized: win.isMinimized(), page: state })}`);
   app.exit(1);
 }
 

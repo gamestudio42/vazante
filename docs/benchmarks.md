@@ -4,6 +4,9 @@ How to reproduce:
 
 - Simulation: `pnpm bench 1200` (fixed seed and script; the horde attacks the base while the truck drives across the city). Prints mean, p95 and worst tick and the most expensive systems.
 - Frames: `pnpm --filter @vazante/desktop bench` opens the game for about 25 s on the real GPU. A horde of 300 attacks the base at 1x in the tactical view, and the last 20 s of frame times are recorded. In a browser, open `/?bench` (the result shows in a toast and in the console).
+  The result carries `refreshHz`, the rate of the display the window ran on. Frame times are
+  multiples of that interval, so only runs at the same rate compare. With several monitors the
+  compositor picks the one the window opens on: unplug or turn off the others, or check `refreshHz`.
 
 ## Reference machine: Marcel's laptop
 
@@ -41,7 +44,7 @@ The horde pass that followed removed the per-zombie allocations (closures, tuple
 | Gate | Target | Result |
 | --- | --- | --- |
 | v0.1 frame budget | 60 fps with 200 zombies | ✅ vsync-locked (p95 16.7 ms) on the integrated GPU, with 290 zombies |
-| v0.1 worst frame | under 33 ms | ❌ isolated hitches of 83 to 133 ms; cause not yet identified (main-thread GC or React re-render of the HUD on each frame are the suspects) |
+| v0.1 worst frame | under 33 ms | ❌ isolated hitches of 83 to 133 ms (2026-10-26). On 2026-11-05 the same code, before and after the 2026-10-30 render changes, gave the same frames at each refresh rate, with no long tasks and 2 to 11 ms of main-thread render in the slow frames: see that section |
 | v0.1 sim budget | mean tick under 4 ms at 4x | ✅ 0.9 ms |
 | v0.5 sim budget | 8,000 agents, mean tick under 12 ms | ✅ 9.65 ms on a busy machine before the horde pass |
 
@@ -71,6 +74,33 @@ Before the render pass (chunked instancing, off-screen culling, pixel-buffer min
 | Porto Velário 8,000 | 3.89 ms | 5.88 | 6.3 |
 
 Gates: v0.5 simulation (8,000 agents, mean under 12 ms) passes with a wide margin; v0.5 frames (60 fps) passes on the city with 6,000 zombies in the world, of which a few hundred are on screen in the benchmark view. A dense on-screen horde of 5,000 is still to be measured.
+
+## 2026-11-05: three monitors, M8.2 hitch hunt
+
+Marcel's laptop, now with three displays on the Intel iGPU: DP-1 2560×1080 at 60 Hz, HDMI-2
+1080×1920 at 120 Hz and the 1600×900 panel at 144 Hz. Desktop app at 1080×852, slice, 20 s per run.
+The window opens on whichever display the compositor picks, and the result follows the display,
+not the code:
+
+| Build | Display | FPS | p50 | p95 | Worst |
+| --- | --- | --- | --- | --- | --- |
+| main | 60 Hz (5 runs) | 50.5 to 56.0 | 16.7 ms | 33.3 ms | 67 to 83 ms |
+| main | 144 Hz (2 runs) | 87.7, 95.2 | 7.0, 6.9 ms | 27.8, 20.8 ms | 56, 49 ms |
+| `packages/view3d` from 8b3daf5 (before the 2026-10-30 shadow changes) | 60 Hz (2 runs) | 53.6, 52.8 | 16.7 ms | 33.3 ms | 67 ms |
+| same | 120 Hz (1 run) | 116.2 | 8.3 ms | 9.1 ms | 23 ms |
+
+- The shadow fit of 2026-10-30 is not a regression: with the old renderer the frames are the same at
+  60 Hz. Its frustum is 0.46 to 0.74 times the area of the old square one at every zoom.
+- Slow frames are whole vsync intervals with 2 to 11 ms of main-thread work, no long tasks and no
+  shader compiles: the GPU or the compositor misses the vsync. On 2026-10-27 the slice ran at 59.95
+  fps with p95 16.7 ms on the same machine, before the second and third displays.
+- Autosave is not a cause either: in the city the main thread spends about 7 ms receiving the save
+  and handing it to IndexedDB (8.5 MB); the 18 ms copy runs in the worker.
+- Several runs stalled with no result while the window was covered. The desktop bench now keeps its
+  window on top and focused, and prints the page state when it times out.
+
+Next: repeat the slice and the city on a single display (the panel alone, 144 Hz) to tell what the
+game costs from what three displays on one iGPU cost.
 
 ## Build machine (cloud container, for comparison)
 
