@@ -117,7 +117,7 @@ async function start(client: GameClient, map: NonNullable<GameClient['state']['m
     void runFrameBench(client, view, Number(params.get('attackers') ?? 300), Number(params.get('seconds') ?? 20)).then((r) => {
       console.log(`BENCH ${JSON.stringify(r)}`);
       (window as unknown as { vazanteBench: unknown }).vazanteBench = r;
-      shell.notify(`${r.fps.toFixed(1)} fps · p95 ${r.p95Ms.toFixed(1)} ms · ${r.gpu}`);
+      shell.notify(`${r.fps.toFixed(1)} fps at ${Math.round(r.refreshHz)} Hz · p95 ${r.p95Ms.toFixed(1)} ms · ${r.gpu}`);
     });
   }
   // Exposed for e2e tests and debugging; read-only access to the mirror.
