@@ -15,3 +15,6 @@ assets-src/
 /stage/
 /prime/
 *.snap
+
+# TypeScript incremental build info
+*.tsbuildinfo
