@@ -1,0 +1,14 @@
+{
+  "title": "Vazante",
+  "tagline": {
+    "en": "Command the squads. Hold the city. Take the rifle.",
+    "pt": "Comande os esquadrões. Defenda a cidade. Assuma o rifle.",
+    "es": "Dirige los escuadrones. Defiende la ciudad. Toma el fusil.",
+    "fr": "Commandez les escouades. Défendez la ville. Prenez le fusil.",
+    "de": "Befehle deinen Trupps. Halte die Stadt, greif zum Gewehr."
+  },
+  "cover": "apps/game/public/favicon.svg",
+  "genre": "real-time-tactics",
+  "tech": ["TypeScript", "Three.js", "React", "Web Worker"],
+  "order": 0.5
+}
