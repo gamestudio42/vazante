@@ -22,6 +22,7 @@ import { CharacterBatch, IDLE_POSE, walkPose, type CharacterColors, type Pose } 
 import { buildCity, buildDistrictOverlay, hash } from './city.ts';
 import { LightPools } from './lights.ts';
 import { FireAndSmoke } from './smoke.ts';
+import { FlipbookLayer } from './flipbook.ts';
 import { buildProps } from './props.ts';
 import { DecalLayer, OrderMarkers, Particles, Pulses, SiteZones, ZoneMarker } from './fx.ts';
 import { cityUniforms, toon } from './materials.ts';
@@ -115,6 +116,9 @@ export class GameRenderer {
   private readonly blood: DecalLayer;
   private readonly particles = new Particles(1200);
   private readonly fire = new FireAndSmoke();
+  /** Baked EffectCraft atlases (see docs/assets.md): a vehicle's fireball, an Inchado's burst. */
+  private readonly explosions = new FlipbookLayer({ file: 'vz_explosion_atlas.png', frames: 16, fps: 24 }, 8);
+  private readonly bileBursts = new FlipbookLayer({ file: 'vz_bile_burst_atlas.png', frames: 12, fps: 24 }, 16);
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -214,7 +218,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -351,6 +355,7 @@ export class GameRenderer {
         this.particles.emit(e.x, e.y!, 1.0, 36, { speed: 6, up: 4, life: 0.9, size: 0.3, color: PALETTE.bile, gravity: 9 });
         this.particles.emit(e.x, e.y!, 1.0, 14, { speed: 4, up: 3, life: 0.7, size: 0.22, color: PALETTE.bloodFresh, gravity: 9 });
         this.fire.explode(e.x, e.y!, 0.6);
+        this.bileBursts.play(e.x, e.y!, 1.0, 5);
         this.flashes.push({ x: e.x, y: e.y!, t: 0.25, life: 0.25 });
         this.blood.add(e.x, e.y!, 3.2, Math.random() * Math.PI, 1.2);
         this.shakeAt(e.x, e.y!, 0.35);
@@ -379,6 +384,7 @@ export class GameRenderer {
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 1.5, 40, { speed: 6, up: 6, life: 1.0, size: 0.35, color: PALETTE.wreck, gravity: 9 });
         this.fire.explode(e.x, e.y!, 1.2);
+        this.explosions.play(e.x, e.y!, 2.0, 10);
         // Short enough to be out before engineers can have it running again (WRECK.repairS).
         this.fire.addFire(e.x, e.y!, 1, 35);
         this.flashes.push({ x: e.x, y: e.y!, t: 0.6, life: 0.6 });
@@ -457,6 +463,12 @@ export class GameRenderer {
     this.corpsesDirty = true;
   }
 
+  /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
+  async loadEffects(baseUrl: string): Promise<void> {
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl)]);
+    for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
+  }
+
   /**
    * Compile every shader up front, including layers that start hidden or empty (blood, corpses,
    * flashes, ghosts). Otherwise each compiles on first use and the frame where combat starts stalls.
@@ -513,6 +525,9 @@ export class GameRenderer {
     this.particles.update(dtS);
     this.fire.smokeShade = 1 - 0.6 * this.night;
     this.fire.update(dtS);
+    this.explosions.update(dtS);
+    this.bileBursts.shade = 1 - 0.6 * this.night;
+    this.bileBursts.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);
