@@ -1,7 +1,7 @@
 """Edge check, horizontal flipbook atlas (RGBA, ffmpeg tile) and manifest for each flipbook."""
 import hashlib, json, os, subprocess, sys
 
-FPS = {"vz_muzzle": 30, "vz_explosion": 24, "vz_bile_burst": 24}
+FPS = {"vz_muzzle": 30, "vz_explosion": 24, "vz_bile_burst": 24, "vz_scream": 24}
 VER = subprocess.run(["effectcraft-cli", "--version"], capture_output=True, text=True).stdout.strip()
 
 def alpha(path):
@@ -28,7 +28,8 @@ for n, fps in FPS.items():
         "first_frame_visible": prof[0]["coverage_pct"] > 0,
         "last_frame_empty": prof[-1]["alpha_max"] == 0,
         "no_edge_clipping": edge < 8,
-        "atlas_keeps_alpha": max(a) == 255 and min(a) == 0,
+        # Same peak as the frames (not 255: a ring drawn at 95% opacity peaks lower) and transparent gaps.
+        "atlas_keeps_alpha": max(a) == max(r["alpha_max"] for r in prof) and min(a) == 0,
     }
     ok &= all(checks.values())
     manifest = {
