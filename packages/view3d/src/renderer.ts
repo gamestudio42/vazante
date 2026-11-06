@@ -119,6 +119,8 @@ export class GameRenderer {
   /** Baked EffectCraft atlases (see docs/assets.md): a vehicle's fireball, an Inchado's burst. */
   private readonly explosions = new FlipbookLayer({ file: 'vz_explosion_atlas.png', frames: 16, fps: 24 }, 8);
   private readonly bileBursts = new FlipbookLayer({ file: 'vz_bile_burst_atlas.png', frames: 12, fps: 24 }, 16);
+  /** A 1 m flash is two or three pixels from the tactical camera: drawn in direct control only. */
+  private readonly muzzleFlashes = new FlipbookLayer({ file: 'vz_muzzle_atlas.png', frames: 4, fps: 30 }, 32);
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -218,7 +220,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -332,6 +334,7 @@ export class GameRenderer {
         const mx = e.x + (dx / d) * 0.9 * boost;
         const my = e.y! + (dy / d) * 0.9 * boost;
         this.particles.emit(mx, my, 1.3 * boost, 2, { speed: 1, up: 0.2, life: 0.05, size: 0.35 * boost, color: PALETTE.muzzle, gravity: 0, spread: 0.3 });
+        if (this.rig.direct) this.muzzleFlashes.play(mx, my, 1.3, 1.1);
         if (e.source !== undefined && e.source < MAX_SOLDIER_ID) this.sRecoil[e.source] = 1;
         if ((e.value ?? 0) === 0) {
           // Miss: dust where the round lands.
@@ -465,7 +468,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -528,6 +531,7 @@ export class GameRenderer {
     this.explosions.update(dtS);
     this.bileBursts.shade = 1 - 0.6 * this.night;
     this.bileBursts.update(dtS);
+    this.muzzleFlashes.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);
