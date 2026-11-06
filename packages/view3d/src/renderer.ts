@@ -121,6 +121,8 @@ export class GameRenderer {
   private readonly bileBursts = new FlipbookLayer({ file: 'vz_bile_burst_atlas.png', frames: 12, fps: 24 }, 16);
   /** A 1 m flash is two or three pixels from the tactical camera: drawn in direct control only. */
   private readonly muzzleFlashes = new FlipbookLayer({ file: 'vz_muzzle_atlas.png', frames: 4, fps: 30 }, 32);
+  /** A Gritador's scream on the street; the plain ring of `pulses` stands in until it loads. */
+  private readonly screamWaves = new FlipbookLayer({ file: 'vz_scream_atlas.png', frames: 22, fps: 24 }, 12, true);
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -220,7 +222,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -365,7 +367,8 @@ export class GameRenderer {
         return;
       case 'zombie_scream':
         if (e.x === undefined) return;
-        this.pulses.add(e.x, e.y!, 18);
+        // The art's outer ring ends at 86% of the frame: 42 m across keeps the old 18 m radius.
+        if (!this.screamWaves.play(e.x, e.y!, 0.12, 42)) this.pulses.add(e.x, e.y!, 18);
         if (e.source !== undefined) this.zScream[e.source] = nowMs / 1000 + 1.4;
         return;
       case 'soldier_hit':
@@ -468,7 +471,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -532,6 +535,7 @@ export class GameRenderer {
     this.bileBursts.shade = 1 - 0.6 * this.night;
     this.bileBursts.update(dtS);
     this.muzzleFlashes.update(dtS);
+    this.screamWaves.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);

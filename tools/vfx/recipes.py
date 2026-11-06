@@ -6,7 +6,7 @@ effectcraft-cli run --commands OUT_DIR/<asset>/build.json builds and saves <asse
 import json, os, sys
 
 ROOT = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__))
-MUZZLE, SPARK, FIRE, DUST, BILE, BLOOD = "#fff2b0", "#ffe08a", "#ff7a2a", "#9b958a", "#a9b84a", "#9a1a14"
+MUZZLE, SPARK, FIRE, DUST, BILE, BLOOD, SCREAM = "#fff2b0", "#ffe08a", "#ff7a2a", "#9b958a", "#a9b84a", "#9a1a14", "#ff5a3c"
 
 def key(layer, path, t, v):
     return {"command": "prop.addKey", "params": {"layer": layer, "path": path, "time": t, "value": v}}
@@ -84,7 +84,26 @@ def bile():
         s += opacity(n, (0, 100), (0.25, 100), (end - 1 / 24, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile)]:
+def scream():
+    # 128 px, 22 frames at 24 fps, drawn flat on the ground: three wobbling rings leave the
+    # Gritador one after another and fade before they reach the edge.
+    end = 21 / 24
+    s = [comp("vz_scream", 128, 24, 22)]
+    for i, t0 in enumerate((0.0, 0.15, 0.3)):
+        n = f"r{i}"
+        s.append(shape(n, "ellipse", [110, 110], fill=None, stroke=SCREAM, width=7 - 2 * i))
+        s += turb(n, 4, 18)
+        span = end - t0
+        peak = 95 - 20 * i
+        if t0 == 0:
+            s += scale(n, (0, 12), (0.35 * span, 70), (end, 100))
+            s += opacity(n, (0, peak), (0.55 * span, 55), (end, 0))
+        else:
+            s += scale(n, (0, 4), (t0, 4), (t0 + 0.35 * span, 70), (end, 100))
+            s += opacity(n, (0, 0), (t0, 0), (t0 + 0.04, peak), (t0 + 0.55 * span, 55 - 10 * i), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
