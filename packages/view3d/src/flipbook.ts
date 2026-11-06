@@ -13,6 +13,7 @@ const VERT = /* glsl */ `
   attribute float aFrame;
   attribute float aSpin;
   uniform float frames;
+  uniform float nudge;
   varying vec2 vUv;
   void main() {
     vUv = vec2((uv.x + aFrame) / frames, uv.y);
@@ -24,9 +25,10 @@ const VERT = /* glsl */ `
     // Flat on the ground (rings that spread over the street), facing up: -y keeps the winding.
     gl_Position = projectionMatrix * modelViewMatrix * vec4(aOffset + vec3(corner.x, 0.0, -corner.y), 1.0);
   #else
-    // Facing the camera.
+    // Facing the camera, moved 'nudge' metres towards it (out of the surface that was struck).
     vec4 mv = modelViewMatrix * vec4(aOffset, 1.0);
     mv.xy += corner;
+    mv.z += nudge;
     gl_Position = projectionMatrix * mv;
   #endif
   }
@@ -74,6 +76,8 @@ export class FlipbookLayer {
     private readonly capacity: number,
     /** Lie flat on the ground instead of facing the camera. */
     ground = false,
+    /** Metres to move each quad towards the camera, for effects that start inside a solid body. */
+    nudge = 0,
   ) {
     const base = new THREE.PlaneGeometry(1, 1);
     this.geo = new THREE.InstancedBufferGeometry();
@@ -90,7 +94,7 @@ export class FlipbookLayer {
     this.geo.setAttribute('aSpin', new THREE.InstancedBufferAttribute(this.spin, 1).setUsage(THREE.DynamicDrawUsage));
     this.geo.instanceCount = 0;
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { map: { value: null }, frames: { value: atlas.frames }, shade: { value: 1 } },
+      uniforms: { map: { value: null }, frames: { value: atlas.frames }, shade: { value: 1 }, nudge: { value: nudge } },
       defines: ground ? { GROUND: '' } : {},
       vertexShader: VERT,
       fragmentShader: FRAG,

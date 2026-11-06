@@ -131,7 +131,27 @@ def dust():
         s += opacity(n, (0, 100), (0.55, 100), (0.75, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust)]:
+def sparks():
+    # 64 px, 8 frames at 30 fps: metal struck. A hot pin of light and seven thin sparks that shoot out,
+    # drop a little and burn out.
+    import math
+    end = 7 / 30
+    c = [32, 32]
+    s = [comp("vz_sparks", 64, 30, 8), shape("core", "ellipse", [14, 14], fill="#ffffff", pos=c), glow("core")]
+    s += scale("core", (0, 100), (0.1, 40)) + opacity("core", (0, 100), (0.1, 30), (0.14, 0))
+    for i, deg in enumerate((-160, -120, -95, -60, -25, 15, 40)):
+        n = f"s{i}"
+        a = math.radians(deg)
+        reach = 18 + 6 * (i % 3)
+        s.append(rect(n, [2, 9 - (i % 2) * 2], SPARK if i % 3 else MUZZLE, c))
+        s.append(key(n, "transform/rotation", 0, deg + 90))
+        s += [key(n, "transform/position", 0, c),
+              key(n, "transform/position", 0.12, [c[0] + math.cos(a) * reach * 0.75, c[1] + math.sin(a) * reach * 0.75]),
+              key(n, "transform/position", end, [c[0] + math.cos(a) * reach, c[1] + math.sin(a) * reach + 6])]
+        s += opacity(n, (0, 100), (0.1, 100), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]

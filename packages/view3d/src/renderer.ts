@@ -125,6 +125,11 @@ export class GameRenderer {
   private readonly screamWaves = new FlipbookLayer({ file: 'vz_scream_atlas.png', frames: 22, fps: 24 }, 12, true);
   /** Dust and chunks when a wall, HESCO, gate or nest gives way. */
   private readonly dustClouds = new FlipbookLayer({ file: 'vz_dust_atlas.png', frames: 24, fps: 20 }, 12);
+  /**
+   * Sparks off a truck's body; a mobbed truck is hit many times a second. The hit comes at the
+   * truck's centre, inside its body, so each quad moves 3 m towards the camera to clear it.
+   */
+  private readonly sparks = new FlipbookLayer({ file: 'vz_sparks_atlas.png', frames: 8, fps: 30 }, 24, false, 3);
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -224,7 +229,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -389,6 +394,8 @@ export class GameRenderer {
       case 'vehicle_hit':
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 1.2, 2, { speed: 2, up: 1.5, life: 0.3, size: 0.15, color: PALETTE.spark, gravity: 6 });
+        // The event gives the truck's centre: scatter the sparks over its body.
+        this.sparks.play(e.x + (Math.random() - 0.5) * 2.4, e.y! + (Math.random() - 0.5) * 2.4, 1 + Math.random() * 0.8, 2.5);
         return;
       case 'vehicle_destroyed':
         if (e.x === undefined) return;
@@ -475,7 +482,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -542,6 +549,7 @@ export class GameRenderer {
     this.screamWaves.update(dtS);
     this.dustClouds.shade = 1 - 0.6 * this.night;
     this.dustClouds.update(dtS);
+    this.sparks.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);
