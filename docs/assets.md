@@ -12,7 +12,7 @@ Every third-party asset must be listed here with its license before it is commit
 
 ## Effects
 
-Four flipbook atlases in `apps/game/public/vfx/`, drawn by `FlipbookLayer` (`packages/view3d/src/flipbook.ts`) on top of the procedural particles. They are our own work, made headless in EffectCraft 0.21.1 (storytold/effectcraft) from shape layers with the palette colours; no third-party art is inside them. Without them the game shows the particles alone.
+Five flipbook atlases in `apps/game/public/vfx/`, drawn by `FlipbookLayer` (`packages/view3d/src/flipbook.ts`) on top of the procedural particles. They are our own work, made headless in EffectCraft 0.21.1 (storytold/effectcraft) from shape layers with the palette colours; no third-party art is inside them. Without them the game shows the particles alone.
 
 | Atlas | Frames | Plays on |
 | --- | --- | --- |
@@ -20,6 +20,7 @@ Four flipbook atlases in `apps/game/public/vfx/`, drawn by `FlipbookLayer` (`pac
 | `vz_bile_burst_atlas.png` | 12 × 96 px, 24 fps, one horizontal strip | `zombie_burst` (Inchado) |
 | `vz_muzzle_atlas.png` | 4 × 64 px, 30 fps, one horizontal strip (the last frame is empty) | `shot`, in direct control only |
 | `vz_scream_atlas.png` | 22 × 128 px, 24 fps, one horizontal strip, drawn flat on the ground | `zombie_scream` (Gritador) |
+| `vz_dust_atlas.png` | 24 × 128 px, 20 fps, one horizontal strip | `structure_destroyed` |
 
 To rebuild: `python3 tools/vfx/recipes.py <dir>`, then for each asset `effectcraft-cli run --commands <dir>/<asset>/build.json` and `effectcraft-cli render --comp <asset> --format png --channels rgba --start 0 --end <frames / fps> --out <dir>/<asset>/frames/<asset>.png <dir>/<asset>/<asset>.ecproj` (the end is exclusive). From `<dir>`, `python3 verify.py <assets…>` writes each alpha profile and `python3 pack.py` packs the atlases and writes `manifest.json`. It fails unless the first frame shows, the last is fully transparent, nothing touches the frame edge and the atlas keeps alpha. Copy an atlas here only after that passes.
 

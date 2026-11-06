@@ -123,6 +123,8 @@ export class GameRenderer {
   private readonly muzzleFlashes = new FlipbookLayer({ file: 'vz_muzzle_atlas.png', frames: 4, fps: 30 }, 32);
   /** A Gritador's scream on the street; the plain ring of `pulses` stands in until it loads. */
   private readonly screamWaves = new FlipbookLayer({ file: 'vz_scream_atlas.png', frames: 22, fps: 24 }, 12, true);
+  /** Dust and chunks when a wall, HESCO, gate or nest gives way. */
+  private readonly dustClouds = new FlipbookLayer({ file: 'vz_dust_atlas.png', frames: 24, fps: 20 }, 12);
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -222,7 +224,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -381,6 +383,8 @@ export class GameRenderer {
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 1.5, 30, { speed: 4, up: 4, life: 1.2, size: 0.45, color: PALETTE.dust });
         this.particles.emit(e.x, e.y!, 1.5, 12, { speed: 3, up: 5, life: 1.0, size: 0.3, color: PALETTE.concrete });
+        // The cloud's base sits 1/8 of the frame below its centre: 1 m up puts it on the street.
+        this.dustClouds.play(e.x, e.y!, 1.0, 8);
         return;
       case 'vehicle_hit':
         if (e.x === undefined) return;
@@ -471,7 +475,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -536,6 +540,8 @@ export class GameRenderer {
     this.bileBursts.update(dtS);
     this.muzzleFlashes.update(dtS);
     this.screamWaves.update(dtS);
+    this.dustClouds.shade = 1 - 0.6 * this.night;
+    this.dustClouds.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);

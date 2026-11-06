@@ -103,7 +103,35 @@ def scream():
             s += opacity(n, (0, 0), (t0, 0), (t0 + 0.04, peak), (t0 + 0.55 * span, 55 - 10 * i), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream)]:
+def rect(name, size, fill, pos):
+    return {"command": "layer.newShape", "params": {"kind": "rect", "name": name, "size": size, "fill": fill, "position": pos}}
+
+def dust():
+    # 128 px, 24 frames at 20 fps: a wall gives way. Five boiling puffs roll out and up from the base,
+    # concrete and sandbag chunks are thrown out and fall, and the cloud thins away.
+    end = 23 / 20
+    c = [64, 80]
+    s = [comp("vz_dust", 128, 20, 24)]
+    puffs = [((-26, -10), 46, "#8a857b"), ((24, -8), 44, "#9b958a"), ((-8, -26), 50, "#a7a196"), ((12, -30), 40, "#b8b2a6"), ((0, -4), 52, "#7d786e")]
+    for i, ((dx, dy), size, col) in enumerate(puffs):
+        n = f"p{i}"
+        s.append(shape(n, "ellipse", [size, size], fill=col, pos=c))
+        s += turb(n, 9, 16)
+        t0 = 0.03 * i
+        s += [key(n, "transform/position", 0, c), key(n, "transform/position", 0.35, [c[0] + dx * 0.8, c[1] + dy * 0.7]), key(n, "transform/position", end, [c[0] + dx, c[1] + dy - 6])]
+        s += scale(n, (0, 10), (t0 + 0.25, 80), (end, 100))
+        s += opacity(n, (0, 90), (0.45, 80), (end, 0))
+    chunks = [(-40, "#9a9890"), (36, "#b59a6a"), (-18, "#9a9890"), (44, "#9a9890"), (8, "#b59a6a")]
+    for i, (dx, col) in enumerate(chunks):
+        n = f"c{i}"
+        s.append(rect(n, [6, 5], col, c))
+        top = 30 + 8 * (i % 3)
+        s += [key(n, "transform/position", 0, c), key(n, "transform/position", 0.3, [c[0] + dx * 0.6, c[1] - top]), key(n, "transform/position", 0.7, [c[0] + dx, c[1] - 4])]
+        s += [key(n, "transform/rotation", 0, 0), key(n, "transform/rotation", 0.7, 300 * (1 if i % 2 else -1))]
+        s += opacity(n, (0, 100), (0.55, 100), (0.75, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
