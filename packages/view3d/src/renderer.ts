@@ -122,16 +122,18 @@ export class GameRenderer {
   /** A 1 m flash is two or three pixels from the tactical camera: drawn in direct control only. */
   private readonly muzzleFlashes = new FlipbookLayer({ file: 'vz_muzzle_atlas.png', frames: 4, fps: 30 }, 32);
   /** A Gritador's scream on the street; the plain ring of `pulses` stands in until it loads. */
-  private readonly screamWaves = new FlipbookLayer({ file: 'vz_scream_atlas.png', frames: 22, fps: 24 }, 12, true);
+  private readonly screamWaves = new FlipbookLayer({ file: 'vz_scream_atlas.png', frames: 22, fps: 24 }, 12, { ground: true });
   /** Dust and chunks when a wall, HESCO, gate or nest gives way. */
-  private readonly dustClouds = new FlipbookLayer({ file: 'vz_dust_atlas.png', frames: 24, fps: 20 }, 12);
+  private readonly dustClouds = new FlipbookLayer({ file: 'vz_dust_atlas.png', frames: 24, fps: 20 }, 12, { upright: true });
   /**
    * Sparks off a truck's body; a mobbed truck is hit many times a second. The hit comes at the
    * truck's centre, inside its body, so each quad moves 3 m towards the camera to clear it.
    */
-  private readonly sparks = new FlipbookLayer({ file: 'vz_sparks_atlas.png', frames: 8, fps: 30 }, 24, false, 3);
+  private readonly sparks = new FlipbookLayer({ file: 'vz_sparks_atlas.png', frames: 8, fps: 30 }, 24, { nudge: 3, upright: true });
   /** Blood where a round, a kill or a bite lands; nudged out of the body it starts in. */
-  private readonly bloodSprays = new FlipbookLayer({ file: 'vz_blood_atlas.png', frames: 8, fps: 24 }, 64, false, 0.8);
+  private readonly bloodSprays = new FlipbookLayer({ file: 'vz_blood_atlas.png', frames: 8, fps: 24 }, 64, { nudge: 0.8, upright: true });
+  /** Low dust that settles when a structure is finished or a wreck runs again; nudged out of it. */
+  private readonly settleDust = new FlipbookLayer({ file: 'vz_settle_atlas.png', frames: 16, fps: 20 }, 12, { nudge: 2, upright: true });
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -231,7 +233,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -417,10 +419,14 @@ export class GameRenderer {
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 1.2, 14, { speed: 3, up: 4, life: 0.6, size: 0.15, color: PALETTE.spark, gravity: 8 });
         this.particles.emit(e.x, e.y!, 0.8, 16, { speed: 2, up: 2, life: 1.2, size: 0.45, color: PALETTE.dust });
+        this.settleDust.play(e.x, e.y!, 1.5, 8);
+        for (let i = 0; i < 3; i++) this.sparks.play(e.x + (Math.random() - 0.5) * 2.4, e.y! + (Math.random() - 0.5) * 2.4, 1 + Math.random() * 0.8, 2.5);
         return;
       case 'structure_built':
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 0.3, 14, { speed: 2, up: 1, life: 0.6, size: 0.3, color: PALETTE.dust });
+        // The puff's base sits 3/16 of the frame below its centre: 1.3 m up puts it on the street.
+        this.settleDust.play(e.x, e.y!, 1.3, 7);
         return;
       case 'soldier_died':
         if (e.x === undefined) return;
@@ -487,7 +493,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -557,6 +563,8 @@ export class GameRenderer {
     this.sparks.update(dtS);
     this.bloodSprays.shade = 1 - 0.6 * this.night;
     this.bloodSprays.update(dtS);
+    this.settleDust.shade = 1 - 0.6 * this.night;
+    this.settleDust.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);

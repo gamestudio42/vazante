@@ -167,7 +167,23 @@ def blood():
         s += opacity(n, (0, 100), (0.15, 100), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood)]:
+def settle():
+    # 128 px, 16 frames at 20 fps: work is done. A low, wide puff of sand and dust rolls out along the
+    # ground and settles; lighter and flatter than vz_dust, with nothing thrown.
+    end = 15 / 20
+    c = [64, 88]
+    s = [comp("vz_settle", 128, 20, 16)]
+    puffs = [(-34, -6, 30, "#c9bda4"), (34, -6, 30, "#b8ac92"), (-18, -12, 36, "#b8ac92"), (18, -12, 36, "#c9bda4"), (0, -16, 40, "#a9a08c"), (0, -4, 34, "#9b958a")]
+    for i, (dx, dy, size, col) in enumerate(puffs):
+        n = f"p{i}"
+        s.append(shape(n, "ellipse", [size, size * 0.8], fill=col, pos=c))
+        s += turb(n, 6, 14)
+        s += [key(n, "transform/position", 0, c), key(n, "transform/position", 0.3, [c[0] + dx * 0.8, c[1] + dy * 0.6]), key(n, "transform/position", end, [c[0] + dx, c[1] + dy])]
+        s += scale(n, (0, 15), (0.3, 85), (end, 100))
+        s += opacity(n, (0, 80), (0.3, 70), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]

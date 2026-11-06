@@ -7,6 +7,18 @@ export interface FlipbookAtlas {
   fps: number;
 }
 
+export interface FlipbookOptions {
+  /** Lie flat on the ground instead of facing the camera. */
+  ground?: boolean;
+  /** Metres to move each quad towards the camera, for effects that start inside a solid body. */
+  nudge?: number;
+  /**
+   * Keep the art's up on screen. Off, each animation turns at a random angle so repeats differ,
+   * which suits round effects; anything with a base on the ground or that falls must stay upright.
+   */
+  upright?: boolean;
+}
+
 const VERT = /* glsl */ `
   attribute vec3 aOffset;
   attribute float aSize;
@@ -71,14 +83,14 @@ export class FlipbookLayer {
   private readonly shots: Shot[] = [];
   private ready = false;
 
+  private readonly upright: boolean;
+
   constructor(
     private readonly atlas: FlipbookAtlas,
     private readonly capacity: number,
-    /** Lie flat on the ground instead of facing the camera. */
-    ground = false,
-    /** Metres to move each quad towards the camera, for effects that start inside a solid body. */
-    nudge = 0,
+    { ground = false, nudge = 0, upright = false }: FlipbookOptions = {},
   ) {
+    this.upright = upright;
     const base = new THREE.PlaneGeometry(1, 1);
     this.geo = new THREE.InstancedBufferGeometry();
     this.geo.index = base.index;
@@ -121,7 +133,7 @@ export class FlipbookLayer {
   play(x: number, y: number, z: number, size: number): boolean {
     if (!this.ready) return false;
     if (this.shots.length >= this.capacity) this.shots.shift();
-    this.shots.push({ x, y, z, size, spin: Math.random() * Math.PI * 2, age: 0 });
+    this.shots.push({ x, y, z, size, spin: this.upright ? 0 : Math.random() * Math.PI * 2, age: 0 });
     return true;
   }
 
