@@ -122,16 +122,16 @@ export class GameRenderer {
   /** A 1 m flash is two or three pixels from the tactical camera: drawn in direct control only. */
   private readonly muzzleFlashes = new FlipbookLayer({ file: 'vz_muzzle_atlas.png', frames: 4, fps: 30 }, 32);
   /** A Gritador's scream on the street; the plain ring of `pulses` stands in until it loads. */
-  private readonly screamWaves = new FlipbookLayer({ file: 'vz_scream_atlas.png', frames: 22, fps: 24 }, 12, true);
+  private readonly screamWaves = new FlipbookLayer({ file: 'vz_scream_atlas.png', frames: 22, fps: 24 }, 12, { ground: true });
   /** Dust and chunks when a wall, HESCO, gate or nest gives way. */
-  private readonly dustClouds = new FlipbookLayer({ file: 'vz_dust_atlas.png', frames: 24, fps: 20 }, 12);
+  private readonly dustClouds = new FlipbookLayer({ file: 'vz_dust_atlas.png', frames: 24, fps: 20 }, 12, { upright: true });
   /**
    * Sparks off a truck's body; a mobbed truck is hit many times a second. The hit comes at the
    * truck's centre, inside its body, so each quad moves 3 m towards the camera to clear it.
    */
-  private readonly sparks = new FlipbookLayer({ file: 'vz_sparks_atlas.png', frames: 8, fps: 30 }, 24, false, 3);
+  private readonly sparks = new FlipbookLayer({ file: 'vz_sparks_atlas.png', frames: 8, fps: 30 }, 24, { nudge: 3, upright: true });
   /** Blood where a round, a kill or a bite lands; nudged out of the body it starts in. */
-  private readonly bloodSprays = new FlipbookLayer({ file: 'vz_blood_atlas.png', frames: 8, fps: 24 }, 64, false, 0.8);
+  private readonly bloodSprays = new FlipbookLayer({ file: 'vz_blood_atlas.png', frames: 8, fps: 24 }, 64, { nudge: 0.8, upright: true });
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
