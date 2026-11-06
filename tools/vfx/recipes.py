@@ -151,7 +151,23 @@ def sparks():
         s += opacity(n, (0, 100), (0.1, 100), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks)]:
+def blood():
+    # 64 px, 8 frames at 24 fps: a round strikes flesh. A ragged spray opens and fades while six drops
+    # fly out and fall.
+    end = 7 / 24
+    c = [32, 30]
+    s = [comp("vz_blood", 64, 24, 8), shape("spray", "ellipse", [26, 22], fill=BLOOD, pos=c)]
+    s += turb("spray", 6, 8)
+    s += scale("spray", (0, 30), (0.08, 100), (end, 120)) + opacity("spray", (0, 100), (0.12, 85), (end, 0))
+    for i, (dx, dy) in enumerate(((-22, -8), (20, -12), (-12, -20), (14, -4), (4, -22), (-24, 6))):
+        n = f"d{i}"
+        s.append(shape(n, "ellipse", [5 - i % 2, 5 - i % 2], fill=BLOOD if i % 2 else "#4a1010", pos=c))
+        s += [key(n, "transform/position", 0, c), key(n, "transform/position", 0.12, [c[0] + dx * 0.7, c[1] + dy * 0.7]),
+              key(n, "transform/position", end, [c[0] + dx, c[1] + dy + 14])]
+        s += opacity(n, (0, 100), (0.15, 100), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
