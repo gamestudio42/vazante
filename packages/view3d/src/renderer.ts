@@ -130,6 +130,8 @@ export class GameRenderer {
    * truck's centre, inside its body, so each quad moves 3 m towards the camera to clear it.
    */
   private readonly sparks = new FlipbookLayer({ file: 'vz_sparks_atlas.png', frames: 8, fps: 30 }, 24, false, 3);
+  /** Blood where a round, a kill or a bite lands; nudged out of the body it starts in. */
+  private readonly bloodSprays = new FlipbookLayer({ file: 'vz_blood_atlas.png', frames: 8, fps: 24 }, 64, false, 0.8);
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -229,7 +231,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -350,6 +352,7 @@ export class GameRenderer {
           this.particles.emit(e.x2, e.y2!, 0.1, 3, { speed: 1.5, up: 1.5, life: 0.4, size: 0.18, color: PALETTE.dust });
         } else {
           this.particles.emit(e.x2, e.y2!, 1.1, 4, { speed: 2.5, up: 1.2, life: 0.35, size: 0.16, color: PALETTE.bloodFresh, dirX: dx / d, dirY: dy / d, spread: 0.6 });
+          this.bloodSprays.play(e.x2, e.y2!, 1.1, 1.4);
         }
         return;
       }
@@ -357,6 +360,7 @@ export class GameRenderer {
         if (e.x === undefined) return;
         this.blood.add(e.x, e.y!, 0.7 + Math.random() * 0.8, Math.random() * Math.PI, 1 + Math.random() * 0.8);
         this.particles.emit(e.x, e.y!, 1.2, 8, { speed: 3, up: 2, life: 0.5, size: 0.2, color: PALETTE.bloodFresh });
+        this.bloodSprays.play(e.x, e.y!, 1.2, 2);
         const slot = e.target ?? 0;
         const kind = e.value ?? 0;
         this.addCorpse(e.x, e.y!, this.zYaw[slot] + Math.PI, kindScale(kind), this.zombieColors(slot, kind), nowMs);
@@ -383,6 +387,7 @@ export class GameRenderer {
         if (e.x === undefined) return;
         this.blood.add(e.x, e.y!, 0.6 + Math.random() * 0.5, Math.random() * Math.PI);
         this.particles.emit(e.x, e.y!, 1.3, 5, { speed: 2, up: 1.5, life: 0.4, size: 0.16, color: PALETTE.bloodFresh });
+        this.bloodSprays.play(e.x, e.y!, 1.3, 1.4);
         return;
       case 'structure_destroyed':
         if (e.x === undefined) return;
@@ -482,7 +487,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -550,6 +555,8 @@ export class GameRenderer {
     this.dustClouds.shade = 1 - 0.6 * this.night;
     this.dustClouds.update(dtS);
     this.sparks.update(dtS);
+    this.bloodSprays.shade = 1 - 0.6 * this.night;
+    this.bloodSprays.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);
