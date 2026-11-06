@@ -16,12 +16,19 @@ const VERT = /* glsl */ `
   varying vec2 vUv;
   void main() {
     vUv = vec2((uv.x + aFrame) / frames, uv.y);
-    // Camera-facing quad around the effect centre, turned by its own angle so repeats differ.
-    vec4 mv = modelViewMatrix * vec4(aOffset, 1.0);
+    // Quad around the effect centre, turned by its own angle so repeats differ.
     float c = cos(aSpin);
     float s = sin(aSpin);
-    mv.xy += mat2(c, s, -s, c) * position.xy * aSize;
+    vec2 corner = mat2(c, s, -s, c) * position.xy * aSize;
+  #ifdef GROUND
+    // Flat on the ground (rings that spread over the street), facing up: -y keeps the winding.
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(aOffset + vec3(corner.x, 0.0, -corner.y), 1.0);
+  #else
+    // Facing the camera.
+    vec4 mv = modelViewMatrix * vec4(aOffset, 1.0);
+    mv.xy += corner;
     gl_Position = projectionMatrix * mv;
+  #endif
   }
 `;
 const FRAG = /* glsl */ `
@@ -65,6 +72,8 @@ export class FlipbookLayer {
   constructor(
     private readonly atlas: FlipbookAtlas,
     private readonly capacity: number,
+    /** Lie flat on the ground instead of facing the camera. */
+    ground = false,
   ) {
     const base = new THREE.PlaneGeometry(1, 1);
     this.geo = new THREE.InstancedBufferGeometry();
@@ -82,6 +91,7 @@ export class FlipbookLayer {
     this.geo.instanceCount = 0;
     this.mat = new THREE.ShaderMaterial({
       uniforms: { map: { value: null }, frames: { value: atlas.frames }, shade: { value: 1 } },
+      defines: ground ? { GROUND: '' } : {},
       vertexShader: VERT,
       fragmentShader: FRAG,
       transparent: true,
@@ -100,11 +110,15 @@ export class FlipbookLayer {
     this.ready = true;
   }
 
-  /** Start one animation centred at world (x, y), z metres up, `size` metres across. */
-  play(x: number, y: number, z: number, size: number): void {
-    if (!this.ready) return;
+  /**
+   * Start one animation centred at world (x, y), z metres up, `size` metres across. Returns false
+   * while the atlas is not loaded, so a caller can draw its procedural stand-in instead.
+   */
+  play(x: number, y: number, z: number, size: number): boolean {
+    if (!this.ready) return false;
     if (this.shots.length >= this.capacity) this.shots.shift();
     this.shots.push({ x, y, z, size, spin: Math.random() * Math.PI * 2, age: 0 });
+    return true;
   }
 
   update(dt: number): void {
