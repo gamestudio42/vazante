@@ -389,7 +389,26 @@ def arrival():
             s += opacity(n, (0, 90), (0.6, 90), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order), ("vz_turn", turn), ("vz_delivery", delivery), ("vz_arrival", arrival)]:
+def panic():
+    # 64 px, 16 frames at 20 fps, white, tinted in the game: a soldier breaks. An exclamation mark
+    # pops over the head and shakes while three stress lines flick out, then all of it fades.
+    import math
+    end = 15 / 20
+    s = [comp("vz_panic", 64, 20, 16), rect("bar", [6, 18], "#ffffff", [32, 28]), shape("dot", "ellipse", [7, 7], fill="#ffffff", pos=[32, 44])]
+    for n in ("bar", "dot"):
+        s += scale(n, (0, 30), (0.1, 130), (0.2, 100)) + opacity(n, (0, 100), (0.5, 100), (end, 0))
+        s += [key(n, "transform/rotation", t, r) for t, r in ((0, 0), (0.15, 12), (0.25, -12), (0.35, 8), (0.45, -6), (0.55, 0))]
+    for i, deg in enumerate((-150, -90, -30)):
+        n = f"l{i}"
+        a = math.radians(deg)
+        s.append(rect(n, [3, 7], "#ffffff", [32, 34]))
+        s.append(key(n, "transform/rotation", 0, deg + 90))
+        s += [key(n, "transform/position", 0, [32 + math.cos(a) * 18, 34 + math.sin(a) * 18]),
+              key(n, "transform/position", 0.3, [32 + math.cos(a) * 25, 34 + math.sin(a) * 25])]
+        s += opacity(n, (0, 100), (0.3, 80), (0.45, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order), ("vz_turn", turn), ("vz_delivery", delivery), ("vz_arrival", arrival), ("vz_panic", panic)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
