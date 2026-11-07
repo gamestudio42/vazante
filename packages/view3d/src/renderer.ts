@@ -141,6 +141,8 @@ export class GameRenderer {
   /** A strategic point changes hands: one white atlas on its capture circle, blue when won, red when lost. */
   private readonly captured = new FlipbookLayer(CAPTURE_ATLAS, 6, { ground: true, upright: true, tint: PALETTE.siteHeld });
   private readonly lostSites = new FlipbookLayer(CAPTURE_ATLAS, 6, { ground: true, upright: true, tint: PALETTE.siteLost });
+  /** Where a squad is sent: the baked ring and triangles; the plain ring of `orders` stands in until it loads. */
+  private readonly orderMarks = new FlipbookLayer({ file: 'vz_order_atlas.png', frames: 14, fps: 20 }, 16, { ground: true, upright: true, tint: PALETTE.orderMarker });
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -240,7 +242,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh, this.healGlows.mesh, this.captured.mesh, this.lostSites.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh, this.healGlows.mesh, this.captured.mesh, this.lostSites.mesh, this.orderMarks.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -296,7 +298,8 @@ export class GameRenderer {
 
   /** Visual acknowledgement of a move order. */
   markOrder(x: number, y: number): void {
-    this.orders.add(x, y);
+    // As before, the mark starts 3 m in radius, scaled with the zoom; the art's ring spans 84 of 96 px.
+    if (!this.orderMarks.play(x, y, 0.08, (6 * this.unitScale() * 96) / 84)) this.orders.add(x, y);
   }
 
   pushFrame(f: Frame, nowMs: number): void {
@@ -520,7 +523,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl), this.healGlows.load(baseUrl), this.captured.load(baseUrl), this.lostSites.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl), this.healGlows.load(baseUrl), this.captured.load(baseUrl), this.lostSites.load(baseUrl), this.orderMarks.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -595,6 +598,7 @@ export class GameRenderer {
     this.healGlows.update(dtS);
     this.captured.update(dtS);
     this.lostSites.update(dtS);
+    this.orderMarks.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);
