@@ -220,7 +220,75 @@ def wave_pulse():
             s += scale(n, (0, 30), (t0, 30), (end, 100)) + opacity(n, (0, 0), (t0, 0), (t0 + 0.05, 90), (t0 + 0.5 * span, 50), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse)]:
+def victory():
+    # 128 px, 20 frames at 24 fps, white mask: a flash, a ring and twelve rays burst out behind the
+    # summary title and fade.
+    import math
+    end = 19 / 24
+    c = [64, 64]
+    s = [comp("vz_victory", 128, 24, 20),
+         shape("ring", "ellipse", [104, 104], fill=None, stroke="#ffffff", width=4, pos=c),
+         shape("core", "ellipse", [30, 30], fill="#ffffff", pos=c)]
+    # The ring stops inside the rays, so they read as a burst and not as a dial.
+    s += scale("ring", (0, 20), (end, 64)) + opacity("ring", (0, 100), (0.4, 60), (end, 0))
+    s += scale("core", (0, 40), (0.1, 120), (0.4, 60)) + opacity("core", (0, 100), (0.15, 90), (0.4, 0))
+    for i in range(12):
+        n = f"ray{i}"
+        deg = i * 30 + (10 if i % 2 else 0)
+        a = math.radians(deg)
+        s.append(rect(n, [4 - (i % 2), 22 - (i % 2) * 6], "#ffffff", c))
+        s.append(key(n, "transform/rotation", 0, deg + 90))
+        s += [key(n, "transform/position", 0, [c[0] + math.cos(a) * 16, c[1] + math.sin(a) * 16]),
+              key(n, "transform/position", end, [c[0] + math.cos(a) * 46, c[1] + math.sin(a) * 46])]
+        s += opacity(n, (0, 100), (0.35, 90), (end, 0))
+    return s
+
+def defeat():
+    # 128 px, 20 frames at 20 fps, white mask: a ring cracks into eight shards that drop, turn and
+    # fade behind the summary title.
+    import math
+    end = 19 / 20
+    c = [64, 60]
+    s = [comp("vz_defeat", 128, 20, 20), shape("ring", "ellipse", [68, 68], fill=None, stroke="#ffffff", width=5, pos=c)]
+    s += opacity("ring", (0, 100), (0.12, 100), (0.2, 0))
+    for i in range(8):
+        n = f"sh{i}"
+        deg = i * 45 + 22.5
+        a = math.radians(deg)
+        p0 = [c[0] + math.cos(a) * 34, c[1] + math.sin(a) * 34]
+        s.append(rect(n, [16, 5], "#ffffff", p0))
+        s.append(key(n, "transform/rotation", 0, deg + 90))
+        s.append(key(n, "transform/rotation", end, deg + 90 + (40 if i % 2 else -40)))
+        s += [key(n, "transform/position", 0, p0), key(n, "transform/position", 0.15, p0),
+              key(n, "transform/position", end, [p0[0] + math.cos(a) * 6, p0[1] + 16])]
+        s += opacity(n, (0, 0), (0.12, 0), (0.16, 100), (0.5, 80), (end, 0))
+    return s
+
+def dawn():
+    # 96 px, 18 frames at 20 fps, white mask: night is over. A small sun rises onto a horizon line
+    # (a mask cannot hide what is below the line, so it never dips under it) and seven rays fan out
+    # above it, then all of it fades.
+    import math
+    end = 17 / 20
+    sy = 54
+    s = [comp("vz_dawn", 96, 20, 18),
+         rect("horizon", [72, 3], "#ffffff", [48, 66]),
+         shape("sun", "ellipse", [22, 22], fill="#ffffff", pos=[48, 60])]
+    s += opacity("horizon", (0, 100), (0.5, 90), (end, 0))
+    s += [key("sun", "transform/position", 0, [48, 60]), key("sun", "transform/position", 0.4, [48, sy])]
+    s += scale("sun", (0, 50), (0.4, 100)) + opacity("sun", (0, 60), (0.2, 100), (0.5, 100), (end, 0))
+    for i, deg in enumerate((-160, -135, -112, -90, -68, -45, -20)):
+        n = f"ray{i}"
+        a = math.radians(deg)
+        s.append(rect(n, [3, 9], "#ffffff", [48, sy]))
+        s.append(key(n, "transform/rotation", 0, deg + 90))
+        s += [key(n, "transform/position", 0, [48 + math.cos(a) * 15, sy + math.sin(a) * 15]),
+              key(n, "transform/position", 0.2, [48 + math.cos(a) * 15, sy + math.sin(a) * 15]),
+              key(n, "transform/position", end, [48 + math.cos(a) * 28, sy + math.sin(a) * 28])]
+        s += opacity(n, (0, 0), (0.2, 0), (0.3, 100), (0.6, 80), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
