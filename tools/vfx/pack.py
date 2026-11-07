@@ -1,7 +1,7 @@
 """Edge check, horizontal flipbook atlas (RGBA, ffmpeg tile) and manifest for each flipbook."""
 import hashlib, json, os, subprocess, sys
 
-FPS = {"vz_muzzle": 30, "vz_explosion": 24, "vz_bile_burst": 24, "vz_scream": 24, "vz_dust": 20, "vz_sparks": 30, "vz_blood": 24, "vz_settle": 20, "vz_heal": 20, "vz_wave_pulse": 20, "vz_victory": 24, "vz_defeat": 20, "vz_dawn": 20}
+FPS = {"vz_muzzle": 30, "vz_explosion": 24, "vz_bile_burst": 24, "vz_scream": 24, "vz_dust": 20, "vz_sparks": 30, "vz_blood": 24, "vz_settle": 20, "vz_heal": 20, "vz_wave_pulse": 20, "vz_victory": 24, "vz_defeat": 20, "vz_dawn": 20, "vz_capture": 24}
 VER = subprocess.run(["effectcraft-cli", "--version"], capture_output=True, text=True).stdout.strip()
 
 def alpha(path):

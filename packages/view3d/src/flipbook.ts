@@ -17,6 +17,8 @@ export interface FlipbookOptions {
    * which suits round effects; anything with a base on the ground or that falls must stay upright.
    */
   upright?: boolean;
+  /** Multiplies the atlas colour; lets one white atlas serve several tones (0xffffff keeps it). */
+  tint?: number;
 }
 
 const VERT = /* glsl */ `
@@ -48,11 +50,12 @@ const VERT = /* glsl */ `
 const FRAG = /* glsl */ `
   uniform sampler2D map;
   uniform float shade;
+  uniform vec3 tint;
   varying vec2 vUv;
   void main() {
     vec4 c = texture2D(map, vUv);
     if (c.a < 0.03) discard;
-    gl_FragColor = vec4(c.rgb * shade, c.a);
+    gl_FragColor = vec4(c.rgb * tint * shade, c.a);
   }
 `;
 
@@ -88,7 +91,7 @@ export class FlipbookLayer {
   constructor(
     private readonly atlas: FlipbookAtlas,
     private readonly capacity: number,
-    { ground = false, nudge = 0, upright = false }: FlipbookOptions = {},
+    { ground = false, nudge = 0, upright = false, tint = 0xffffff }: FlipbookOptions = {},
   ) {
     this.upright = upright;
     const base = new THREE.PlaneGeometry(1, 1);
@@ -106,7 +109,7 @@ export class FlipbookLayer {
     this.geo.setAttribute('aSpin', new THREE.InstancedBufferAttribute(this.spin, 1).setUsage(THREE.DynamicDrawUsage));
     this.geo.instanceCount = 0;
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { map: { value: null }, frames: { value: atlas.frames }, shade: { value: 1 }, nudge: { value: nudge } },
+      uniforms: { map: { value: null }, frames: { value: atlas.frames }, shade: { value: 1 }, nudge: { value: nudge }, tint: { value: new THREE.Color(tint) } },
       defines: ground ? { GROUND: '' } : {},
       vertexShader: VERT,
       fragmentShader: FRAG,
