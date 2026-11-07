@@ -353,7 +353,25 @@ def turn():
         s += opacity(n, (0, 85), (0.45, 75), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order), ("vz_turn", turn)]:
+def delivery():
+    # 96 px, 16 frames at 20 fps: a truck unloads. An amber ring spreads at its base and three cargo
+    # crates with amber lids pop out, rise and fade.
+    end = 15 / 20
+    base = [48, 78]
+    cargo, amber = "#8a7a52", "#f0b03f"
+    s = [comp("vz_delivery", 96, 20, 16), shape("ring", "ellipse", [56, 16], fill=None, stroke=amber, width=3, pos=base)]
+    s += scale("ring", (0, 40), (end, 115)) + opacity("ring", (0, 100), (0.4, 70), (end, 0))
+    for i, (dx, t0) in enumerate(((-16, 0.0), (0, 0.08), (16, 0.16))):
+        top = [48 + dx, 30 + (i % 2) * 6]
+        for part, size, col, off in (("box", [13, 11], cargo, 0), ("lid", [13, 3], amber, -6)):
+            n = f"c{i}{part}"
+            s.append(rect(n, size, col, [base[0], base[1] + off]))
+            s += [key(n, "transform/position", 0, [base[0], base[1] + off]), key(n, "transform/position", t0, [base[0], base[1] + off]),
+                  key(n, "transform/position", t0 + 0.25, [top[0], top[1] + 10 + off]), key(n, "transform/position", end, [top[0], top[1] + off])]
+            s += opacity(n, (0, 100), (0.45, 100), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order), ("vz_turn", turn), ("vz_delivery", delivery)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
