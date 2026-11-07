@@ -2,6 +2,7 @@ import {
   useEffect,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import {
@@ -177,7 +178,7 @@ export function App({ client, input, view, shell }: Props) {
             {!f.economy && <DistrictList frame={f} />}
           </div>
         )}
-        <WaveBanner alerts={state.alerts} />
+        <EventBanner alerts={state.alerts} />
         {!input.inDirect && (
           <Alerts
             alerts={state.alerts}
@@ -948,30 +949,63 @@ function Alerts({
   );
 }
 
-/** How long the wave banner stays: the pulse plays three times (16 frames at 20 fps each). */
-const WAVE_BANNER_MS = 3600;
+/** A baked white atlas from `public/vfx` (see docs/assets.md): one horizontal strip of square frames. */
+interface MaskAtlas {
+  file: string;
+  frames: number;
+  fps: number;
+}
+
+const PULSE: MaskAtlas = { file: "vz_wave_pulse", frames: 16, fps: 20 };
+const DAWN: MaskAtlas = { file: "vz_dawn", frames: 18, fps: 20 };
+const VICTORY: MaskAtlas = { file: "vz_victory", frames: 20, fps: 24 };
+const DEFEAT: MaskAtlas = { file: "vz_defeat", frames: 20, fps: 20 };
 
 /**
- * A banner across the top when the Choir is announced and when its wave arrives, with the baked
- * radar pulse (see docs/assets.md) tinted by the alert's tone. Pressure groups (wave 0) stay in the
- * alert list only.
+ * Plays a white atlas as a CSS mask over `currentColor`, so the surrounding text's colour tints it.
+ * `size` is the shown frame in px; the animation steps through the strip `plays` times.
  */
-function WaveBanner({ alerts }: { alerts: GameClient["state"]["alerts"] }) {
+function MaskFlipbook({ atlas, size, plays, className }: { atlas: MaskAtlas; size: number; plays: number; className?: string }) {
+  const style = {
+    "--mask": `url(${import.meta.env.BASE_URL}vfx/${atlas.file}_atlas.png)`,
+    "--size": `${size}px`,
+    "--frames": atlas.frames,
+    "--dur": `${atlas.frames / atlas.fps}s`,
+    "--plays": plays,
+  } as CSSProperties;
+  return <span className={`mask-flipbook ${className ?? ""}`} style={style} aria-hidden="true" />;
+}
+
+/** How long the event banner stays. */
+const EVENT_BANNER_MS = 3600;
+
+const BANNER: Partial<Record<GameClient["state"]["alerts"][number]["type"], { atlas: MaskAtlas; plays: number; tone: string }>> = {
+  wave_warning: { atlas: PULSE, plays: 3, tone: "warn" },
+  wave_started: { atlas: PULSE, plays: 3, tone: "danger" },
+  night_survived: { atlas: DAWN, plays: 2, tone: "ok" },
+};
+
+/**
+ * A banner across the top for the moments of a night: the Choir is announced, its wave arrives, the
+ * night is survived. Each has a baked emblem tinted by its tone. Pressure groups (wave 0) stay in
+ * the alert list only.
+ */
+function EventBanner({ alerts }: { alerts: GameClient["state"]["alerts"] }) {
   const [shown, setShown] = useState<GameClient["state"]["alerts"][number] | null>(null);
-  const latest = alerts.find((a) => a.type === "wave_warning" || (a.type === "wave_started" && a.value));
+  const latest = alerts.find((a) => BANNER[a.type] && !(a.type === "wave_started" && !a.value));
   useEffect(() => {
     if (!latest) return;
     setShown(latest);
-    const id = window.setTimeout(() => setShown(null), WAVE_BANNER_MS);
+    const id = window.setTimeout(() => setShown(null), EVENT_BANNER_MS);
     return () => clearTimeout(id);
-    // Keyed on the alert id: a new wave restarts the banner, a re-render with the same alert does not.
+    // Keyed on the alert id: a new event restarts the banner, a re-render with the same alert does not.
   }, [latest?.id]);
-  if (!shown) return null;
-  const tone = ALERT_STYLE[shown.type]?.tone ?? "warn";
+  const b = shown && BANNER[shown.type];
+  if (!shown || !b) return null;
   return (
-    <div key={shown.id} className={`wave-banner panel t-${tone}`} role="status">
-      <span className="wave-pulse" style={{ ["--pulse" as string]: `url(${import.meta.env.BASE_URL}vfx/vz_wave_pulse_atlas.png)` }} />
-      <span className="wave-banner-text">{alertText(shown)}</span>
+    <div key={shown.id} className={`event-banner panel t-${b.tone}`} role="status">
+      <MaskFlipbook atlas={b.atlas} size={48} plays={b.plays} />
+      <span className="event-banner-text">{alertText(shown)}</span>
     </div>
   );
 }
@@ -1602,7 +1636,8 @@ function Summary({
       <div className={`panel card ${won ? "won" : "lost"}`}>
         <div className="summary-kicker">{t(`brief.${m.id}.title`)}</div>
         <h1 className={won ? "won" : "lost"}>
-          {won ? t("summary.won") : t("summary.lost")}
+          <MaskFlipbook atlas={won ? VICTORY : DEFEAT} size={128} plays={1} className="summary-burst" />
+          <span className="summary-title">{won ? t("summary.won") : t("summary.lost")}</span>
         </h1>
         {!won && <p className="muted">{t(`loss.${m.reason}`)}</p>}
         <div className="summary-grid">

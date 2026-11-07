@@ -618,8 +618,26 @@ b {
   background: var(--danger);
 }
 
-/* ----- Wave banner ----- */
-.wave-banner {
+/* ----- Baked emblems (white atlases in public/vfx, played as a mask over currentColor) ----- */
+.mask-flipbook {
+  display: inline-block;
+  width: var(--size);
+  height: var(--size);
+  flex: none;
+  background: currentColor;
+  -webkit-mask: var(--mask) 0 0 / calc(var(--frames) * var(--size)) var(--size) no-repeat;
+  mask: var(--mask) 0 0 / calc(var(--frames) * var(--size)) var(--size) no-repeat;
+  animation: mask-flipbook var(--dur) steps(var(--frames)) var(--plays) forwards;
+}
+@keyframes mask-flipbook {
+  to {
+    -webkit-mask-position: calc(var(--frames) * var(--size) * -1) 0;
+    mask-position: calc(var(--frames) * var(--size) * -1) 0;
+  }
+}
+
+/* ----- Event banner (waves, nights) ----- */
+.event-banner {
   position: absolute;
   top: 58px;
   left: 50%;
@@ -630,35 +648,19 @@ b {
   padding: 6px 18px 6px 10px;
   --chamfer: 7px;
   border-bottom: 2px solid var(--tone);
+  color: var(--tone);
   pointer-events: none;
-  animation: wave-banner 3.6s ease-out forwards;
+  animation: event-banner 3.6s ease-out forwards;
 }
-.wave-banner-text {
+.event-banner-text {
   font-family: var(--display);
   font-size: 19px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--tone);
   white-space: nowrap;
 }
-/* The baked pulse atlas (16 frames of 96 px, shown at 48 px) masks a square of the tone colour. */
-.wave-pulse {
-  width: 48px;
-  height: 48px;
-  flex: none;
-  background: var(--tone);
-  -webkit-mask: var(--pulse) 0 0 / 768px 48px no-repeat;
-  mask: var(--pulse) 0 0 / 768px 48px no-repeat;
-  animation: wave-pulse 0.8s steps(16) 3;
-}
-@keyframes wave-pulse {
-  to {
-    -webkit-mask-position: -768px 0;
-    mask-position: -768px 0;
-  }
-}
-@keyframes wave-banner {
+@keyframes event-banner {
   0% {
     opacity: 0;
     transform: translate(-50%, -8px);
@@ -674,10 +676,11 @@ b {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wave-banner,
-  .wave-pulse {
+  .event-banner,
+  .mask-flipbook {
     animation: none;
   }
+  /* Frame 0 of each emblem is its first visible frame; held still it is a plain icon. */
 }
 
 /* ----- Alerts ----- */
@@ -1036,6 +1039,23 @@ button {
 }
 .summary h1.won {
   color: var(--ok);
+}
+/* Victory burst or defeat shatter, played once behind the title (see MaskFlipbook). The title only
+   spans its text, so the emblem centres on the words and not on the card. */
+.summary h1 {
+  position: relative;
+  display: table;
+}
+.summary-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.summary-title {
+  position: relative;
 }
 .summary h1.lost {
   color: var(--danger);

@@ -12,7 +12,7 @@ Every third-party asset must be listed here with its license before it is commit
 
 ## Effects
 
-Ten flipbook atlases in `apps/game/public/vfx/`, drawn by `FlipbookLayer` (`packages/view3d/src/flipbook.ts`) on top of the procedural particles. They are our own work, made headless in EffectCraft 0.21.1 (storytold/effectcraft) from shape layers with the palette colours; no third-party art is inside them. Without them the game shows the particles alone.
+Thirteen flipbook atlases in `apps/game/public/vfx/`. Nine are drawn in the world by `FlipbookLayer` (`packages/view3d/src/flipbook.ts`) on top of the procedural particles; the four white ones are HUD emblems that `MaskFlipbook` (`apps/game/src/ui/App.tsx`) plays as a CSS mask over the text colour. They are our own work, made headless in EffectCraft 0.21.1 (storytold/effectcraft) from shape layers with the palette colours; no third-party art is inside them. Without them the game shows the particles alone.
 
 | Atlas | Frames | Plays on |
 | --- | --- | --- |
@@ -25,7 +25,10 @@ Ten flipbook atlases in `apps/game/public/vfx/`, drawn by `FlipbookLayer` (`pack
 | `vz_blood_atlas.png` | 8 × 64 px, 24 fps, one horizontal strip | `shot` hits, `zombie_killed`, `soldier_hit`, `soldier_bitten` |
 | `vz_settle_atlas.png` | 16 × 128 px, 20 fps, one horizontal strip | `structure_built`, `vehicle_repaired` (with three sparks) |
 | `vz_heal_atlas.png` | 18 × 96 px, 20 fps, one horizontal strip | `soldier_cured` (the hospital cures a bitten soldier) |
-| `vz_wave_pulse_atlas.png` | 16 × 96 px, 20 fps, one horizontal strip, white | HUD: the wave banner (`WaveBanner` in `App.tsx`) uses it as a CSS mask tinted by the alert's tone, three times |
+| `vz_wave_pulse_atlas.png` | 16 × 96 px, 20 fps, one horizontal strip, white | HUD: `EventBanner` (`App.tsx`) on `wave_warning` and `wave_started`, as a CSS mask tinted by the tone, three times |
+| `vz_dawn_atlas.png` | 18 × 96 px, 20 fps, one horizontal strip, white | HUD: `EventBanner` on `night_survived`, twice |
+| `vz_victory_atlas.png` | 20 × 128 px, 24 fps, one horizontal strip, white | HUD: behind the title of the mission summary when it is won, once |
+| `vz_defeat_atlas.png` | 20 × 128 px, 20 fps, one horizontal strip, white | HUD: behind the title of the mission summary when it is lost, once |
 
 To rebuild: `python3 tools/vfx/recipes.py <dir>`, then for each asset `effectcraft-cli run --commands <dir>/<asset>/build.json` and `effectcraft-cli render --comp <asset> --format png --channels rgba --start 0 --end <frames / fps> --out <dir>/<asset>/frames/<asset>.png <dir>/<asset>/<asset>.ecproj` (the end is exclusive). From `<dir>`, `python3 verify.py <assets…>` writes each alpha profile and `python3 pack.py` packs the atlases and writes `manifest.json`. It fails unless the first frame shows, the last is fully transparent, nothing touches the frame edge and the atlas keeps alpha. Copy an atlas here only after that passes.
 
