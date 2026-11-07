@@ -26,6 +26,8 @@ export type SimEventType =
   | 'objective_done'
   | 'night_survived'
   | 'soldier_cured'
+  /** A medic is treating this soldier: at most once a second per medic. */
+  | 'soldier_healed'
   | 'squad_recruited'
   | 'site_secured'
   | 'site_lost'

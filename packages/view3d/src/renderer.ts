@@ -429,6 +429,11 @@ export class GameRenderer {
         // The ground ring sits 0.27 of the frame below its centre: 0.85 m up puts it at the feet.
         this.healGlows.play(e.x, e.y!, 0.85, 3);
         return;
+      case 'soldier_healed':
+        if (e.x === undefined) return;
+        // A medic at work: the same glow, smaller, once a second at the patient.
+        this.healGlows.play(e.x, e.y!, 0.57, 2);
+        return;
       case 'structure_built':
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 0.3, 14, { speed: 2, up: 1, life: 0.6, size: 0.3, color: PALETTE.dust });
