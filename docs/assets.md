@@ -12,7 +12,7 @@ Every third-party asset must be listed here with its license before it is commit
 
 ## Effects
 
-Sixteen flipbook atlases in `apps/game/public/vfx/`. Twelve are drawn in the world by `FlipbookLayer` (`packages/view3d/src/flipbook.ts`) on top of the procedural particles; the four white ones are HUD emblems that `MaskFlipbook` (`apps/game/src/ui/App.tsx`) plays as a CSS mask over the text colour. They are our own work, made headless in EffectCraft 0.21.1 (storytold/effectcraft) from shape layers with the palette colours; no third-party art is inside them. Without them the game shows the particles alone.
+Seventeen flipbook atlases in `apps/game/public/vfx/`. Thirteen are drawn in the world by `FlipbookLayer` (`packages/view3d/src/flipbook.ts`) on top of the procedural particles; the four white ones are HUD emblems that `MaskFlipbook` (`apps/game/src/ui/App.tsx`) plays as a CSS mask over the text colour. They are our own work, made headless in EffectCraft 0.21.1 (storytold/effectcraft) from shape layers with the palette colours; no third-party art is inside them. Without them the game shows the particles alone.
 
 | Atlas | Frames | Plays on |
 | --- | --- | --- |
@@ -28,6 +28,7 @@ Sixteen flipbook atlases in `apps/game/public/vfx/`. Twelve are drawn in the wor
 | `vz_capture_atlas.png` | 22 × 128 px, 24 fps, one horizontal strip, white, drawn flat on the ground | `site_secured` (tinted `siteHeld`, blue) and `site_lost` (tinted `siteLost`, red), sized to the site's capture circle |
 | `vz_order_atlas.png` | 14 × 96 px, 20 fps, one horizontal strip, white, drawn flat on the ground | move orders (`markOrder`), tinted `orderMarker`, 3 m in radius at the start, scaled with the zoom |
 | `vz_turn_atlas.png` | 18 × 96 px, 20 fps, one horizontal strip | `soldier_turned` and `zombie_risen`: a sickly ring at the feet and a dark miasma that rises |
+| `vz_delivery_atlas.png` | 16 × 96 px, 20 fps, one horizontal strip | `cargo_delivered`: an amber ring at the truck and three crates that pop out and rise |
 | `vz_wave_pulse_atlas.png` | 16 × 96 px, 20 fps, one horizontal strip, white | HUD: `EventBanner` (`App.tsx`) on `wave_warning` and `wave_started`, as a CSS mask tinted by the tone, three times |
 | `vz_dawn_atlas.png` | 18 × 96 px, 20 fps, one horizontal strip, white | HUD: `EventBanner` on `night_survived`, twice |
 | `vz_victory_atlas.png` | 20 × 128 px, 24 fps, one horizontal strip, white | HUD: behind the title of the mission summary when it is won, once |
