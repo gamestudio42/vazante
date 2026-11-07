@@ -371,7 +371,25 @@ def delivery():
             s += opacity(n, (0, 100), (0.45, 100), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order), ("vz_turn", turn), ("vz_delivery", delivery)]:
+def arrival():
+    # 128 px, 20 frames at 20 fps, white, drawn flat on the ground and tinted in the game: help has
+    # arrived. Four corner brackets close onto a square drop zone while a square pulse leaves it.
+    end = 19 / 20
+    c = [64, 64]
+    s = [comp("vz_arrival", 128, 20, 20), shape("pulse", "rect", [72, 72], fill=None, stroke="#ffffff", width=3, pos=c)]
+    s += scale("pulse", (0, 40), (0.2, 40), (end, 140)) + opacity("pulse", (0, 0), (0.2, 0), (0.25, 90), (end, 0))
+    for i, (sx, sy) in enumerate(((-1, -1), (1, -1), (1, 1), (-1, 1))):
+        for part, size, ox, oy in (("h", [16, 4], 6, 0), ("v", [4, 16], 0, 6)):
+            n = f"b{i}{part}"
+            # The arm runs from the corner towards the middle of the square's side.
+            p0 = [c[0] + sx * (52 - ox), c[1] + sy * (52 - oy)]
+            p1 = [c[0] + sx * (38 - ox), c[1] + sy * (38 - oy)]
+            s.append(rect(n, size, "#ffffff", p0))
+            s += [key(n, "transform/position", 0, p0), key(n, "transform/position", 0.3, p1)]
+            s += opacity(n, (0, 90), (0.6, 90), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order), ("vz_turn", turn), ("vz_delivery", delivery), ("vz_arrival", arrival)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
