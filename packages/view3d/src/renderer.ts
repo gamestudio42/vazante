@@ -134,6 +134,8 @@ export class GameRenderer {
   private readonly bloodSprays = new FlipbookLayer({ file: 'vz_blood_atlas.png', frames: 8, fps: 24 }, 64, { nudge: 0.8, upright: true });
   /** Low dust that settles when a structure is finished or a wreck runs again; nudged out of it. */
   private readonly settleDust = new FlipbookLayer({ file: 'vz_settle_atlas.png', frames: 16, fps: 20 }, 12, { nudge: 2, upright: true });
+  /** Green glow and rising crosses when the hospital cures a bitten soldier. */
+  private readonly healGlows = new FlipbookLayer({ file: 'vz_heal_atlas.png', frames: 18, fps: 20 }, 12, { nudge: 0.5, upright: true });
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -233,7 +235,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh, this.healGlows.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -422,6 +424,11 @@ export class GameRenderer {
         this.settleDust.play(e.x, e.y!, 1.5, 8);
         for (let i = 0; i < 3; i++) this.sparks.play(e.x + (Math.random() - 0.5) * 2.4, e.y! + (Math.random() - 0.5) * 2.4, 1 + Math.random() * 0.8, 2.5);
         return;
+      case 'soldier_cured':
+        if (e.x === undefined) return;
+        // The ground ring sits 0.27 of the frame below its centre: 0.85 m up puts it at the feet.
+        this.healGlows.play(e.x, e.y!, 0.85, 3);
+        return;
       case 'structure_built':
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 0.3, 14, { speed: 2, up: 1, life: 0.6, size: 0.3, color: PALETTE.dust });
@@ -493,7 +500,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl), this.healGlows.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -565,6 +572,7 @@ export class GameRenderer {
     this.bloodSprays.update(dtS);
     this.settleDust.shade = 1 - 0.6 * this.night;
     this.settleDust.update(dtS);
+    this.healGlows.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);
