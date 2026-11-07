@@ -310,7 +310,31 @@ def capture():
         s += opacity(n, (0, 60), (0.1, 100), (0.55, 90), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture)]:
+def order():
+    # 96 px, 14 frames at 20 fps, white, drawn flat on the ground and tinted in the game: a squad is
+    # sent here. A ring closes in, four triangles point at the spot and converge, and a dot lands.
+    import math
+    end = 13 / 20
+    c = [48, 48]
+    s = [comp("vz_order", 96, 20, 14),
+         shape("ring", "ellipse", [84, 84], fill=None, stroke="#ffffff", width=4, pos=c),
+         shape("dot", "ellipse", [10, 10], fill="#ffffff", pos=c)]
+    s += scale("ring", (0, 100), (end, 35)) + opacity("ring", (0, 100), (0.4, 80), (end, 0))
+    s += scale("dot", (0, 0), (0.25, 0), (0.35, 140), (0.45, 100)) + opacity("dot", (0, 100), (0.45, 100), (end, 0))
+    for i, deg in enumerate((45, 135, 225, 315)):
+        n = f"t{i}"
+        a = math.radians(deg)
+        s.append(shape(n, "polygon", [12, 12], fill="#ffffff", pos=c))
+        s.append(setp(n, "contents/group/contents/star/points", 3))
+        s.append(setp(n, "contents/group/contents/star/outerRadius", 6))
+        # Measured: deg + 90 turns the triangle's tip towards the centre (deg + 270 pointed it out).
+        s.append(key(n, "transform/rotation", 0, deg + 90))
+        s += [key(n, "transform/position", 0, [c[0] + math.cos(a) * 36, c[1] + math.sin(a) * 36]),
+              key(n, "transform/position", 0.35, [c[0] + math.cos(a) * 12, c[1] + math.sin(a) * 12])]
+        s += opacity(n, (0, 100), (0.35, 100), (0.5, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
