@@ -142,6 +142,8 @@ export class GameRenderer {
   private readonly captured = new FlipbookLayer(CAPTURE_ATLAS, 6, { ground: true, upright: true, tint: PALETTE.siteHeld });
   private readonly lostSites = new FlipbookLayer(CAPTURE_ATLAS, 6, { ground: true, upright: true, tint: PALETTE.siteLost });
   /** Where a squad is sent: the baked ring and triangles; the plain ring of `orders` stands in until it loads. */
+  /** A bitten soldier turns, or the dead rise: a sickly miasma boils up from the feet. */
+  private readonly turnMiasma = new FlipbookLayer({ file: 'vz_turn_atlas.png', frames: 18, fps: 20 }, 16, { nudge: 0.6, upright: true });
   private readonly orderMarks = new FlipbookLayer({ file: 'vz_order_atlas.png', frames: 14, fps: 20 }, 16, { ground: true, upright: true, tint: PALETTE.orderMarker });
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
@@ -242,7 +244,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh, this.healGlows.mesh, this.captured.mesh, this.lostSites.mesh, this.orderMarks.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh, this.healGlows.mesh, this.captured.mesh, this.lostSites.mesh, this.orderMarks.mesh, this.turnMiasma.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -458,6 +460,12 @@ export class GameRenderer {
         // The puff's base sits 3/16 of the frame below its centre: 1.3 m up puts it on the street.
         this.settleDust.play(e.x, e.y!, 1.3, 7);
         return;
+      case 'soldier_turned':
+      case 'zombie_risen':
+        if (e.x === undefined) return;
+        // The feet sit 0.31 of the frame below its centre: 1.25 m up on a 4 m quad puts them on the street.
+        this.turnMiasma.play(e.x, e.y!, 1.25, 4);
+        return;
       case 'soldier_died':
         if (e.x === undefined) return;
         this.blood.add(e.x, e.y!, 1.6, Math.random() * Math.PI, 1.5);
@@ -523,7 +531,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl), this.healGlows.load(baseUrl), this.captured.load(baseUrl), this.lostSites.load(baseUrl), this.orderMarks.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl), this.healGlows.load(baseUrl), this.captured.load(baseUrl), this.lostSites.load(baseUrl), this.orderMarks.load(baseUrl), this.turnMiasma.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -599,6 +607,8 @@ export class GameRenderer {
     this.captured.update(dtS);
     this.lostSites.update(dtS);
     this.orderMarks.update(dtS);
+    this.turnMiasma.shade = 1 - 0.6 * this.night;
+    this.turnMiasma.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);

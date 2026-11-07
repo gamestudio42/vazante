@@ -334,7 +334,26 @@ def order():
         s += opacity(n, (0, 100), (0.35, 100), (0.5, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order)]:
+def turn():
+    # 96 px, 18 frames at 20 fps: a soldier turns, or the dead rise. A sickly ring spreads at the feet
+    # and a dark green miasma boils up the body and thins away.
+    end = 17 / 20
+    feet = [48, 78]
+    sick, mid, dark = "#8fa06a", "#56603f", "#3d4632"
+    s = [comp("vz_turn", 96, 20, 18), shape("ring", "ellipse", [60, 18], fill=None, stroke=sick, width=3, pos=feet)]
+    s += scale("ring", (0, 30), (end, 110)) + opacity("ring", (0, 90), (0.4, 70), (end, 0))
+    puffs = [(-10, 26, dark, 0.0), (10, 24, mid, 0.05), (0, 30, dark, 0.12), (-6, 22, sick, 0.2), (8, 20, mid, 0.28)]
+    for i, (dx, size, col, t0) in enumerate(puffs):
+        n = f"m{i}"
+        s.append(shape(n, "ellipse", [size, size], fill=col, pos=feet))
+        s += turb(n, 6, 10)
+        s += [key(n, "transform/position", 0, feet), key(n, "transform/position", t0, feet),
+              key(n, "transform/position", end, [feet[0] + dx, 20 + i * 3])]
+        s += scale(n, (0, 20), (t0, 20), (min(end, t0 + 0.3), 100), (end, 120))
+        s += opacity(n, (0, 85), (0.45, 75), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order), ("vz_turn", turn)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
