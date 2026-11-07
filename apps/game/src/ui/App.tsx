@@ -177,6 +177,7 @@ export function App({ client, input, view, shell }: Props) {
             {!f.economy && <DistrictList frame={f} />}
           </div>
         )}
+        <WaveBanner alerts={state.alerts} />
         {!input.inDirect && (
           <Alerts
             alerts={state.alerts}
@@ -943,6 +944,34 @@ function Alerts({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** How long the wave banner stays: the pulse plays three times (16 frames at 20 fps each). */
+const WAVE_BANNER_MS = 3600;
+
+/**
+ * A banner across the top when the Choir is announced and when its wave arrives, with the baked
+ * radar pulse (see docs/assets.md) tinted by the alert's tone. Pressure groups (wave 0) stay in the
+ * alert list only.
+ */
+function WaveBanner({ alerts }: { alerts: GameClient["state"]["alerts"] }) {
+  const [shown, setShown] = useState<GameClient["state"]["alerts"][number] | null>(null);
+  const latest = alerts.find((a) => a.type === "wave_warning" || (a.type === "wave_started" && a.value));
+  useEffect(() => {
+    if (!latest) return;
+    setShown(latest);
+    const id = window.setTimeout(() => setShown(null), WAVE_BANNER_MS);
+    return () => clearTimeout(id);
+    // Keyed on the alert id: a new wave restarts the banner, a re-render with the same alert does not.
+  }, [latest?.id]);
+  if (!shown) return null;
+  const tone = ALERT_STYLE[shown.type]?.tone ?? "warn";
+  return (
+    <div key={shown.id} className={`wave-banner panel t-${tone}`} role="status">
+      <span className="wave-pulse" style={{ ["--pulse" as string]: `url(${import.meta.env.BASE_URL}vfx/vz_wave_pulse_atlas.png)` }} />
+      <span className="wave-banner-text">{alertText(shown)}</span>
     </div>
   );
 }

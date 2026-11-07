@@ -618,6 +618,68 @@ b {
   background: var(--danger);
 }
 
+/* ----- Wave banner ----- */
+.wave-banner {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 18px 6px 10px;
+  --chamfer: 7px;
+  border-bottom: 2px solid var(--tone);
+  pointer-events: none;
+  animation: wave-banner 3.6s ease-out forwards;
+}
+.wave-banner-text {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tone);
+  white-space: nowrap;
+}
+/* The baked pulse atlas (16 frames of 96 px, shown at 48 px) masks a square of the tone colour. */
+.wave-pulse {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  background: var(--tone);
+  -webkit-mask: var(--pulse) 0 0 / 768px 48px no-repeat;
+  mask: var(--pulse) 0 0 / 768px 48px no-repeat;
+  animation: wave-pulse 0.8s steps(16) 3;
+}
+@keyframes wave-pulse {
+  to {
+    -webkit-mask-position: -768px 0;
+    mask-position: -768px 0;
+  }
+}
+@keyframes wave-banner {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  8%,
+  85% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wave-banner,
+  .wave-pulse {
+    animation: none;
+  }
+}
+
 /* ----- Alerts ----- */
 .alerts {
   position: absolute;
