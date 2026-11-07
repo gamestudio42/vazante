@@ -203,7 +203,24 @@ def heal():
             s += opacity(n, (0, 0), (t0, 0), (t0 + 0.05, 100), (t0 + 0.3, 90), (end, 0)) if t0 else opacity(n, (0, 100), (0.3, 90), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal)]:
+def wave_pulse():
+    # 96 px, 16 frames at 20 fps, white: a HUD emblem used as a CSS mask and tinted by the alert's
+    # tone, played three times. A core blinks while two rings leave it and fade.
+    end = 15 / 20
+    c = [48, 48]
+    s = [comp("vz_wave_pulse", 96, 20, 16), shape("core", "ellipse", [26, 26], fill="#ffffff", pos=c)]
+    s += scale("core", (0, 70), (0.12, 100), (0.45, 85), (end, 70)) + opacity("core", (0, 100), (0.5, 90), (end, 0))
+    for i, t0 in enumerate((0.0, 0.2)):
+        n = f"r{i}"
+        s.append(shape(n, "ellipse", [84, 84], fill=None, stroke="#ffffff", width=5 - i, pos=c))
+        span = end - t0
+        if t0 == 0:
+            s += scale(n, (0, 30), (end, 100)) + opacity(n, (0, 100), (0.5 * span, 60), (end, 0))
+        else:
+            s += scale(n, (0, 30), (t0, 30), (end, 100)) + opacity(n, (0, 0), (t0, 0), (t0 + 0.05, 90), (t0 + 0.5 * span, 50), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
