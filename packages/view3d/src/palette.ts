@@ -45,6 +45,8 @@ export const PALETTE = {
   siteHeld: 0x4fa3ff,
   siteContested: 0xe0b040,
   siteLost: 0xd0503c,
+  /** A soldier breaks: the HUD's warning orange (--warn). */
+  panic: 0xf08a3c,
   /** Inchado skin and the bile of its burst; Gritador skin; the scream ring. */
   bloaterSkin: 0x8f9c55,
   bile: 0xa9b84a,
