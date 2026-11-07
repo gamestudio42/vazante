@@ -39,6 +39,8 @@ const TRACER_LIFE_S = 0.08;
 const MAX_CORPSES = 1500;
 const CORPSE_FALL_S = 0.35;
 const PATH_VERTS = 4096;
+/** White ring that locks onto a strategic point's capture circle (see docs/assets.md). */
+const CAPTURE_ATLAS = { file: 'vz_capture_atlas.png', frames: 22, fps: 24 };
 /** Metres of travel per full walk cycle (two steps). */
 /** Shadow texel / screen pixel: full shadows up to OK, none from MAX, a fade between. */
 const SHADOW_COARSE_OK = 1;
@@ -136,6 +138,9 @@ export class GameRenderer {
   private readonly settleDust = new FlipbookLayer({ file: 'vz_settle_atlas.png', frames: 16, fps: 20 }, 12, { nudge: 2, upright: true });
   /** Green glow and rising crosses when the hospital cures a bitten soldier. */
   private readonly healGlows = new FlipbookLayer({ file: 'vz_heal_atlas.png', frames: 18, fps: 20 }, 12, { nudge: 0.5, upright: true });
+  /** A strategic point changes hands: one white atlas on its capture circle, blue when won, red when lost. */
+  private readonly captured = new FlipbookLayer(CAPTURE_ATLAS, 6, { ground: true, upright: true, tint: PALETTE.siteHeld });
+  private readonly lostSites = new FlipbookLayer(CAPTURE_ATLAS, 6, { ground: true, upright: true, tint: PALETTE.siteLost });
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
   private readonly siteZones = new SiteZones();
@@ -235,7 +240,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh, this.healGlows.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh, this.healGlows.mesh, this.captured.mesh, this.lostSites.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -434,6 +439,16 @@ export class GameRenderer {
         // A medic at work: the same glow, smaller, once a second at the patient.
         this.healGlows.play(e.x, e.y!, 0.57, 2);
         return;
+      case 'site_secured':
+      case 'site_lost': {
+        // The event names the site; its capture circle is the same one SiteZones draws.
+        const b = this.curr?.bases.find((x) => x.id === e.target);
+        if (!b) return;
+        const z = siteZone(b, this.map.cellSize);
+        // The art's capture ring spans 104 of its 128 px.
+        (e.type === 'site_secured' ? this.captured : this.lostSites).play(z.x, z.y, 0.15, (2 * z.r * 128) / 104);
+        return;
+      }
       case 'structure_built':
         if (e.x === undefined) return;
         this.particles.emit(e.x, e.y!, 0.3, 14, { speed: 2, up: 1, life: 0.6, size: 0.3, color: PALETTE.dust });
@@ -505,7 +520,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl), this.healGlows.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl), this.healGlows.load(baseUrl), this.captured.load(baseUrl), this.lostSites.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -578,6 +593,8 @@ export class GameRenderer {
     this.settleDust.shade = 1 - 0.6 * this.night;
     this.settleDust.update(dtS);
     this.healGlows.update(dtS);
+    this.captured.update(dtS);
+    this.lostSites.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);

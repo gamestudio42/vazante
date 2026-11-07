@@ -288,7 +288,29 @@ def dawn():
         s += opacity(n, (0, 0), (0.2, 0), (0.3, 100), (0.6, 80), (end, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn)]:
+def capture():
+    # 128 px, 22 frames at 24 fps, white, drawn flat on the ground and tinted in the game: a strategic
+    # point changes hands. The capture ring closes in, four marks lock onto it, and a pulse leaves it.
+    import math
+    end = 21 / 24
+    c = [64, 64]
+    s = [comp("vz_capture", 128, 24, 22),
+         shape("zone", "ellipse", [104, 104], fill=None, stroke="#ffffff", width=4, pos=c),
+         shape("pulse", "ellipse", [104, 104], fill=None, stroke="#ffffff", width=3, pos=c)]
+    # Frame 0 already shows the ring and marks: a flipbook's first frame must not be blank.
+    s += scale("zone", (0, 115), (0.3, 100)) + opacity("zone", (0, 60), (0.15, 100), (0.55, 90), (end, 0))
+    s += scale("pulse", (0, 40), (0.25, 40), (end, 115)) + opacity("pulse", (0, 0), (0.25, 0), (0.3, 90), (end, 0))
+    for i, deg in enumerate((0, 90, 180, 270)):
+        n = f"m{i}"
+        a = math.radians(deg)
+        s.append(rect(n, [4, 14], "#ffffff", c))
+        s.append(key(n, "transform/rotation", 0, deg + 90))
+        s += [key(n, "transform/position", 0, [c[0] + math.cos(a) * 56, c[1] + math.sin(a) * 56]),
+              key(n, "transform/position", 0.3, [c[0] + math.cos(a) * 44, c[1] + math.sin(a) * 44])]
+        s += opacity(n, (0, 60), (0.1, 100), (0.55, 90), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]
