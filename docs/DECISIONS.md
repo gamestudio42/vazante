@@ -79,3 +79,9 @@ A save is a structured clone of the whole `World` plus its state hash. Loading r
 - **Steam is optional.** With `VAZANTE_STEAM_APP_ID` set and `steamworks.js` installed, Steam is initialised; otherwise the game opens without it.
 - **Packaging** uses electron-builder: AppImage, Snap and Flatpak on Linux, NSIS on Windows, DMG on macOS. The app id `io.github.vazante.Vazante` is a placeholder until the publisher identity is chosen.
 - **`--smoke`** opens the game hidden, checks it reached the first frame with `crossOriginIsolated === true` and exits with a status code, for CI.
+
+## D14. Medic treatment is a throttled event
+
+- **Medics do not cure.** They heal HP and slow a bite, so they never emit `soldier_cured`; only the hospital cures.
+- **`soldier_healed` once a second per treating medic.** A medic heals every tick, so an event per tick would flood the event stream. On ticks where `tick % TICK_HZ === 0` a medic who is treating someone emits it at the patient (`source` the patient, `target` the medic). A medic with no one hurt in reach emits nothing.
+- **Not an alert.** It is for the renderer (a small heal glow), not the alert log, where it would repeat every second.

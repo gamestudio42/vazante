@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SoldierCondition, TICK_HZ, WEAPONS, ZombieKind, ZombieState } from '@vazante/shared';
+import { SoldierCondition, TICK_HZ, type SimEvent, WEAPONS, ZombieKind, ZombieState } from '@vazante/shared';
 import { placeStructure } from '../src/systems/construction.ts';
 import { spawnTruck } from '../src/systems/logistics.ts';
 import { addSquad, disarm, fieldEngine, soldiersOf } from './helpers.ts';
@@ -20,6 +20,39 @@ describe('medic', () => {
     e.runTicks(10 * TICK_HZ);
     expect(hurt.hp).toBeGreaterThan(50);
     expect(bitten.turnAt - turnAt).toBeGreaterThanOrEqual(5 * TICK_HZ - 1);
+  });
+
+  it('signals the treatment at the patient once a second, not every tick', () => {
+    const e = fieldEngine(1, 64);
+    const q = addSquad(e, 'marines', 100, 100);
+    const team = soldiersOf(e, q.id);
+    const medic = team.find((s) => s.role === 'medic')!;
+    const hurt = team[team.indexOf(medic) - 1];
+    hurt.hp = 10;
+    const seen: SimEvent[] = [];
+    for (let i = 0; i < 5 * TICK_HZ; i++) {
+      const from = e.world.events.length;
+      e.runTicks(1);
+      for (const ev of e.world.events.slice(from)) {
+        if (ev.type !== 'soldier_healed') continue;
+        // The patient's position on the tick it was treated.
+        expect([ev.x, ev.y]).toEqual([hurt.x, hurt.y]);
+        seen.push(ev);
+      }
+    }
+    expect(seen.length).toBeGreaterThanOrEqual(4);
+    expect(seen.length).toBeLessThanOrEqual(5);
+    for (const ev of seen) {
+      expect(ev.source).toBe(hurt.id);
+      expect(ev.target).toBe(medic.id);
+    }
+  });
+
+  it('stays quiet when no one needs treatment', () => {
+    const e = fieldEngine(1, 64);
+    addSquad(e, 'marines', 100, 100);
+    e.runTicks(3 * TICK_HZ);
+    expect(e.world.events.some((ev) => ev.type === 'soldier_healed')).toBe(false);
   });
 
   it('squads without a medic do not heal', () => {

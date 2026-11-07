@@ -1,16 +1,18 @@
-import { MEDIC, TICK_DT, SoldierCondition } from '@vazante/shared';
+import { MEDIC, TICK_DT, TICK_HZ, SoldierCondition } from '@vazante/shared';
 import type { Soldier } from '../entities.ts';
 import { isActiveSoldier, type World } from '../world.ts';
 
 /**
  * Each medic treats the most hurt soldier within MEDIC.rangeM (themself included) and slows the
  * infection of every bitten soldier there: their turn comes later by MEDIC.infectionSlow per tick.
- * A panicking medic treats no one.
+ * A panicking medic treats no one. Once a second a medic who is treating someone emits
+ * `soldier_healed` at the patient, so the renderer can show it without one event per tick.
  */
 export function stepMedics(w: World): void {
   const r2 = MEDIC.rangeM * MEDIC.rangeM;
   const heal = MEDIC.healPerS * TICK_DT;
   const slowEvery = Math.round(1 / MEDIC.infectionSlow);
+  const pulse = w.tick % TICK_HZ === 0;
   for (const m of w.soldiers) {
     if (m.role !== 'medic' || !isActiveSoldier(m) || m.panicT > 0 || m.direct) continue;
     let worst: Soldier | undefined;
@@ -24,6 +26,8 @@ export function stepMedics(w: World): void {
         worst = s;
       }
     }
-    if (worst) worst.hp = Math.min(worst.maxHp, worst.hp + heal);
+    if (!worst) continue;
+    worst.hp = Math.min(worst.maxHp, worst.hp + heal);
+    if (pulse) w.emit({ type: 'soldier_healed', source: worst.id, target: m.id, x: worst.x, y: worst.y });
   }
 }
