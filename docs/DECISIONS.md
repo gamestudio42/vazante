@@ -98,3 +98,13 @@ Legacy saves keep their original occupancy and do not acquire new solid scenery 
 Infantry routes around truck bodies and direct control uses the same collision rules. Trucks yield
 to living infantry instead of pushing or teleporting soldiers. Existing zombie attack and vehicle
 ramming rules continue separately. This preserves one authoritative world across all cameras.
+
+### D16 — bounded architectural reference cluster (2026-11-12)
+
+Validate the next architecture pass near the starting base before applying it city-wide. Use
+cosmetic gables and setback crowns within the existing authoritative building envelope. Keep
+conservative rectangular sight blocking: no apparent roof space is traversable or advertised as
+cover. This avoids changing navigation or combat balance for an art prototype. Place fixtures on
+the actual flat crown, never above a slope or an empty setback. Sidewalk treatment only recolours
+existing sidewalk cells; it does not create new pedestrian routes. Broader expansion follows visual
+review and the existing render performance gate.

@@ -211,3 +211,13 @@ real cells on vacant lots. Road cells remain open. Tents currently have no trave
 
 This changes navigation and movement, not resource costs, unit stats or damage. Trucks yield to
 infantry rather than overlapping it. The separate static-prop flag is not a climbable structure.
+
+### 2026-11-12 — bounded architectural reference block
+
+Presentation only: the nearest building to the base anchors a cluster with a 40 m half-extent.
+Roof rise is at most 2.4 m or 25% of building height; setbacks are at most 1.2 m or 25% of the
+narrower footprint. Residential and industrial buildings up to 15 m use gables. Ground-floor plinths are 0.45 m
+high, canopies 0.5 m deep and 65% of facade width. The detail budget rises from 12 to 20 boxes
+per building in this prototype. Existing sidewalk cells around the cluster use staggered
+4-texel slabs (2 m at the current ground-texture density), joint shade 0.84 and colour variation
+±0.035. No occupied cells, terrain kinds, sight-blocking heights or gameplay balance change.

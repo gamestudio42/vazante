@@ -212,3 +212,20 @@ New snapshots retain the prop list and grid occupancy. Legacy snapshots without 
 with their original occupancy and render no newly introduced solid props, avoiding invisible or
 retroactively overlapping obstacles. Collision changes do not add destructibility or zombie/truck
 body avoidance; existing zombie attack/ram rules remain in effect.
+
+### Architectural reference block
+
+A bounded presentation prototype selects the building nearest the starting base and its neighbours
+within 40 m along each axis. Only that cluster gets pitched residential/industrial roofs, setback crowns,
+ground-floor plinths/canopies and staggered sidewalk paving. The selection uses map geometry and
+never consumes simulation RNG. Other buildings retain the previous appearance.
+
+Roof volumes replace the upper portion of the facade, remain inside the occupied rectangle and
+reach the original maximum height. Flat-roof fixtures use the actual crown footprint; pitched
+roofs carry no flat-deck equipment. The simulation still uses its conservative rectangular height
+for visibility; these are cosmetic roofs, not accessible terraces or interiors. Two instanced roof
+batches reuse existing toon shading and chunk culling. No new per-tick system or render pass is added.
+
+Tests cover small footprints, support bounds, deterministic selection, chunk attributes and an
+unchanged world hash. `e2e/reference-block.spec.ts` captures the cluster close up, from the map and
+in perspective at noon and night. GPU performance acceptance remains the separate roadmap gate.

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { Ground, type MapInfo } from '@vazante/shared';
+import { Ground, PRESENTATION, type MapInfo } from '@vazante/shared';
 import { buildingMaterial, groundMaterial, toon } from './materials.ts';
-import { buildArchitecture } from './architecture.ts';
+import { buildArchitecture, planBuilding, referenceBuildings } from './architecture.ts';
 import { hash } from './cosmetic.ts';
 export { hash } from './cosmetic.ts';
 import { PALETTE } from './palette.ts';
@@ -108,11 +108,16 @@ export function buildRooftops(map: MapInfo): THREE.Group {
   const ac: THREE.Matrix4[] = [];
   const stairs: THREE.Matrix4[] = [];
   const tanks: THREE.Matrix4[] = [];
+  const reference = referenceBuildings(map);
   for (const b of map.buildings) {
-    const w = (b.x1 - b.x0 + 1) * cs - 0.6;
-    const d = (b.y1 - b.y0 + 1) * cs - 0.6;
-    const cx = b.x0 * cs + 0.3;
-    const cy = b.y0 * cs + 0.3;
+    const appearance = planBuilding(b, cs, map.seed, reference.has(b.id));
+    // Pitched roofs carry no flat-deck equipment. Setback crowns own a smaller support area.
+    if (appearance.roofShape === 'gable') continue;
+    const deck = appearance.roof ?? appearance.body;
+    const w = deck.width;
+    const d = deck.depth;
+    const cx = deck.x - w / 2;
+    const cy = deck.z - d / 2;
     const h = hash(b.id * 92821 + 7);
     const at = (k: number, sx: number, sy: number, sz: number, margin: number) => {
       const r = hash(h + k * 7919);
@@ -124,10 +129,10 @@ export function buildRooftops(map: MapInfo): THREE.Group {
       const py = cy + my + (((r >>> 10) % 1000) / 1000) * Math.max(0, d - 2 * my);
       return new THREE.Matrix4().makeScale(sx, sz, sy).setPosition(px, b.height, py);
     };
-    const nAc = h % 4;
+    const nAc = Math.min(w, d) >= 1.3 ? h % 4 : 0;
     for (let k = 0; k < nAc; k++) ac.push(at(k, 1.3, 1.0, 0.9, 1.2));
     if (w > 7 && d > 7 && h % 3 !== 0) stairs.push(at(10, 3.2, 2.6, 2.4, 2.4));
-    if (b.height > 14 && h % 5 < 2) tanks.push(at(20, 1.0, 1.0, 1.0, 2));
+    if (b.height > 14 && Math.min(w, d) >= 2.2 && h % 5 < 2) tanks.push(at(20, 1.0, 1.0, 1.0, 2));
   }
   const box = new THREE.BoxGeometry(1, 1, 1);
   box.translate(0, 0.5, 0);
@@ -251,6 +256,15 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
     [Ground.Park]: PALETTE.park,
   };
   const g = (cx: number, cy: number) => (cx < 0 || cy < 0 || cx >= map.width || cy >= map.height ? -1 : map.ground[cy * map.width + cx]);
+  const reference = referenceBuildings(map);
+  const paving = new Set<number>();
+  for (const b of map.buildings) if (reference.has(b.id)) {
+    for (let y = Math.max(0, b.y0 - 1); y <= Math.min(map.height - 1, b.y1 + 1); y++) {
+      for (let x = Math.max(0, b.x0 - 1); x <= Math.min(map.width - 1, b.x1 + 1); x++) {
+        if (g(x, y) === Ground.Sidewalk) paving.add(y * map.width + x);
+      }
+    }
+  }
   const inSite = (cx: number, cy: number) => map.sites.some((st) => cx >= st.x0 && cx <= st.x1 && cy >= st.y0 && cy <= st.y1);
   for (let ty = 0; ty < H; ty++) {
     const cy = Math.floor(ty / TPC);
@@ -288,6 +302,14 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
       } else if (kind === Ground.Sidewalk) {
         if (sx === 0 || sy === 0) shade *= 0.9; // paving slabs
         const curb = (g(cx - 1, cy) === Ground.Street && sx === 0) || (g(cx + 1, cy) === Ground.Street && sx === TPC - 1) || (g(cx, cy - 1) === Ground.Street && sy === 0) || (g(cx, cy + 1) === Ground.Street && sy === TPC - 1);
+        if (paving.has(cy * map.width + cx)) {
+          const tune = PRESENTATION.architecture;
+          const slab = tune.pavingSlabTexels;
+          const row = Math.floor(ty / slab);
+          const staggeredX = tx + (row % 2) * slab / 2;
+          const joint = staggeredX % slab === 0 || ty % slab === 0;
+          shade *= joint ? tune.pavingJointShade : 1 + ((hash(Math.floor(staggeredX / slab) * 31 + row * 977) % 3) - 1) * tune.pavingVariation;
+        }
         if (curb) c = PALETTE.curb;
       } else if (kind === Ground.Park) {
         // Uneven grass: lighter dry patches, darker clumps, tufts.

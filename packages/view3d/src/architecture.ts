@@ -26,10 +26,33 @@ export interface BuildingAppearance {
   wear: number;
   body: FacadePart;
   details: FacadePart[];
+  roof: FacadePart | null;
+  roofShape: 'flat' | 'gable' | 'setback';
+}
+
+/** A bounded reference cluster next to the starting base; the rest of the city keeps its style. */
+export function referenceBuildings(map: MapInfo): Set<number> {
+  const base = map.sites.find(s => s.kind === 'base');
+  if (!base || map.buildings.length === 0) return new Set();
+  const x = (base.x0 + base.x1 + 1) * map.cellSize / 2;
+  const z = (base.y0 + base.y1 + 1) * map.cellSize / 2;
+  const center = (b: BuildingRect) => ({ x: (b.x0 + b.x1 + 1) * map.cellSize / 2, z: (b.y0 + b.y1 + 1) * map.cellSize / 2 });
+  let nearest = map.buildings[0];
+  let distance = Infinity;
+  for (const b of map.buildings) {
+    const c = center(b);
+    const d = (c.x - x) ** 2 + (c.z - z) ** 2;
+    if (d < distance) { nearest = b; distance = d; }
+  }
+  const anchor = center(nearest);
+  return new Set(map.buildings.filter(b => {
+    const c = center(b);
+    return Math.abs(c.x - anchor.x) <= PRESENTATION.architecture.referenceRadiusM && Math.abs(c.z - anchor.z) <= PRESENTATION.architecture.referenceRadiusM;
+  }).map(b => b.id));
 }
 
 /** All details stay inside the engine's occupied rectangle and below its sight-blocking height. */
-export function planBuilding(b: BuildingRect, cellSize: number, seed: number): BuildingAppearance {
+export function planBuilding(b: BuildingRect, cellSize: number, seed: number, reference = false): BuildingAppearance {
   const tuning = PRESENTATION.architecture;
   const district = hash(Math.floor(b.x0 / tuning.neighborhoodCells) * 73856093 ^ Math.floor(b.y0 / tuning.neighborhoodCells) * 19349663 ^ seed);
   const variation = hash(b.id * 92821 ^ district);
@@ -42,6 +65,17 @@ export function planBuilding(b: BuildingRect, cellSize: number, seed: number): B
   const x = (b.x0 + b.x1 + 1) * cellSize / 2;
   const z = (b.y0 + b.y1 + 1) * cellSize / 2;
   const body: FacadePart = { x, y: 0, z, width, height: b.height, depth, color: colors.walls[variation % colors.walls.length] };
+  const roofShape = !reference ? 'flat' : (family === 'industrial' || family === 'residential') && b.height <= tuning.pitchedMaxHeight ? 'gable' : 'setback';
+  const rise = Math.min(tuning.roofRise, b.height * tuning.roofMaxFraction);
+  const setback = Math.min(tuning.roofSetback, Math.min(width, depth) * tuning.roofMaxFraction);
+  const roof: FacadePart | null = roofShape === 'flat' ? null : {
+    x, z, y: b.height - rise, height: rise,
+    width: width - (roofShape === 'setback' ? setback * 2 : 0),
+    depth: depth - (roofShape === 'setback' ? setback * 2 : 0),
+    color: roofShape === 'gable' ? colors.accent : colors.trim,
+  };
+  if (roof) body.height -= rise;
+  const wallHeight = body.height;
   const details: FacadePart[] = [];
   const add = (px: number, py: number, pz: number, w: number, h: number, d: number, color: number) => {
     details.push({ x: px, y: py, z: pz, width: w, height: h, depth: d, color });
@@ -51,13 +85,13 @@ export function planBuilding(b: BuildingRect, cellSize: number, seed: number): B
   const edge = tuning.corniceWidth;
   // A shallow roof rim changes the profile without introducing fake walkable terraces.
   for (const side of [-1, 1]) {
-    add(x, b.height - band, z + side * (depth / 2 - edge / 2 + lip), width + 2 * lip, band, edge, colors.trim);
-    add(x + side * (width / 2 - edge / 2 + lip), b.height - band, z, edge, band, depth, colors.trim);
+    add(x, wallHeight - band, z + side * (depth / 2 - edge / 2 + lip), width + 2 * lip, band, edge, colors.trim);
+    add(x + side * (width / 2 - edge / 2 + lip), wallHeight - band, z, edge, band, depth, colors.trim);
   }
   const faceDepth = tuning.inset + lip;
   if (family === 'residential') {
     // Shallow sill/balcony bands give the plaster blocks a domestic scale.
-    const rows = Math.min(tuning.balconyRows, Math.floor((b.height - band) / tuning.floorHeight));
+    const rows = Math.min(tuning.balconyRows, Math.floor((wallHeight - band) / tuning.floorHeight));
     for (let row = 1; row <= rows; row++) for (const side of [-1, 1]) {
       const y = row * tuning.floorHeight;
       add(x, y, z + side * depth / 2, width * 0.82, band, faceDepth, colors.trim);
@@ -66,23 +100,31 @@ export function planBuilding(b: BuildingRect, cellSize: number, seed: number): B
     const columns = family === 'civic' ? tuning.civicColumns : 2;
     for (let i = 0; i < columns; i++) for (const side of [-1, 1]) {
       const px = x + (i / (columns - 1) - 0.5) * (width - edge * 2);
-      add(px, 0, z + side * depth / 2, edge, b.height - band, faceDepth, colors.trim);
+      add(px, 0, z + side * depth / 2, edge, wallHeight - band, faceDepth, colors.trim);
     }
     for (const side of [-1, 1]) {
-      add(x, Math.min(tuning.shopHeight, b.height - band), z + side * depth / 2, width, band, faceDepth, colors.accent);
+      add(x, Math.min(tuning.shopHeight, wallHeight - band), z + side * depth / 2, width, band, faceDepth, colors.accent);
     }
   } else {
     for (const side of [-1, 1]) {
-      add(x, Math.min(tuning.shopHeight, b.height - band), z + side * depth / 2, width * 0.75, band, faceDepth, colors.accent);
+      add(x, Math.min(tuning.shopHeight, wallHeight - band), z + side * depth / 2, width * 0.75, band, faceDepth, colors.accent);
     }
   }
-  return { family, familyIndex, variation: variation % 251, wear: tuning.wearMin + ((variation >>> 8) % 100) / 100 * tuning.wearRange, body, details };
+  if (reference) {
+    for (const side of [-1, 1]) {
+      add(x, 0, z + side * depth / 2, width, tuning.podiumHeight, faceDepth, colors.trim);
+      add(x, Math.min(tuning.shopHeight - band * 2, wallHeight - band), z + side * depth / 2,
+        width * tuning.canopyWidthFraction, band, tuning.canopyDepth, colors.accent);
+    }
+  }
+  return { roof, roofShape, family, familyIndex, variation: variation % 251, wear: tuning.wearMin + ((variation >>> 8) % 100) / 100 * tuning.wearRange, body, details };
 }
 
 /** One body batch and one detail batch, subsequently culled in the city's existing chunks. */
 export function buildArchitecture(map: MapInfo): THREE.Group {
   const group = new THREE.Group();
-  const appearances = map.buildings.map(b => planBuilding(b, map.cellSize, map.seed));
+  const reference = referenceBuildings(map);
+  const appearances = map.buildings.map(b => planBuilding(b, map.cellSize, map.seed, reference.has(b.id)));
   const box = new THREE.BoxGeometry(1, 1, 1);
   box.translate(0, 0.5, 0);
   const attributes = new Float32Array(Math.max(1, appearances.length) * 4);
@@ -111,6 +153,24 @@ export function buildArchitecture(map: MapInfo): THREE.Group {
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    group.add(mesh);
+  }
+  for (const shape of ['gable', 'setback'] as const) {
+    const roofs = appearances.filter(a => a.roofShape === shape).map(a => a.roof!);
+    if (roofs.length === 0) continue;
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    geometry.translate(0, 0.5, 0);
+    if (shape === 'gable') {
+      const positions = geometry.getAttribute('position');
+      // Collapse the upper box edge into a ridge running along local Z.
+      for (let i = 0; i < positions.count; i++) if (positions.getY(i) > 0.5) positions.setX(i, 0);
+      positions.needsUpdate = true;
+      geometry.computeVertexNormals();
+    }
+    const mesh = new THREE.InstancedMesh(geometry, toon(), roofs.length);
+    mesh.name = `reference-roof-${shape}`;
+    roofs.forEach((p, i) => put(mesh, p, i));
+    mesh.castShadow = mesh.receiveShadow = true;
     group.add(mesh);
   }
   return group;
