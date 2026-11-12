@@ -109,3 +109,38 @@ test('lighting and camera presentation leave the paused world unchanged', async 
   }
   expect(errors).toEqual([]);
 });
+
+test('close direct camera hides only the controlled model and restores it when clear', async ({ page }) => {
+  const errors = watchErrors(page);
+  await startGame(page);
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await frame(page)).speed).toBe(0);
+  const before = await stateHash(page);
+  const result = await page.evaluate(() => {
+    const { view } = (window as unknown as { vazante: { view: GameRenderer } }).vazante;
+    const snapshot = view.latest!;
+    const internals = view as unknown as { soldierCrowd: { mesh: { count: number } } | null; soldiers: { count: number } };
+    const count = () => internals.soldierCrowd?.mesh.count ?? internals.soldiers.count;
+    view.pushFrame({ ...snapshot, directSoldier: snapshot.soldiers[0] }, performance.now());
+    view.rig.setBuildings([{ id: 1, x0: 0, y0: 0, x1: 1, y1: 4, height: 30 }], 4);
+    view.rig.direct = { x: 9, y: 40, yaw: 0 };
+    view.render(performance.now(), 1);
+    const clear = count();
+    view.rig.direct.y = 10;
+    view.render(performance.now(), 0.016);
+    const close = count();
+    const hidden = view.rig.hideControlledSoldier;
+    view.rig.direct.y = 40;
+    view.render(performance.now(), 2);
+    const restored = count();
+    view.rig.setBuildings(view.map.buildings, view.map.cellSize);
+    view.pushFrame(snapshot, performance.now());
+    return { clear, close, restored, hidden };
+  });
+  expect(result.hidden).toBe(true);
+  expect(result.clear).toBeGreaterThan(0);
+  expect(result.close).toBe(result.clear - 1);
+  expect(result.restored).toBe(result.clear);
+  expect(await stateHash(page)).toBe(before);
+  expect(errors).toEqual([]);
+});

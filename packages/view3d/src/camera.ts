@@ -31,6 +31,8 @@ export class CameraRig {
   direct: { x: number; y: number; yaw: number } | null = null;
   private obstacles: THREE.Box3[] = [];
   private directDistance = 1;
+  /** Hide only the controlled model when the camera enters its personal space. */
+  hideControlledSoldier = false;
   private readonly cameraRay = new THREE.Ray();
   private readonly cameraHit = new THREE.Vector3();
 
@@ -167,6 +169,8 @@ export class CameraRig {
       // Retract immediately for safety; ease outward only after the obstruction clears.
       this.directDistance = Math.min(allowed, this.directDistance + (allowed - this.directDistance) * (1 - Math.exp(-dtS / tuning.returnSeconds)));
       this.persp.position.copy(origin).addScaledVector(offset, this.directDistance);
+      const separation = this.persp.position.distanceTo(origin);
+      this.hideControlledSoldier = separation < (this.hideControlledSoldier ? tuning.showSoldierAboveM : tuning.hideSoldierBelowM);
       this.persp.up.set(0, 1, 0);
       this.persp.lookAt(x + fx * 10 + sh.x, 1.5 + sh.y, y + fy * 10);
       this.persp.updateMatrixWorld();
@@ -174,6 +178,7 @@ export class CameraRig {
     }
 
     this.directDistance = 1;
+    this.hideControlledSoldier = false;
     const tilt = this.tilt;
     const halfH = this.span / 2;
     const halfW = halfH * this.aspect;

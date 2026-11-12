@@ -235,3 +235,10 @@ existing saves retain their saved placements.
 Camera clearance is 0.6 m around building envelopes. The default offset is 12 m behind,
 8 m above ground, measured from a 1.5 m target. Obstructions retract the camera immediately;
 return to the full offset eases over 0.3 s. Presentation only.
+
+### Close direct-camera visibility (2026-11-12)
+
+Hide the controlled soldier's rendered body and selection ring below 2.5 m camera-to-target
+separation; restore above 3 m to avoid oscillation at the threshold. Applies to both the baked
+model and procedural fallback. Simulation state, other soldiers and camera obstacle clearance
+are unchanged. This keeps the camera from looking through its own soldier at tight walls.

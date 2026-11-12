@@ -1,6 +1,6 @@
 /** Cosmetic tuning only: none of these values may affect simulation or visibility. */
 export const PRESENTATION = {
-  directCamera: { clearance: 0.6, distance: 12, height: 8, targetHeight: 1.5, returnSeconds: 0.3 },
+  directCamera: { clearance: 0.6, distance: 12, height: 8, targetHeight: 1.5, returnSeconds: 0.3, hideSoldierBelowM: 2.5, showSoldierAboveM: 3 },
   post: {
     saturation: 1.04,
     shadowLift: 0.2,

@@ -952,6 +952,7 @@ export class GameRenderer {
       if (cond === SoldierCondition.Bitten) colors.skin.setHex(PALETTE.soldierBitten);
       if (cond !== SoldierCondition.Dead) this.sDeadAt[sid] = -1;
       else if (this.sDeadAt[sid] < 0) this.sDeadAt[sid] = t;
+      if (local && this.rig.hideControlledSoldier) continue;
       const crowd = this.soldierCrowd;
       if (crowd) {
         const dist = (this.sPhase[sid] * STRIDE_M) / (Math.PI * 2);
