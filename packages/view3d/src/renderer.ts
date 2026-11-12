@@ -595,7 +595,7 @@ export class GameRenderer {
     });
     this.renderer.compile(this.scene, this.rig.active);
     this.renderer.shadowMap.needsUpdate = true;
-    this.post.render(this.renderer, this.scene, this.rig.active);
+    this.post.render(this.renderer, this.scene, this.rig.active, this.rig.strategicBlend);
     for (const o of hidden) o.visible = false;
     for (const e of empty) {
       if (e instanceof THREE.InstancedMesh) e.count = 0;
@@ -653,7 +653,7 @@ export class GameRenderer {
     this.lights.end(this.night);
     this.updateLighting();
     this.districts.visible = !this.economy && this.rig.band !== 'tactical' && !this.rig.direct;
-    this.post.render(this.renderer, this.scene, this.rig.active);
+    this.post.render(this.renderer, this.scene, this.rig.active, this.rig.strategicBlend);
   }
 
   private readonly cDay = new THREE.Color();

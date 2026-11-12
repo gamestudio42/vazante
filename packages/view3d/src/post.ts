@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PRESENTATION } from '@vazante/shared';
 
 /** Smallest depth jump (metres) outlined in the top-down view. */
 const EDGE_THRESHOLD_M = 0.6;
@@ -35,8 +36,20 @@ export class PixelPost {
         ortho: { value: 1 },
         edgeThreshold: { value: EDGE_THRESHOLD_M },
         outline: { value: new THREE.Color(0x0b0d10) },
+        outlineStrength: { value: PRESENTATION.post.outlineTactical },
         levels: { value: 28 },
-        vignette: { value: 0.35 },
+        vignette: { value: PRESENTATION.post.vignetteTactical },
+        saturation: { value: PRESENTATION.post.saturation },
+        shadowLift: { value: PRESENTATION.post.shadowLift },
+        shadowLiftEnd: { value: PRESENTATION.post.shadowLiftEnd },
+        skyElevation: { value: PRESENTATION.post.skyElevation },
+        skyZenith: { value: new THREE.Color() },
+        skyHorizon: { value: new THREE.Color() },
+        skyEnabled: { value: 0 },
+        fogNear: { value: 5000 },
+        fogFar: { value: 6000 },
+        inverseProjection: { value: new THREE.Matrix4() },
+        cameraWorld: { value: new THREE.Matrix4() },
       },
       vertexShader: /* glsl */ `
         varying vec2 vUv;
@@ -52,8 +65,20 @@ export class PixelPost {
         uniform float ortho;
         uniform float edgeThreshold;
         uniform vec3 outline;
+        uniform float outlineStrength;
         uniform float levels;
         uniform float vignette;
+        uniform float saturation;
+        uniform float shadowLift;
+        uniform float shadowLiftEnd;
+        uniform float skyElevation;
+        uniform vec3 skyZenith;
+        uniform vec3 skyHorizon;
+        uniform float skyEnabled;
+        uniform float fogNear;
+        uniform float fogFar;
+        uniform mat4 inverseProjection;
+        uniform mat4 cameraWorld;
         varying vec2 vUv;
 
         float viewZ(vec2 uv) {
@@ -90,7 +115,16 @@ export class PixelPost {
           float nearer = max(max(zc - zl, zc - zr), max(zc - zu, zc - zd));
           float farther = max(max(zl - zc, zr - zc), max(zu - zc, zd - zc));
           float edge = step(thr, farther) * (1.0 - step(thr, nearer) * 0.5);
+          // Distant geometry dissolves into the haze, including its outline.
+          if (skyEnabled > 0.5) edge *= 1.0 - smoothstep(fogNear, fogFar, zc);
           vec3 c = col.rgb;
+          // Only the uncovered background receives sky. Fog-of-war and city geometry keep
+          // their own depth and colour; this never reveals hidden units or terrain.
+          if (skyEnabled > 0.5 && texture2D(tDepth, vUv).x >= 1.0) {
+            vec4 ray = inverseProjection * vec4(vUv * 2.0 - 1.0, 1.0, 1.0);
+            vec3 direction = normalize(mat3(cameraWorld) * ray.xyz);
+            c = mix(skyHorizon, skyZenith, smoothstep(0.0, skyElevation, direction.y));
+          }
           // Bloom: two rings of taps around the pixel (cheap at this resolution).
           vec3 glow = vec3(0.0);
           for (int k = 0; k < 8; k++) {
@@ -102,15 +136,16 @@ export class PixelPost {
           // Soft shoulder: keep everything below 0.8 as is, roll the rest off toward white.
           vec3 hi = max(c - 0.8, 0.0);
           c = min(c, 0.8) + 0.2 * (1.0 - exp(-hi * 4.0));
-          // Grade: gentle contrast and saturation.
+          // Multiplicative grading keeps dark surfaces distinct and true black at zero.
+          // The old contrast offset subtracted 0.03 in linear space, crushing dark streets.
           float luma = dot(c, vec3(0.299, 0.587, 0.114));
-          c = mix(vec3(luma), c, 1.1);
-          c = (c - 0.5) * 1.06 + 0.5;
+          c = mix(vec3(luma), c, saturation);
+          c *= 1.0 + shadowLift * (1.0 - smoothstep(0.0, shadowLiftEnd, luma));
           // Posterize in gamma space (keeps dark tones apart) with a light ordered dither.
           c = sqrt(max(c, 0.0));
           c = floor(c * levels + 0.5 + bayer4(gl_FragCoord.xy) * 0.5) / levels;
           c = c * c;
-          c = mix(c, outline, edge * 0.85);
+          c = mix(c, outline, edge * outlineStrength);
           vec2 q = vUv - 0.5;
           c *= 1.0 - vignette * dot(q, q) * 1.6;
           gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
@@ -130,13 +165,29 @@ export class PixelPost {
     this.material.uniforms.resolution.value.set(w, h);
   }
 
-  render(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
+  render(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, strategicBlend = 0): void {
     const u = this.material.uniforms;
     const cam = camera as THREE.PerspectiveCamera | THREE.OrthographicCamera;
     u.near.value = cam.near;
     u.far.value = cam.far;
     const ortho = (camera as THREE.OrthographicCamera).isOrthographicCamera;
     u.ortho.value = ortho ? 1 : 0;
+    const blend = ortho ? Math.max(0, Math.min(1, strategicBlend)) : 0;
+    const style = PRESENTATION.post;
+    u.outlineStrength.value = THREE.MathUtils.lerp(style.outlineTactical, style.outlineStrategic, blend);
+    u.vignette.value = THREE.MathUtils.lerp(style.vignetteTactical, style.vignetteStrategic, blend);
+    const sky = !ortho && scene.background instanceof THREE.Color && scene.fog !== null;
+    u.skyEnabled.value = sky ? 1 : 0;
+    if (sky) {
+      u.skyZenith.value.copy(scene.background);
+      u.skyHorizon.value.copy(scene.fog!.color);
+      if (scene.fog instanceof THREE.Fog) {
+        u.fogNear.value = scene.fog.near;
+        u.fogFar.value = scene.fog.far;
+      }
+      u.inverseProjection.value.copy(cam.projectionMatrixInverse);
+      u.cameraWorld.value.copy(cam.matrixWorld);
+    }
     // Flat ground seen at a tilt deepens by texel / tan(tilt) from one pixel to the next. Once that
     // passed the fixed threshold (zoomed out a little at the tactical tilt) every ground pixel became
     // an "edge" and the whole scene darkened: keep the threshold well above that slope.

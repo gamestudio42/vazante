@@ -140,6 +140,18 @@ Structure placement or destruction marks affected cells dirty; the flow field an
 4. Buildings merged per sector into one mesh. Zombies drawn with one `InstancedMesh` per kind. Soldiers and vehicles as individual low-poly meshes.
 5. The renderer never writes to the simulation.
 
+The M8 readability pass keeps the existing two-pass pixel pipeline and internal resolution.
+`PixelPost` preserves dark linear-light values rather than subtracting a contrast offset, fades
+outline/vignette strength towards the strategic view, and shades uncovered perspective background
+with a world-oriented zenith/horizon gradient. The horizon uses the same colour as the distance fog;
+outlines fade with that fog. Building shaders blend subpixel facade patterns towards their average
+coverage using screen derivatives. None of these presentation choices alters fog-of-war, navigation,
+entity counts or simulation time. Cosmetic tuning is in `shared/balance/presentation.ts`.
+
+`e2e/lighting.spec.ts` tests the actual WebGL composite against dark swatches, black and day/night
+sky gradients, then renders day/night fixtures in all three cameras while checking the paused
+worker's state hash and soldier count. GPU performance gates still require the reference machine.
+
 ## Persistence
 
 Save envelope: `{ format: 'vazante-save', version, seed, tick, checksum, state }`. Grid layers as base64, tables as JSON. Migrations are pure functions per version. Saves are written by the worker; IndexedDB in the browser, files through the preload bridge in Electron.

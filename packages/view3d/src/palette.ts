@@ -1,10 +1,10 @@
 /** Theme palette for the procedural art. All game colours come from here. */
 export const PALETTE = {
-  sky: 0x1d2228,
-  fog: 0x2a2f36,
+  sky: 0x657e91,
+  fog: 0xaaa99b,
   sun: 0xffe2b8,
   skyLight: 0xb8c8e0,
-  groundLight: 0x3a3024,
+  groundLight: 0x655b4e,
   street: 0x45484c,
   marking: 0xb9b08a,
   sidewalk: 0x6a6a66,
@@ -69,7 +69,7 @@ export const PALETTE = {
   ghostOk: 0x7fe07a,
   ghostBad: 0xff5a4a,
   skyNight: 0x111a2b,
-  fogNight: 0x18202f,
+  fogNight: 0x2b3446,
   skyLightNight: 0x9db2e0,
   groundLightNight: 0x2a2a30,
   moon: 0x9fb4e0,

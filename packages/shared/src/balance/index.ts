@@ -10,3 +10,4 @@ export * from './tactics.ts';
 export * from './difficulty.ts';
 export * from './missions.ts';
 export * from './economy.ts';
+export * from './presentation.ts';

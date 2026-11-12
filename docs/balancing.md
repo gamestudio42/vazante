@@ -154,10 +154,23 @@ Veteran is the reference; every other table in this file is tuned for it. Chosen
 | Turn time after bite | 60 to 180 s |
 | Rise time after death by zombie | 20 s |
 
+## Presentation (`balance/presentation.ts`)
+
+Cosmetic values only; these do not change visibility, combat, clocks or the world hash.
+
+- Post saturation: 1.04. Shadow gain: up to 20%, fading to zero at linear luminance 0.35.
+- Outline blend: 0.62 in tactical/direct, smoothly falling to 0.28 in strategic view.
+- Vignette: 0.18 in tactical/direct, 0.08 in strategic view.
+- Sky reaches its zenith colour at world-space ray elevation 0.65.
+- Facade detail fades between projected footprints of 0.25 and 0.75 pattern periods per pixel.
+- Lighting colours remain in the renderer's `palette.ts`: daytime zenith `#657e91`, horizon/fog
+  `#aaa99b`, ground bounce `#655b4e`; night horizon/fog `#2b3446`.
+
 ## Change log
 
 | Date | Value | Old → new | Reason |
 | --- | --- | --- | --- |
+| 2026-11-12 | M8 visual readability | subtractive contrast → black-preserving shadow gain; outline 0.85 → 0.62/0.28; vignette 0.35 → 0.18/0.08; saturation 1.1 → 1.04 | keep shadow detail and reduce distant edge noise without changing simulation or internal resolution |
 | 2026-10-26 | — | — | initial tables from the Vazante spec |
 | 2026-10-26 | structure HP | thousands → 250..600 zombie attacks | HP is counted in attacks; old values made walls immortal |
 | 2026-10-26 | structure footprint | 2×2 nest, 2×1 gate → 1×1 | one cell per piece for the slice; multi-cell later |
