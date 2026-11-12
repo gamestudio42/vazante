@@ -38,6 +38,7 @@ export class PixelPost {
         outline: { value: new THREE.Color(0x0b0d10) },
         outlineStrength: { value: PRESENTATION.post.outlineTactical },
         levels: { value: 28 },
+        surfaceDither: { value: PRESENTATION.post.surfaceDither },
         vignette: { value: PRESENTATION.post.vignetteTactical },
         saturation: { value: PRESENTATION.post.saturation },
         shadowLift: { value: PRESENTATION.post.shadowLift },
@@ -68,6 +69,7 @@ export class PixelPost {
         uniform vec3 outline;
         uniform float outlineStrength;
         uniform float levels;
+        uniform float surfaceDither;
         uniform float vignette;
         uniform float saturation;
         uniform float shadowLift;
@@ -147,7 +149,11 @@ export class PixelPost {
           c *= 1.0 + shadowLift * (1.0 - smoothstep(0.0, shadowLiftEnd, luma));
           // Posterize in gamma space (keeps dark tones apart) with a light ordered dither.
           c = sqrt(max(c, 0.0));
-          c = floor(c * levels + 0.5 + bayer4(gl_FragCoord.xy) * 0.5) / levels;
+          float atmosphere = skyEnabled > 0.5 ? smoothstep(fogNear, fogFar, zc) : 0.0;
+          if (skyEnabled > 0.5 && texture2D(tDepth, vUv).x >= 1.0) atmosphere = 1.0;
+          vec3 quantized = floor(c * levels + 0.5 + bayer4(gl_FragCoord.xy) * surfaceDither * (1.0 - atmosphere)) / levels;
+          // Preserve smooth sky/fog gradients while surfaces retain pixel-art colour steps.
+          c = mix(quantized, c, atmosphere);
           c = c * c;
           c = mix(c, outline, edge * outlineStrength);
           vec2 q = vUv - 0.5;

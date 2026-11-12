@@ -248,3 +248,10 @@ are unchanged. This keeps the camera from looking through its own soldier at tig
 Apply the validated roof profiles city-wide. Waterfront visual anchors search within 12 cells
 of a base for water. Landmark bands increase the detail budget to 22 boxes per building;
 all parts stay below the authoritative height and within the occupied footprint.
+
+### Image cleanup (2026-11-12)
+
+Surface ordered-dither amplitude decreases from 0.5 to 0.22. Perspective sky and fully fogged
+surfaces keep smooth gradients instead of colour quantization; intermediate fog blends the two.
+Facade detail now fades at 0.18–0.55 projected window periods (previously 0.25–0.75), and glass
+variation converges to its mean at distance. Black map background and world visibility remain intact.

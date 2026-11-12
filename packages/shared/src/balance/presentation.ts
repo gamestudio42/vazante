@@ -3,6 +3,7 @@ export const PRESENTATION = {
   directCamera: { clearance: 0.6, distance: 12, height: 8, targetHeight: 1.5, returnSeconds: 0.3, hideSoldierBelowM: 2.5, showSoldierAboveM: 3 },
   post: {
     saturation: 1.04,
+    surfaceDither: 0.22,
     shadowLift: 0.2,
     shadowLiftEnd: 0.35,
     outlineTactical: 0.62,
@@ -12,8 +13,8 @@ export const PRESENTATION = {
     skyElevation: 0.65,
   },
   facade: {
-    detailFadeStart: 0.25,
-    detailFadeEnd: 0.75,
+    detailFadeStart: 0.18,
+    detailFadeEnd: 0.55,
   },
   architecture: {
     inset: 0.3,

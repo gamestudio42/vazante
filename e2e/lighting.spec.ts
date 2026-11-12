@@ -45,19 +45,23 @@ test('pixel composite preserves dark tones, a black floor and day/night atmosphe
     post.render(renderer, scene, view.rig.ortho);
     const mapBackground = sample(32, 32);
     const skies: number[][] = [];
+    const skyNoise: number[] = [];
     for (const night of [false, true]) {
       background.set(night ? PALETTE.skyNight : PALETTE.sky);
       scene.fog.color.set(night ? PALETTE.fogNight : PALETTE.fog);
       post.render(renderer, scene, camera);
       skies.push([sample(32, 32), sample(32, 58)]);
+      const row = [30, 31, 32, 33].map(x => sample(x, 20));
+      skyNoise.push(Math.max(...row) - Math.min(...row));
     }
     post.target.dispose();
     view.resize(window.innerWidth, window.innerHeight);
     view.render(performance.now(), 0);
-    return { tones, skies, mapBackground };
+    return { tones, skies, mapBackground, skyNoise };
   }, { postUrl: `${root}/packages/view3d/src/post.ts`, paletteUrl: `${root}/packages/view3d/src/palette.ts` });
 
   expect(result.mapBackground).toBe(0);
+  for (const noise of result.skyNoise) expect(noise).toBeLessThan(2);
   expect(result.tones[0]).toBe(0);
   expect(result.tones[1]).toBeGreaterThan(8);
   expect(result.tones[2]).toBeGreaterThan(20);

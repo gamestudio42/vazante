@@ -99,7 +99,7 @@ export const FACADE_COLOR = /* glsl */ `
     float damp = (1.0 - smoothstep(0.0, 2.2, vFacadePos.y)) * wear;
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.065, 0.085, 0.065), damp);
     vec3 glass = commercial ? vec3(0.07, 0.15, 0.19) : vec3(0.055, 0.085, 0.10);
-    glass *= mix(0.65, 1.25, rnd);
+    glass *= mix(0.95, mix(0.65, 1.25, rnd), detail);
     diffuseColor.rgb = mix(diffuseColor.rgb, glass, mix(average, window, detail) * (1.0 - ground) * 0.9);
     litWindow = window * (1.0 - ground) * step(0.84, rnd) * detail;
     // Shuttered shops and loading doors: graphic treatment, not passable entrances.
