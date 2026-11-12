@@ -150,6 +150,8 @@ export class GameRenderer {
   private readonly arrivals = new FlipbookLayer({ file: 'vz_arrival_atlas.png', frames: 20, fps: 20 }, 6, { ground: true, upright: true, tint: PALETTE.siteHeld });
   /** A soldier panics: an exclamation mark pops over the head. */
   private readonly panicMarks = new FlipbookLayer({ file: 'vz_panic_atlas.png', frames: 16, fps: 20 }, 16, { upright: true, tint: PALETTE.panic });
+  /** A soldier runs dry: an empty, struck-out magazine blinks over the head. */
+  private readonly ammoOutMarks = new FlipbookLayer({ file: 'vz_ammo_out_atlas.png', frames: 16, fps: 20 }, 16, { upright: true, tint: PALETTE.ammoOut });
   private readonly orderMarks = new FlipbookLayer({ file: 'vz_order_atlas.png', frames: 14, fps: 20 }, 16, { ground: true, upright: true, tint: PALETTE.orderMarker });
   private readonly orders = new OrderMarkers(PALETTE.orderMarker);
   private readonly zone = new ZoneMarker(PALETTE.zone);
@@ -250,7 +252,7 @@ export class GameRenderer {
       ])
         this.lights.addStatic(x + (x < (x0 + x1) / 2 ? 8 : -8), y + (y < (y0 + y1) / 2 ? 8 : -8), 20, PALETTE.floodLight, 0.28);
     }
-    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh, this.healGlows.mesh, this.captured.mesh, this.lostSites.mesh, this.orderMarks.mesh, this.turnMiasma.mesh, this.deliveries.mesh, this.arrivals.mesh, this.panicMarks.mesh);
+    this.scene.add(this.lights.mesh, this.fire.group, this.explosions.mesh, this.bileBursts.mesh, this.muzzleFlashes.mesh, this.screamWaves.mesh, this.dustClouds.mesh, this.sparks.mesh, this.bloodSprays.mesh, this.settleDust.mesh, this.healGlows.mesh, this.captured.mesh, this.lostSites.mesh, this.orderMarks.mesh, this.turnMiasma.mesh, this.deliveries.mesh, this.arrivals.mesh, this.panicMarks.mesh, this.ammoOutMarks.mesh);
     this.addAmbientFires(map);
     this.structures = new StructureLayer(map.cellSize, map.width, map.height);
     this.scene.add(this.structures.group, this.vehicles.group);
@@ -467,15 +469,15 @@ export class GameRenderer {
         this.settleDust.play(e.x, e.y!, 1.3, 7);
         return;
       case 'soldier_panicked':
+      case 'out_of_ammo': {
         if (e.x === undefined) return;
-      {
-        // Over the head (the soldier is 1.8 m tall), grown with the zoom faster than the unit markers:
-        // at the tactical view even 3.3 m (1.8 m x unitScale) was a few pixels and the "!" got lost.
-        const k = this.unitScale();
-        const size = 1.8 * k * k;
-        this.panicMarks.play(e.x, e.y!, 1.8 + size / 2, size);
-      }
+        // Over the head (the soldier is 1.8 m tall), about 20 px of the low-resolution image at any
+        // zoom: scaled by unitScale (1 up to mid zoom) it was 8 px at a 60 m view and the mark got lost.
+        const metresPerPixel = this.rig.span / this.rig.pixelsHigh;
+        const size = this.rig.direct ? 1.8 : Math.max(1.8, metresPerPixel * 20);
+        (e.type === 'soldier_panicked' ? this.panicMarks : this.ammoOutMarks).play(e.x, e.y!, 1.8 + size / 2, size);
         return;
+      }
       case 'squad_recruited':
       case 'truck_bought':
         if (e.x === undefined) return;
@@ -558,7 +560,7 @@ export class GameRenderer {
 
   /** Load the baked effect atlases. The game runs fine without them: each one that fails stays off. */
   async loadEffects(baseUrl: string): Promise<void> {
-    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl), this.healGlows.load(baseUrl), this.captured.load(baseUrl), this.lostSites.load(baseUrl), this.orderMarks.load(baseUrl), this.turnMiasma.load(baseUrl), this.deliveries.load(baseUrl), this.arrivals.load(baseUrl), this.panicMarks.load(baseUrl)]);
+    const results = await Promise.allSettled([this.explosions.load(baseUrl), this.bileBursts.load(baseUrl), this.muzzleFlashes.load(baseUrl), this.screamWaves.load(baseUrl), this.dustClouds.load(baseUrl), this.sparks.load(baseUrl), this.bloodSprays.load(baseUrl), this.settleDust.load(baseUrl), this.healGlows.load(baseUrl), this.captured.load(baseUrl), this.lostSites.load(baseUrl), this.orderMarks.load(baseUrl), this.turnMiasma.load(baseUrl), this.deliveries.load(baseUrl), this.arrivals.load(baseUrl), this.panicMarks.load(baseUrl), this.ammoOutMarks.load(baseUrl)]);
     for (const r of results) if (r.status === 'rejected') console.warn('effect atlas unavailable', r.reason);
   }
 
@@ -640,6 +642,7 @@ export class GameRenderer {
     this.deliveries.update(dtS);
     this.arrivals.update(dtS);
     this.panicMarks.update(dtS);
+    this.ammoOutMarks.update(dtS);
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);

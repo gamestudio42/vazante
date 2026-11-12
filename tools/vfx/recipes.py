@@ -408,7 +408,22 @@ def panic():
         s += opacity(n, (0, 100), (0.3, 80), (0.45, 0))
     return s
 
-for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order), ("vz_turn", turn), ("vz_delivery", delivery), ("vz_arrival", arrival), ("vz_panic", panic)]:
+def ammo_out():
+    # 64 px, 16 frames at 20 fps, white, tinted in the game: a soldier is out of ammunition. An empty
+    # magazine pops over the head with a slash across it, blinks, and fades.
+    end = 15 / 20
+    c = [32, 32]
+    s = [comp("vz_ammo_out", 64, 20, 16),
+         shape("mag", "rect", [16, 26], fill=None, stroke="#ffffff", width=3, pos=c),
+         rect("lip", [10, 3], "#ffffff", [32, 17]),
+         rect("slash", [4, 38], "#ffffff", c)]
+    s.append(key("slash", "transform/rotation", 0, 45))
+    for n in ("mag", "lip", "slash"):
+        s += scale(n, (0, 40), (0.1, 120), (0.2, 100))
+        s += opacity(n, (0, 100), (0.2, 100), (0.25, 30), (0.3, 100), (0.35, 30), (0.4, 100), (0.55, 100), (end, 0))
+    return s
+
+for name, build in [("vz_muzzle", muzzle), ("vz_explosion", explosion), ("vz_bile_burst", bile), ("vz_scream", scream), ("vz_dust", dust), ("vz_sparks", sparks), ("vz_blood", blood), ("vz_settle", settle), ("vz_heal", heal), ("vz_wave_pulse", wave_pulse), ("vz_victory", victory), ("vz_defeat", defeat), ("vz_dawn", dawn), ("vz_capture", capture), ("vz_order", order), ("vz_turn", turn), ("vz_delivery", delivery), ("vz_arrival", arrival), ("vz_panic", panic), ("vz_ammo_out", ammo_out)]:
     d = os.path.join(ROOT, name)
     os.makedirs(d, exist_ok=True)
     steps = build() + [{"command": "file.save", "params": {"path": os.path.join(d, name + ".ecproj")}}]

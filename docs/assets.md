@@ -12,7 +12,7 @@ Every third-party asset must be listed here with its license before it is commit
 
 ## Effects
 
-Nineteen flipbook atlases in `apps/game/public/vfx/`. Fifteen are drawn in the world by `FlipbookLayer` (`packages/view3d/src/flipbook.ts`) on top of the procedural particles; the four white ones are HUD emblems that `MaskFlipbook` (`apps/game/src/ui/App.tsx`) plays as a CSS mask over the text colour. They are our own work, made headless in EffectCraft 0.21.1 (storytold/effectcraft) from shape layers with the palette colours; no third-party art is inside them. Without them the game shows the particles alone.
+Twenty flipbook atlases in `apps/game/public/vfx/`. Sixteen are drawn in the world by `FlipbookLayer` (`packages/view3d/src/flipbook.ts`) on top of the procedural particles; the four white ones are HUD emblems that `MaskFlipbook` (`apps/game/src/ui/App.tsx`) plays as a CSS mask over the text colour. They are our own work, made headless in EffectCraft 0.21.1 (storytold/effectcraft) from shape layers with the palette colours; no third-party art is inside them. Without them the game shows the particles alone.
 
 | Atlas | Frames | Plays on |
 | --- | --- | --- |
@@ -31,6 +31,7 @@ Nineteen flipbook atlases in `apps/game/public/vfx/`. Fifteen are drawn in the w
 | `vz_delivery_atlas.png` | 16 × 96 px, 20 fps, one horizontal strip | `cargo_delivered`: an amber ring at the truck and three crates that pop out and rise |
 | `vz_arrival_atlas.png` | 20 × 128 px, 20 fps, one horizontal strip, white, drawn flat on the ground | `squad_recruited` (18 m) and `truck_bought` (12 m), tinted `siteHeld`: corner brackets close onto a square drop zone |
 | `vz_panic_atlas.png` | 16 × 64 px, 20 fps, one horizontal strip, white | `soldier_panicked`, tinted `panic` (the HUD's warning orange): an exclamation mark that pops and shakes over the head |
+| `vz_ammo_out_atlas.png` | 16 × 64 px, 20 fps, one horizontal strip, white | `out_of_ammo`, tinted `ammoOut` (the HUD's danger red): an empty, struck-out magazine that blinks over the head, sized like the panic mark |
 | `vz_wave_pulse_atlas.png` | 16 × 96 px, 20 fps, one horizontal strip, white | HUD: `EventBanner` (`App.tsx`) on `wave_warning` and `wave_started`, as a CSS mask tinted by the tone, three times |
 | `vz_dawn_atlas.png` | 18 × 96 px, 20 fps, one horizontal strip, white | HUD: `EventBanner` on `night_survived`, twice |
 | `vz_victory_atlas.png` | 20 × 128 px, 24 fps, one horizontal strip, white | HUD: behind the title of the mission summary when it is won, once |
