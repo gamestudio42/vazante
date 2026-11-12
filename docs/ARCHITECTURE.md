@@ -185,3 +185,8 @@ city construction and chunking preserve map data and world hash, and the lightin
 External skyline buildings use a reserved negative facade family: their roof shading preserves
 instance colour and the existing distance attenuation instead of replacing it with a fixed roof
 colour. Orthographic world views keep uncovered background black; perspective views retain sky.
+
+Rooftop fixture placement uses unsigned hash shifts and clamps the placement margin to half
+of each roof dimension. This prevents negative cosmetic offsets and unsupported fixtures on
+narrow roofs. `view3d/test/rooftops.test.ts` checks transformed fixture bounds and support heights
+across 500 building hashes and three footprint sizes; it reproduces the former signed-shift bug.

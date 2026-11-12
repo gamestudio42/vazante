@@ -102,7 +102,7 @@ export function buildDistrictOverlay(map: MapInfo): THREE.Group {
  * Roof clutter seen from above: air-conditioning units, stair and lift housings, water tanks.
  * Placed by hash inside each roof so the skyline stops reading as plain boxes.
  */
-function buildRooftops(map: MapInfo): THREE.Group {
+export function buildRooftops(map: MapInfo): THREE.Group {
   const group = new THREE.Group();
   const cs = map.cellSize;
   const ac: THREE.Matrix4[] = [];
@@ -116,8 +116,12 @@ function buildRooftops(map: MapInfo): THREE.Group {
     const h = hash(b.id * 92821 + 7);
     const at = (k: number, sx: number, sy: number, sz: number, margin: number) => {
       const r = hash(h + k * 7919);
-      const px = cx + margin + ((r % 1000) / 1000) * Math.max(0, w - 2 * margin);
-      const py = cy + margin + (((r >> 10) % 1000) / 1000) * Math.max(0, d - 2 * margin);
+      // Hashes are unsigned: a signed shift makes half the Z offsets negative.
+      // Centre narrow roofs instead of placing their fixtures beyond the edge.
+      const mx = Math.min(margin, w / 2);
+      const my = Math.min(margin, d / 2);
+      const px = cx + mx + ((r % 1000) / 1000) * Math.max(0, w - 2 * mx);
+      const py = cy + my + (((r >>> 10) % 1000) / 1000) * Math.max(0, d - 2 * my);
       return new THREE.Matrix4().makeScale(sx, sz, sy).setPosition(px, b.height, py);
     };
     const nAc = h % 4;
