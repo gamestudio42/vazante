@@ -229,3 +229,9 @@ modulo 11, with 24 m minimum spacing and one new car per 32-cell sector. Cars re
 lot cells adjacent to a street or sidewalk and keep the two-cell exclusion around bases/depots.
 Existing sparse dressing remains. This restores cars without occupying streets or sidewalks;
 existing saves retain their saved placements.
+
+### Direct-camera obstruction (2026-11-12)
+
+Camera clearance is 0.6 m around building envelopes. The default offset is 12 m behind,
+8 m above ground, measured from a 1.5 m target. Obstructions retract the camera immediately;
+return to the full offset eases over 0.3 s. Presentation only.

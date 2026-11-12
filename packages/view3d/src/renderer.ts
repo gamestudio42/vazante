@@ -223,6 +223,7 @@ export class GameRenderer {
     const wM = map.width * map.cellSize;
     const hM = map.height * map.cellSize;
     this.rig = new CameraRig(wM, hM);
+    this.rig.setBuildings(map.buildings, map.cellSize);
 
     this.hemi = new THREE.HemisphereLight(PALETTE.skyLight, PALETTE.groundLight, 1.6);
     this.scene.add(this.hemi);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PRESENTATION, type BuildingRect } from '@vazante/shared';
 
 export type ViewBand = 'tactical' | 'transition' | 'strategic';
 
@@ -28,6 +29,19 @@ export class CameraRig {
   /** Height of the internal render target in pixels; the ortho camera snaps to its texel grid. */
   pixelsHigh = 270;
   direct: { x: number; y: number; yaw: number } | null = null;
+  private obstacles: THREE.Box3[] = [];
+  private directDistance = 1;
+  private readonly cameraRay = new THREE.Ray();
+  private readonly cameraHit = new THREE.Vector3();
+
+  setBuildings(buildings: readonly BuildingRect[], cellSize: number): void {
+    const margin = PRESENTATION.directCamera.clearance;
+    this.obstacles = buildings.map(b => new THREE.Box3(
+      new THREE.Vector3(b.x0 * cellSize - margin, -margin, b.y0 * cellSize - margin),
+      new THREE.Vector3((b.x1 + 1) * cellSize + margin, b.height + margin, (b.y1 + 1) * cellSize + margin),
+    ));
+  }
+
   private aspect = 16 / 9;
   private savedFocus: [number, number] | null = null;
   readonly maxSpan: number;
@@ -140,13 +154,26 @@ export class CameraRig {
       const { x, y, yaw } = this.direct;
       const fx = Math.cos(yaw);
       const fy = Math.sin(yaw);
-      this.persp.position.set(x - fx * 12 + sh.x, 8 + sh.y, y - fy * 12);
+      const tuning = PRESENTATION.directCamera;
+      const origin = new THREE.Vector3(x, tuning.targetHeight, y);
+      const offset = new THREE.Vector3(-fx * tuning.distance + sh.x, tuning.height - tuning.targetHeight + sh.y, -fy * tuning.distance);
+      const length = offset.length();
+      this.cameraRay.set(origin, offset.clone().normalize());
+      let allowed = 1;
+      for (const box of this.obstacles) {
+        if (box.containsPoint(origin)) { allowed = 0; break; }
+        if (this.cameraRay.intersectBox(box, this.cameraHit)) allowed = Math.min(allowed, origin.distanceTo(this.cameraHit) / length);
+      }
+      // Retract immediately for safety; ease outward only after the obstruction clears.
+      this.directDistance = Math.min(allowed, this.directDistance + (allowed - this.directDistance) * (1 - Math.exp(-dtS / tuning.returnSeconds)));
+      this.persp.position.copy(origin).addScaledVector(offset, this.directDistance);
       this.persp.up.set(0, 1, 0);
       this.persp.lookAt(x + fx * 10 + sh.x, 1.5 + sh.y, y + fy * 10);
       this.persp.updateMatrixWorld();
       return;
     }
 
+    this.directDistance = 1;
     const tilt = this.tilt;
     const halfH = this.span / 2;
     const halfW = halfH * this.aspect;
