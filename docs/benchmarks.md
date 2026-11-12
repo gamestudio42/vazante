@@ -114,3 +114,17 @@ Intel Xeon @ 2.10 GHz, Node 22.22, after the horde pass:
 | 8,000 | 3.28 ms | 4.30 | 9.7 |
 
 Flow field cost by map size (open field, two sources), before → after the bucket queue: 128² 3.3 → 0.8 ms, 256² 13 → 5 ms, 512² (a 2 km city) 57 → 13 ms. It is rebuilt every 5 ticks, so v0.5 still needs sector LOD or a bounded search before the 2 km map.
+
+## 2026-11-12: architectural variety, preliminary render cost
+
+Chromium/SwiftShader, seed 1 slice, 1440×900 CSS pixels, unchanged internal resolution.
+Counts include shadow and composite passes. Fixed centre (256,256), tactical spans 110/45 m,
+map at maximum span; direct camera at (256,285), facing north. Before → after draw calls:
+162→189 tactical, 106→124 close, 203→225 direct, 346→376 map. Triangles increased by about
+33k–51k across these views, from about 621k–751k to 654k–802k. The extra work is the bounded
+facade detail batch plus richer fragment shaders; no new render pass is used.
+
+Software timings were noisy with validation processes running concurrently (roughly 2.5–4.6 ms
+before and 3.4–7.2 ms after for short synchronous samples). They are not a hardware frame-rate
+comparison or a passed performance gate. Measure on the reference GPU before increasing the
+detail budget; the 5,000-visible-agent gate remains pending.

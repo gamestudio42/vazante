@@ -190,3 +190,13 @@ Cosmetic values only; these do not change visibility, combat, clocks or the worl
 | 2026-10-30 | survival day | 40 → 30 min (still from 08:00) | Diogo found 40 min too long; 20 min was too short |
 | 2026-10-30 | wall climbing | PILE_UNIT_M 0.5 → 0.25 (14 stacked zombies top a 3.5 m wall, 9 a hesco); once climbable, one zombie per wall cell per second (CLIMB_INTERVAL_S 1); base ammo alerts below 800 and at 0 | Diogo saw hordes pour over walls: 7 zombies were enough and the whole pile went over at once, while the base sat at 0 ammo without warning. Bot at veteran unchanged: night shift, last convoy, hospital 3/3, bridge 2/3, survival 4 nights |
 | 2026-10-30 | horde routing | flow field ignores zombies → each zombie beyond the first in a cell adds 10 (one cell of walking) to it, up to 80; lane lean 0.15 → 0.3 and slack 10 → 20 | Diogo saw the whole horde file through one gap in a single line; now a queue makes going round or hitting another stretch of wall look shorter. Bot at veteran: night shift, last convoy, hospital, bridge 3/3 |
+
+### 2026-11-12 — architecture presentation tuning
+
+Cosmetic settings in `balance/presentation.ts`: body inset 0.3 m, trim projection 0.12 m,
+cornice height/width 0.28/0.24 m, facade floor spacing 3 m, shop lintel 2.6 m, neighbourhood
+size 16 cells. Industrial variants require height at most 12 m and both dimensions at least
+8 m. Up to three residential sill rows or three civic columns; at most 12 detail boxes per
+building. Wear ranges from 0.12 to below 0.42. Fine material detail fades at projected
+footprints of 0.12–0.65 m/pixel, with grain strength 0.12 and pavement tiles of 0.75 m.
+These are new appearance controls; simulation balance is unchanged.

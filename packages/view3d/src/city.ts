@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { Ground, type MapInfo } from '@vazante/shared';
-import { buildingMaterial, toon } from './materials.ts';
+import { buildingMaterial, groundMaterial, toon } from './materials.ts';
+import { buildArchitecture } from './architecture.ts';
+import { hash } from './cosmetic.ts';
+export { hash } from './cosmetic.ts';
 import { PALETTE } from './palette.ts';
 
 /** Texels per cell in the ground texture (lane markings, curbs, grain). */
@@ -13,35 +16,13 @@ export function buildCity(map: MapInfo): THREE.Group {
   const wM = map.width * cs;
   const hM = map.height * cs;
 
-  const groundMesh = new THREE.Mesh(groundGeometry(wM, hM), toon({ map: groundTexture(map) }));
+  const groundMesh = new THREE.Mesh(groundGeometry(wM, hM), groundMaterial(map, groundTexture(map)));
   groundMesh.position.set(wM / 2, 0, hM / 2);
   groundMesh.receiveShadow = true;
   groundMesh.name = 'ground';
   group.add(groundMesh);
 
-  const box = new THREE.BoxGeometry(1, 1, 1);
-  box.translate(0, 0.5, 0);
-  const inst = new THREE.InstancedMesh(box, buildingMaterial(), Math.max(1, map.buildings.length));
-  const m = new THREE.Matrix4();
-  const col = new THREE.Color();
-  const tones = PALETTE.buildingTones.map((c) => new THREE.Color(c));
-  map.buildings.forEach((b, i) => {
-    // Inset a little so alleys and sidewalks read between buildings.
-    const w = (b.x1 - b.x0 + 1) * cs - 0.6;
-    const d = (b.y1 - b.y0 + 1) * cs - 0.6;
-    m.makeScale(w, b.height, d);
-    m.setPosition(b.x0 * cs + (w + 0.6) / 2, 0, b.y0 * cs + (d + 0.6) / 2);
-    inst.setMatrixAt(i, m);
-    col.copy(tones[hash(b.id) % tones.length]).multiplyScalar(0.9 + (hash(b.id * 7) % 20) / 100);
-    inst.setColorAt(i, col);
-  });
-  inst.count = map.buildings.length;
-  inst.castShadow = true;
-  inst.receiveShadow = true;
-  inst.instanceMatrix.needsUpdate = true;
-  if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
-  inst.name = 'buildings';
-  group.add(inst);
+  group.add(buildArchitecture(map));
 
   const props = buildProps(map);
   group.add(props);
@@ -80,7 +61,15 @@ function splitIntoChunks(root: THREE.Object3D, size: number): void {
     if (buckets.size < 2) continue;
     const parent = mesh.parent!;
     for (const list of buckets.values()) {
-      const chunk = new THREE.InstancedMesh(mesh.geometry, mesh.material, list.length);
+      // Per-building styles must follow the reordered instances, not the original global index.
+      const facade = mesh.geometry.getAttribute('aFacade');
+      const geometry = facade ? mesh.geometry.clone() : mesh.geometry;
+      if (facade) {
+        const data = new Float32Array(list.length * 4);
+        list.forEach((src, i) => data.set([facade.getX(src), facade.getY(src), facade.getZ(src), facade.getW(src)], i * 4));
+        geometry.setAttribute('aFacade', new THREE.InstancedBufferAttribute(data, 4));
+      }
+      const chunk = new THREE.InstancedMesh(geometry, mesh.material, list.length);
       list.forEach((src, i) => {
         mesh.getMatrixAt(src, m);
         chunk.setMatrixAt(i, m);
@@ -223,6 +212,8 @@ function buildOutskirts(map: MapInfo): THREE.Group {
   }
   const box = new THREE.BoxGeometry(1, 1, 1);
   box.translate(0, 0.5, 0);
+  // Outskirts retain their subdued residential treatment and have no interactive buildings.
+  box.setAttribute('aFacade', new THREE.InstancedBufferAttribute(new Float32Array(ruins.length * 4), 4));
   const inst = new THREE.InstancedMesh(box, buildingMaterial(), ruins.length);
   ruins.forEach(([m, col], i) => {
     inst.setMatrixAt(i, m);
@@ -425,12 +416,4 @@ function valueNoise(x: number, y: number, seed: number): number {
   const a = v(0, 0) + (v(1, 0) - v(0, 0)) * sx;
   const b = v(0, 1) + (v(1, 1) - v(0, 1)) * sx;
   return a + (b - a) * sy;
-}
-
-/** Small integer hash for stable cosmetic variation. */
-export function hash(n: number): number {
-  let x = n | 0;
-  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
-  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
-  return (x ^ (x >>> 16)) >>> 0;
 }

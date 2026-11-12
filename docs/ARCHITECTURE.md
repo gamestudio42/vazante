@@ -163,3 +163,21 @@ Required test: save mid-combat, load, run N ticks; the hash must equal running N
 - Electron loads `apps/game/dist` through a custom `app://` protocol, `contextIsolation: true`, `nodeIntegration: false`.
 - Preload exposes only `window.vazanteNative`: save/load file, optional Steam achievements (steamworks.js, absent client must not break the game), quit.
 - COOP/COEP headers on `app://` to enable `SharedArrayBuffer` (used for the horde buffer from v0.5; transfer fallback always works).
+
+### Architectural appearance (M8)
+
+`view3d/architecture.ts` derives four cosmetic families from building dimensions, seed and
+neighbourhood: residential plaster/masonry, commercial panels/glass, industrial brick/steel,
+and civic stone. The original solid body remains; cornices, shallow sill bands, pilasters and
+shop lintels stay inside the occupied rectangle and below its authoritative height. They are
+not entrances, cover, new entities or navigable terraces. Existing rooftop clutter is retained.
+
+Bodies share one instanced material with per-instance family, variation and wear attributes.
+Chunk splitting copies these attributes alongside instance transforms. Decorative boxes share
+one additional batch per visible chunk. Procedural surface patterns use local metre coordinates
+and derivative fading; coarse road paint and ground contact shadows remain intact. A one-byte
+per-cell terrain texture selects asphalt, paving or gravel detail without increasing the large
+ground colour texture. No extra render pass or external art dependency is added.
+
+Acceptance: architecture unit bounds/repeatability tests, a simulation scenario checking that
+city construction and chunking preserve map data and world hash, and the lighting WebGL suite.
