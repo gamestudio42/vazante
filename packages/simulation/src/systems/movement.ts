@@ -1,6 +1,7 @@
+import { COLLISION } from '@vazante/shared';
 import type { Grid } from '../grid.ts';
 
-const RADIUS = 0.3;
+const RADIUS = COLLISION.soldierRadius;
 
 export interface MoveResult {
   x: number;

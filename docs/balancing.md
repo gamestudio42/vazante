@@ -200,3 +200,14 @@ size 16 cells. Industrial variants require height at most 12 m and both dimensio
 building. Wear ranges from 0.12 to below 0.42. Fine material detail fades at projected
 footprints of 0.12–0.65 m/pixel, with grain strength 0.12 and pavement tiles of 0.75 m.
 These are new appearance controls; simulation balance is unchanged.
+
+### Solid scenery and vehicle collision (2026-11-12)
+
+New controls in `balance/collision.ts`: soldier radius 0.3 m, sweep step at most 0.15 m,
+truck body 7×2.5 m. Solid tents, containers, tanks and car wrecks reserve 8×4 m; barriers and
+sandbags reserve 4×4 m. Models fit within those footprints. Site deployment clearance is 8 m,
+with at most eight tents. Objects previously placed independently by the renderer now reserve
+real cells on vacant lots. Road cells remain open. Tents currently have no traversable interior.
+
+This changes navigation and movement, not resource costs, unit stats or damage. Trucks yield to
+infantry rather than overlapping it. The separate static-prop flag is not a climbable structure.

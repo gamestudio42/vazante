@@ -190,3 +190,25 @@ Rooftop fixture placement uses unsigned hash shifts and clamps the placement mar
 of each roof dimension. This prevents negative cosmetic offsets and unsupported fixtures on
 narrow roofs. `view3d/test/rooftops.test.ts` checks transformed fixture bounds and support heights
 across 500 building hashes and three footprint sizes; it reproduces the former signed-shift bug.
+
+### Solid set dressing and infantry/vehicle collision
+
+The worker generates `World.props` and reserves their grid cells with `Blocked.Prop`. `MapInfo.props`
+transfers these authoritative placements and occupied dimensions to the renderer. Tents, containers,
+parked tanks and other solid props are rendered from those placements only. Imported meshes fit
+inside their reserved rectangles. They are solid scenery, not usable vehicles or cover systems.
+
+Site dressing occupies vacant lots outside the deployment cross and truck parking position.
+Roadside dressing moves to vacant lots; it never reserves road cells. Tents are solid in this pass;
+there are no tent interiors or entry commands. Grid occupancy affects A*, zombie flow, physical
+movement and shared construction validation. The preview also respects non-buildable depots.
+
+Infantry uses swept, axis-separated movement against the grid and oriented truck rectangles,
+with an expanded navigation margin for routing. Trucks yield before sweeping into living infantry
+and resume when clear; they also test their new heading before turning. This runs in the same
+simulation in tactical, strategic and direct control. It adds no camera-dependent rules.
+
+New snapshots retain the prop list and grid occupancy. Legacy snapshots without `props` continue
+with their original occupancy and render no newly introduced solid props, avoiding invisible or
+retroactively overlapping obstacles. Collision changes do not add destructibility or zombie/truck
+body avoidance; existing zombie attack/ram rules remain in effect.

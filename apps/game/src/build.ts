@@ -73,6 +73,11 @@ export class BuildTool {
   private context(frame: Frame | null): PlacementContext {
     const m = this.map;
     const taken = new Set<number>();
+    for (const p of m.props ?? []) {
+      for (let cy = Math.floor((p.y - p.width / 2) / m.cellSize); cy < Math.ceil((p.y + p.width / 2) / m.cellSize); cy++) {
+        for (let cx = Math.floor((p.x - p.length / 2) / m.cellSize); cx < Math.ceil((p.x + p.length / 2) / m.cellSize); cx++) taken.add(cy * m.width + cx);
+      }
+    }
     const units = new Set<number>();
     const engineers: [number, number][] = [];
     if (frame) {
@@ -90,7 +95,7 @@ export class BuildTool {
       width: m.width,
       height: m.height,
       ground: m.ground,
-      bases: frame?.bases ?? [],
+      bases: frame?.bases.map(b => ({ ...b, buildable: b.kind === 'base' })) ?? [],
       structureAt: (cell) => taken.has(cell),
       unitIn: (cell) => units.has(cell),
       engineerNear: (cx, cy) => {

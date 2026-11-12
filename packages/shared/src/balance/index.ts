@@ -11,3 +11,4 @@ export * from './difficulty.ts';
 export * from './missions.ts';
 export * from './economy.ts';
 export * from './presentation.ts';
+export * from './collision.ts';

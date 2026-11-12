@@ -128,3 +128,16 @@ Software timings were noisy with validation processes running concurrently (roug
 before and 3.4–7.2 ms after for short synchronous samples). They are not a hardware frame-rate
 comparison or a passed performance gate. Measure on the reference GPU before increasing the
 detail budget; the 5,000-visible-agent gate remains pending.
+
+## 2026-11-12: solid scenery and infantry/vehicle collision
+
+Before/after `pnpm bench 300 --json`, same i7-13620H and Node 22.23.4, six seeded benchmark scripts.
+Mean tick milliseconds: slice 0.385→0.377; slice with attack 0.387→0.335; 1,000 agents
+0.569→0.486; 4,000 1.545→1.370; 8,000 3.087→2.843; Porto Velário 8,000 5.227→4.363.
+No case increased its mean tick time above 10%. These short samples do not establish a speedup:
+new occupied cells affect routes and initial horde placement, so workload and state hashes change.
+
+Collision work runs under the existing `units` and `vehicles` profiler entries. Slice vehicle time
+rose from about 0.004 to 0.007 ms/tick, consistent with checking swept volumes against infantry;
+city vehicle time was about 0.009→0.005 ms. Static footprints are generated once, not each tick.
+This is a simulation comparison, not validation of the dense visible-horde rendering gate.

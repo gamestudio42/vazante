@@ -162,6 +162,7 @@ export class SimulationEngine {
       buildings: w.buildings.map((b) => ({ ...b })),
       districts: w.districts.map((d) => ({ ...d })),
       sites: w.sites.map((s) => ({ ...s })),
+      props: (w.props ?? []).map(p => ({ ...p })),
     };
   }
 
