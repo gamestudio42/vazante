@@ -40,7 +40,8 @@ export const FACADE_COLOR = /* glsl */ `
     vec2 roofCell = fract(vFacadePos.xz / (industrial ? vec2(0.8, 4.0) : vec2(1.2, 0.6)));
     float seam = max(step(0.9, roofCell.x), step(0.9, roofCell.y));
     float mottling = surfaceNoise(vFacadePos.xz * 0.17 + seed);
-    diffuseColor.rgb = mix(diffuseColor.rgb * 0.65, roof, 0.8) * (0.88 + mottling * 0.16);
+    // External skyline keeps its per-instance colour and distance attenuation.
+    diffuseColor.rgb = (family < -0.5 ? diffuseColor.rgb * 0.62 : mix(diffuseColor.rgb * 0.65, roof, 0.8)) * (0.88 + mottling * 0.16);
     diffuseColor.rgb *= 1.0 - 0.15 * mix(0.19, seam, roofDetail);
     float rim = step(min(vBuildingSize.x * 0.5 - abs(vFacadePos.x), vBuildingSize.z * 0.5 - abs(vFacadePos.z)), 0.5);
     diffuseColor.rgb *= 1.0 - rim * wear * 0.4;

@@ -181,3 +181,7 @@ ground colour texture. No extra render pass or external art dependency is added.
 
 Acceptance: architecture unit bounds/repeatability tests, a simulation scenario checking that
 city construction and chunking preserve map data and world hash, and the lighting WebGL suite.
+
+External skyline buildings use a reserved negative facade family: their roof shading preserves
+instance colour and the existing distance attenuation instead of replacing it with a fixed roof
+colour. Orthographic world views keep uncovered background black; perspective views retain sky.

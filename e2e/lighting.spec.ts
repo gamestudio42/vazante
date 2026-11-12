@@ -42,6 +42,8 @@ test('pixel composite preserves dark tones, a black floor and day/night atmosphe
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
     scene.fog = view.scene.fog!.clone();
+    post.render(renderer, scene, view.rig.ortho);
+    const mapBackground = sample(32, 32);
     const skies: number[][] = [];
     for (const night of [false, true]) {
       background.set(night ? PALETTE.skyNight : PALETTE.sky);
@@ -52,9 +54,10 @@ test('pixel composite preserves dark tones, a black floor and day/night atmosphe
     post.target.dispose();
     view.resize(window.innerWidth, window.innerHeight);
     view.render(performance.now(), 0);
-    return { tones, skies };
+    return { tones, skies, mapBackground };
   }, { postUrl: `${root}/packages/view3d/src/post.ts`, paletteUrl: `${root}/packages/view3d/src/palette.ts` });
 
+  expect(result.mapBackground).toBe(0);
   expect(result.tones[0]).toBe(0);
   expect(result.tones[1]).toBeGreaterThan(8);
   expect(result.tones[2]).toBeGreaterThan(20);

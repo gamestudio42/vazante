@@ -46,6 +46,7 @@ export class PixelPost {
         skyZenith: { value: new THREE.Color() },
         skyHorizon: { value: new THREE.Color() },
         skyEnabled: { value: 0 },
+        darkBackground: { value: 0 },
         fogNear: { value: 5000 },
         fogFar: { value: 6000 },
         inverseProjection: { value: new THREE.Matrix4() },
@@ -75,6 +76,7 @@ export class PixelPost {
         uniform vec3 skyZenith;
         uniform vec3 skyHorizon;
         uniform float skyEnabled;
+        uniform float darkBackground;
         uniform float fogNear;
         uniform float fogFar;
         uniform mat4 inverseProjection;
@@ -118,6 +120,8 @@ export class PixelPost {
           // Distant geometry dissolves into the haze, including its outline.
           if (skyEnabled > 0.5) edge *= 1.0 - smoothstep(fogNear, fogFar, zc);
           vec3 c = col.rgb;
+          // The strategic map ends in darkness; atmospheric sky belongs to direct control.
+          if (darkBackground > 0.5 && texture2D(tDepth, vUv).x >= 1.0) c = vec3(0.0);
           // Only the uncovered background receives sky. Fog-of-war and city geometry keep
           // their own depth and colour; this never reveals hidden units or terrain.
           if (skyEnabled > 0.5 && texture2D(tDepth, vUv).x >= 1.0) {
@@ -172,6 +176,7 @@ export class PixelPost {
     u.far.value = cam.far;
     const ortho = (camera as THREE.OrthographicCamera).isOrthographicCamera;
     u.ortho.value = ortho ? 1 : 0;
+    u.darkBackground.value = ortho && scene.fog !== null ? 1 : 0;
     const blend = ortho ? Math.max(0, Math.min(1, strategicBlend)) : 0;
     const style = PRESENTATION.post;
     u.outlineStrength.value = THREE.MathUtils.lerp(style.outlineTactical, style.outlineStrategic, blend);

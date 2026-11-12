@@ -213,7 +213,7 @@ function buildOutskirts(map: MapInfo): THREE.Group {
   const box = new THREE.BoxGeometry(1, 1, 1);
   box.translate(0, 0.5, 0);
   // Outskirts retain their subdued residential treatment and have no interactive buildings.
-  box.setAttribute('aFacade', new THREE.InstancedBufferAttribute(new Float32Array(ruins.length * 4), 4));
+  box.setAttribute('aFacade', new THREE.InstancedBufferAttribute(Float32Array.from({ length: ruins.length * 4 }, (_, i) => i % 4 === 0 ? -1 : 0), 4));
   const inst = new THREE.InstancedMesh(box, buildingMaterial(), ruins.length);
   ruins.forEach(([m, col], i) => {
     inst.setMatrixAt(i, m);
