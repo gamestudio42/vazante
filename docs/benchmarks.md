@@ -141,3 +141,15 @@ Collision work runs under the existing `units` and `vehicles` profiler entries. 
 rose from about 0.004 to 0.007 ms/tick, consistent with checking swept volumes against infantry;
 city vehicle time was about 0.009→0.005 ms. Static footprints are generated once, not each tick.
 This is a simulation comparison, not validation of the dense visible-horde rendering gate.
+
+### Abandoned-car placement regression (2026-11-12)
+
+300 ticks, i7-13620H, Node v22.23.4. Before/after mean tick times in ms:
+slice 0.394/0.377, slice+attack 0.329/0.329, 1,000 agents 0.495/0.507,
+4,000 agents 1.448/1.508, 8,000 agents 2.960/2.944, Porto Velário 8,000
+4.700/4.494. No mean regression exceeds 10%. After measurements ran without
+concurrent tests; the earlier concurrent measurement is not comparable. New occupied
+cells alter paths and hashes, so decreases are not evidence of an optimization.
+Placement only runs on world creation; there is no new per-tick system. The GPU
+render gate remains pending. Seeds 1/7/42 produce 13 cars in the slice and 203/211/206
+in the city, including the existing sparse dressing.

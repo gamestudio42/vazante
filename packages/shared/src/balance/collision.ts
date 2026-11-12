@@ -6,6 +6,9 @@ export const COLLISION = {
   truckWidth: 2.5,
   siteClearance: 8,
   maxTents: 8,
+  carSpacingM: 24,
+  carCandidateModulo: 11,
+  carSectorCells: 32,
   props: {
     Tent: { length: 8, width: 4 },
     Container_Long: { length: 8, width: 4 },

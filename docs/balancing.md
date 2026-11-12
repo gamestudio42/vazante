@@ -221,3 +221,11 @@ high, canopies 0.5 m deep and 65% of facade width. The detail budget rises from 
 per building in this prototype. Existing sidewalk cells around the cluster use staggered
 4-texel slabs (2 m at the current ground-texture density), joint shade 0.84 and colour variation
 ±0.035. No occupied cells, terrain kinds, sight-blocking heights or gameplay balance change.
+
+### 2026-11-12 — abandoned-car distribution
+
+Scan every vacant lot cell instead of sampling every third cell for cars. Candidate hashing uses
+modulo 11, with 24 m minimum spacing and one new car per 32-cell sector. Cars require two free
+lot cells adjacent to a street or sidewalk and keep the two-cell exclusion around bases/depots.
+Existing sparse dressing remains. This restores cars without occupying streets or sidewalks;
+existing saves retain their saved placements.

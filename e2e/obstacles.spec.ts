@@ -31,6 +31,7 @@ test('solid set dressing is rendered at the authoritative occupied footprints', 
   expect(result.expected).toBeGreaterThan(0);
   expect(result.kinds).toContain('Tent');
   expect(result.kinds).toContain('Tank');
+  expect(result.kinds).toContain('Debris_BrokenCar');
   expect(result.count).toBe(result.expected);
   expect(result.outside).toEqual([]);
   expect(errors).toEqual([]);

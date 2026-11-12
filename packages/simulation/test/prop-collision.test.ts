@@ -29,6 +29,9 @@ test('static props occupy the same cells in navigation, construction preview and
 test('deployment and depot access remain connected across city seeds', () => {
   for (const scenario of ['last_convoy', 'city_war'] as const) for (const seed of [1, 7, 42]) {
     const e = SimulationEngine.create(seed, scenario, { zombies: 0 });
+    const cars = e.mapInfo().props!.filter(p => p.kind === 'Debris_BrokenCar');
+    expect(cars.length).toBeGreaterThanOrEqual(scenario === 'last_convoy' ? 8 : 100);
+    expect(cars.length).toBeLessThan(scenario === 'last_convoy' ? 40 : 400);
     const g = e.world.grid;
     const home = e.world.bases[0];
     const origin = g.cellAt((home.x0 + home.x1 + 1) * 2, (home.y0 + home.y1 + 1) * 2);

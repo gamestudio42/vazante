@@ -31,6 +31,27 @@ export function placeStaticProps(grid: Grid, sites: readonly SiteInfo[]): Static
       }
     }
   }
+  // Scan every vacant verge cell, along the street edge. Coarse sampling used to miss
+  // nearly every two-cell parking space on the slice map.
+  const cars: StaticProp[] = [];
+  const carSectors = new Set<number>();
+  for (let cy = 1; cy < grid.height - 2; cy++) for (let cx = 1; cx < grid.width - 2; cx++) {
+    const key = (Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0;
+    if (key % COLLISION.carCandidateModulo !== 0 || sites.some(s => cx >= s.x0 - 2 && cx <= s.x1 + 2 && cy >= s.y0 - 2 && cy <= s.y1 + 2)) continue;
+    const sector = Math.floor(cy / COLLISION.carSectorCells) * grid.width + Math.floor(cx / COLLISION.carSectorCells);
+    if (carSectors.has(sector)) continue;
+    const cells = [grid.idx(cx, cy), grid.idx(cx + 1, cy)];
+    if (cells.some(c => grid.ground[c] !== Ground.Lot || grid.blocked[c] !== 0)) continue;
+    const verge = cells.some(c => [c - grid.width, c + grid.width].some(n => grid.ground[n] === Ground.Sidewalk || grid.ground[n] === Ground.Street));
+    if (!verge) continue;
+    const x = (cx + 1) * CELL_SIZE;
+    const y = (cy + 0.5) * CELL_SIZE;
+    if (cars.some(p => (p.x - x) ** 2 + (p.y - y) ** 2 < COLLISION.carSpacingM ** 2)) continue;
+    cells.forEach(c => grid.blocked[c] |= Blocked.Prop);
+    const size = COLLISION.props.Debris_BrokenCar;
+    const car: StaticProp = { kind: 'Debris_BrokenCar', x, y, yaw: 0, length: size.length, width: size.width };
+    out.push(car); cars.push(car); carSectors.add(sector);
+  }
   // Move roadside dressing onto vacant lots so a narrow street never closes cosmetically.
   for (let cy = 1; cy < grid.height - 1; cy += 3) for (let cx = 1; cx < grid.width - 2; cx += 3) {
     const key = (Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0;
