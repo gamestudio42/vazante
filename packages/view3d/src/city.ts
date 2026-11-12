@@ -5,6 +5,7 @@ import { buildArchitecture, planCityBuildings, referenceBuildings } from './arch
 import { hash } from './cosmetic.ts';
 export { hash } from './cosmetic.ts';
 import { PALETTE } from './palette.ts';
+import { planCrossings, vegetationStyle } from './streets.ts';
 
 /** Texels per cell in the ground texture (lane markings, curbs, grain). */
 const TPC = 8;
@@ -16,7 +17,9 @@ export function buildCity(map: MapInfo): THREE.Group {
   const wM = map.width * cs;
   const hM = map.height * cs;
 
-  const groundMesh = new THREE.Mesh(groundGeometry(wM, hM), groundMaterial(map, groundTexture(map)));
+  // Planned once: the ground paints the zebra stripes and the props put signs beside them.
+  const crossings = planCrossings(map);
+  const groundMesh = new THREE.Mesh(groundGeometry(wM, hM), groundMaterial(map, groundTexture(map, crossings)));
   groundMesh.position.set(wM / 2, 0, hM / 2);
   groundMesh.receiveShadow = true;
   groundMesh.name = 'ground';
@@ -24,7 +27,7 @@ export function buildCity(map: MapInfo): THREE.Group {
 
   group.add(buildArchitecture(map));
 
-  const props = buildProps(map);
+  const props = buildProps(map, crossings);
   group.add(props);
   group.userData.lamps = props.userData.lamps;
 
@@ -242,7 +245,7 @@ function groundGeometry(wM: number, hM: number): THREE.PlaneGeometry {
   return g;
 }
 
-function groundTexture(map: MapInfo): THREE.DataTexture {
+function groundTexture(map: MapInfo, crossings: Uint8Array): THREE.DataTexture {
   const W = map.width * TPC;
   const H = map.height * TPC;
   const data = new Uint8Array(W * H * 4);
@@ -337,6 +340,13 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
           shade = n2 > 0.8 ? 0.8 : 1;
         }
       }
+      const crossing = crossings[cy * map.width + cx];
+      const paint = PRESENTATION.street;
+      if (((crossing & 1) && Math.abs(sy - TPC / 2) < paint.crossingHalfWidthTexels && Math.floor(tx / paint.stripeTexels) % 2 === 0)
+        || ((crossing & 2) && Math.abs(sx - TPC / 2) < paint.crossingHalfWidthTexels && Math.floor(ty / paint.stripeTexels) % 2 === 0)) {
+        c = PALETTE.marking;
+        shade *= 0.9 + 0.1 * n1;
+      }
       // Contact shadow at the foot of buildings (cheap ambient occlusion).
       if (kind !== Ground.Building) {
         const ao = Math.min(
@@ -371,17 +381,28 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
 }
 
 /** Cosmetic props: trees in parks and lamp posts on sidewalk corners. They do not block movement. */
-function buildProps(map: MapInfo): THREE.Group {
+function buildProps(map: MapInfo, crossings: Uint8Array): THREE.Group {
   const group = new THREE.Group();
   const cs = map.cellSize;
-  const trees: [number, number, number][] = [];
+  const trees: [number, number, number, number][] = [];
+  const signs: [number, number, boolean][] = [];
   const lamps: [number, number][] = [];
   for (let cy = 0; cy < map.height; cy++) {
     for (let cx = 0; cx < map.width; cx++) {
       const k = map.ground[cy * map.width + cx];
       const h = hash(cx * 73856093 ^ cy * 19349663);
-      if (k === Ground.Park && h % 2 === 0) trees.push([(cx + 0.2 + (h % 60) / 100) * cs, (cy + 0.2 + ((h >> 8) % 60) / 100) * cs, 0.8 + ((h >> 4) % 50) / 100]);
-      if (k === Ground.Sidewalk && h % 19 === 0) lamps.push([(cx + 0.5) * cs, (cy + 0.5) * cs]);
+      const style = vegetationStyle(map, cx, cy);
+      if (k === Ground.Park && h % PRESENTATION.street.treeDensityModulo[style] === 0) trees.push([(cx + 0.2 + (h % 60) / 100) * cs, (cy + 0.2 + ((h >>> 8) % 60) / 100) * cs, (0.8 + ((h >>> 4) % 50) / 100) * PRESENTATION.street.treeScale[style], style]);
+      let sign = false;
+      if (k === Ground.Sidewalk && h % 3 === 0) {
+        // Bit tests, not equality: where two crossings meet a street cell carries both bits (3).
+        const horizontal = (cx > 0 && (crossings[cy * map.width + cx - 1] & 1) !== 0) || (cx + 1 < map.width && (crossings[cy * map.width + cx + 1] & 1) !== 0);
+        const vertical = (cy > 0 && (crossings[(cy - 1) * map.width + cx] & 2) !== 0) || (cy + 1 < map.height && (crossings[(cy + 1) * map.width + cx] & 2) !== 0);
+        sign = horizontal || vertical;
+        if (sign) signs.push([(cx + 0.5) * cs, (cy + 0.5) * cs, vertical]);
+      }
+      // A sign and a lamp never share a sidewalk cell.
+      if (k === Ground.Sidewalk && !sign && h % 19 === 0) lamps.push([(cx + 0.5) * cs, (cy + 0.5) * cs]);
     }
   }
   const m = new THREE.Matrix4();
@@ -390,14 +411,33 @@ function buildProps(map: MapInfo): THREE.Group {
   const crownGeo = new THREE.IcosahedronGeometry(1.6, 0);
   crownGeo.translate(0, 3.2, 0);
   const trunks = new THREE.InstancedMesh(trunkGeo, toon({ color: PALETTE.trunk }), Math.max(1, trees.length));
-  const crowns = new THREE.InstancedMesh(crownGeo, toon({ color: PALETTE.foliage }), Math.max(1, trees.length));
-  trees.forEach(([x, y, s], i) => {
+  const crowns = new THREE.InstancedMesh(crownGeo, toon({ color: 0xffffff }), Math.max(1, trees.length));
+  trees.forEach(([x, y, s, style], i) => {
     m.makeScale(s, s, s).setPosition(x, 0, y);
     trunks.setMatrixAt(i, m);
     crowns.setMatrixAt(i, m);
+    crowns.setColorAt(i, new THREE.Color(PRESENTATION.street.foliage[style]));
   });
   trunks.count = crowns.count = trees.length;
   for (const mesh of [trunks, crowns]) {
+    mesh.castShadow = true;
+    group.add(mesh);
+  }
+  const signTuning = PRESENTATION.street;
+  const signPole = new THREE.BoxGeometry(0.1, signTuning.signHeight, 0.1);
+  signPole.translate(0, signTuning.signHeight / 2, 0);
+  const signBoard = new THREE.BoxGeometry(signTuning.signSize, signTuning.signSize, 0.1);
+  signBoard.translate(0, signTuning.signHeight, 0);
+  const signStripe = new THREE.BoxGeometry(signTuning.signSize * 0.65, signTuning.signSize * 0.15, 0.12);
+  signStripe.translate(0, signTuning.signHeight, 0);
+  for (const [geometry, color] of [[signPole, PALETTE.pole], [signBoard, PALETTE.base], [signStripe, PALETTE.marking]] as const) {
+    const mesh = new THREE.InstancedMesh(geometry, toon({ color }), Math.max(1, signs.length));
+    signs.forEach(([x, y, vertical], i) => {
+      m.makeRotationY(vertical ? Math.PI / 2 : 0).setPosition(x, 0, y);
+      mesh.setMatrixAt(i, m);
+    });
+    mesh.name = 'crossing-signs';
+    mesh.count = signs.length;
     mesh.castShadow = true;
     group.add(mesh);
   }

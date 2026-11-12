@@ -44,6 +44,16 @@ export const PRESENTATION = {
     wearMin: 0.12,
     wearRange: 0.3,
   },
+  street: {
+    crossingMaxCells: 12,
+    stripeTexels: 2,
+    crossingHalfWidthTexels: 2,
+    signHeight: 2.4,
+    signSize: 0.8,
+    foliage: [0x3f6b35, 0x566c38, 0x315c48],
+    treeDensityModulo: [2, 3, 2],
+    treeScale: [1, 0.85, 1.15],
+  },
   surface: {
     detailFadeStartM: 0.12,
     detailFadeEndM: 0.65,
