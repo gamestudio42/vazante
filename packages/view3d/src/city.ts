@@ -1,7 +1,11 @@
 import * as THREE from 'three';
-import { Ground, type MapInfo } from '@vazante/shared';
-import { buildingMaterial, toon } from './materials.ts';
+import { Ground, PRESENTATION, type MapInfo } from '@vazante/shared';
+import { buildingMaterial, groundMaterial, toon } from './materials.ts';
+import { buildArchitecture, planCityBuildings, referenceBuildings } from './architecture.ts';
+import { hash } from './cosmetic.ts';
+export { hash } from './cosmetic.ts';
 import { PALETTE } from './palette.ts';
+import { planCentreLines, planCrossings, vegetationStyle } from './streets.ts';
 
 /** Texels per cell in the ground texture (lane markings, curbs, grain). */
 const TPC = 8;
@@ -13,37 +17,17 @@ export function buildCity(map: MapInfo): THREE.Group {
   const wM = map.width * cs;
   const hM = map.height * cs;
 
-  const groundMesh = new THREE.Mesh(groundGeometry(wM, hM), toon({ map: groundTexture(map) }));
+  // Planned once: the ground paints the zebra stripes and the props put signs beside them.
+  const crossings = planCrossings(map);
+  const groundMesh = new THREE.Mesh(groundGeometry(wM, hM), groundMaterial(map, groundTexture(map, crossings)));
   groundMesh.position.set(wM / 2, 0, hM / 2);
   groundMesh.receiveShadow = true;
   groundMesh.name = 'ground';
   group.add(groundMesh);
 
-  const box = new THREE.BoxGeometry(1, 1, 1);
-  box.translate(0, 0.5, 0);
-  const inst = new THREE.InstancedMesh(box, buildingMaterial(), Math.max(1, map.buildings.length));
-  const m = new THREE.Matrix4();
-  const col = new THREE.Color();
-  const tones = PALETTE.buildingTones.map((c) => new THREE.Color(c));
-  map.buildings.forEach((b, i) => {
-    // Inset a little so alleys and sidewalks read between buildings.
-    const w = (b.x1 - b.x0 + 1) * cs - 0.6;
-    const d = (b.y1 - b.y0 + 1) * cs - 0.6;
-    m.makeScale(w, b.height, d);
-    m.setPosition(b.x0 * cs + (w + 0.6) / 2, 0, b.y0 * cs + (d + 0.6) / 2);
-    inst.setMatrixAt(i, m);
-    col.copy(tones[hash(b.id) % tones.length]).multiplyScalar(0.9 + (hash(b.id * 7) % 20) / 100);
-    inst.setColorAt(i, col);
-  });
-  inst.count = map.buildings.length;
-  inst.castShadow = true;
-  inst.receiveShadow = true;
-  inst.instanceMatrix.needsUpdate = true;
-  if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
-  inst.name = 'buildings';
-  group.add(inst);
+  group.add(buildArchitecture(map));
 
-  const props = buildProps(map);
+  const props = buildProps(map, crossings);
   group.add(props);
   group.userData.lamps = props.userData.lamps;
 
@@ -80,7 +64,15 @@ function splitIntoChunks(root: THREE.Object3D, size: number): void {
     if (buckets.size < 2) continue;
     const parent = mesh.parent!;
     for (const list of buckets.values()) {
-      const chunk = new THREE.InstancedMesh(mesh.geometry, mesh.material, list.length);
+      // Per-building styles must follow the reordered instances, not the original global index.
+      const facade = mesh.geometry.getAttribute('aFacade');
+      const geometry = facade ? mesh.geometry.clone() : mesh.geometry;
+      if (facade) {
+        const data = new Float32Array(list.length * 4);
+        list.forEach((src, i) => data.set([facade.getX(src), facade.getY(src), facade.getZ(src), facade.getW(src)], i * 4));
+        geometry.setAttribute('aFacade', new THREE.InstancedBufferAttribute(data, 4));
+      }
+      const chunk = new THREE.InstancedMesh(geometry, mesh.material, list.length);
       list.forEach((src, i) => {
         mesh.getMatrixAt(src, m);
         chunk.setMatrixAt(i, m);
@@ -113,28 +105,36 @@ export function buildDistrictOverlay(map: MapInfo): THREE.Group {
  * Roof clutter seen from above: air-conditioning units, stair and lift housings, water tanks.
  * Placed by hash inside each roof so the skyline stops reading as plain boxes.
  */
-function buildRooftops(map: MapInfo): THREE.Group {
+export function buildRooftops(map: MapInfo): THREE.Group {
   const group = new THREE.Group();
-  const cs = map.cellSize;
   const ac: THREE.Matrix4[] = [];
   const stairs: THREE.Matrix4[] = [];
   const tanks: THREE.Matrix4[] = [];
+  const appearances = planCityBuildings(map);
   for (const b of map.buildings) {
-    const w = (b.x1 - b.x0 + 1) * cs - 0.6;
-    const d = (b.y1 - b.y0 + 1) * cs - 0.6;
-    const cx = b.x0 * cs + 0.3;
-    const cy = b.y0 * cs + 0.3;
+    const appearance = appearances.get(b.id)!;
+    // Pitched roofs carry no flat-deck equipment. Setback crowns own a smaller support area.
+    if (appearance.roofShape === 'gable') continue;
+    const deck = appearance.roof ?? appearance.body;
+    const w = deck.width;
+    const d = deck.depth;
+    const cx = deck.x - w / 2;
+    const cy = deck.z - d / 2;
     const h = hash(b.id * 92821 + 7);
     const at = (k: number, sx: number, sy: number, sz: number, margin: number) => {
       const r = hash(h + k * 7919);
-      const px = cx + margin + ((r % 1000) / 1000) * Math.max(0, w - 2 * margin);
-      const py = cy + margin + (((r >> 10) % 1000) / 1000) * Math.max(0, d - 2 * margin);
+      // Hashes are unsigned: a signed shift makes half the Z offsets negative.
+      // Centre narrow roofs instead of placing their fixtures beyond the edge.
+      const mx = Math.min(margin, w / 2);
+      const my = Math.min(margin, d / 2);
+      const px = cx + mx + ((r % 1000) / 1000) * Math.max(0, w - 2 * mx);
+      const py = cy + my + (((r >>> 10) % 1000) / 1000) * Math.max(0, d - 2 * my);
       return new THREE.Matrix4().makeScale(sx, sz, sy).setPosition(px, b.height, py);
     };
-    const nAc = h % 4;
+    const nAc = Math.min(w, d) >= 1.3 ? h % 4 : 0;
     for (let k = 0; k < nAc; k++) ac.push(at(k, 1.3, 1.0, 0.9, 1.2));
     if (w > 7 && d > 7 && h % 3 !== 0) stairs.push(at(10, 3.2, 2.6, 2.4, 2.4));
-    if (b.height > 14 && h % 5 < 2) tanks.push(at(20, 1.0, 1.0, 1.0, 2));
+    if (b.height > 14 && Math.min(w, d) >= 2.2 && h % 5 < 2) tanks.push(at(20, 1.0, 1.0, 1.0, 2));
   }
   const box = new THREE.BoxGeometry(1, 1, 1);
   box.translate(0, 0.5, 0);
@@ -223,6 +223,8 @@ function buildOutskirts(map: MapInfo): THREE.Group {
   }
   const box = new THREE.BoxGeometry(1, 1, 1);
   box.translate(0, 0.5, 0);
+  // Outskirts retain their subdued residential treatment and have no interactive buildings.
+  box.setAttribute('aFacade', new THREE.InstancedBufferAttribute(Float32Array.from({ length: ruins.length * 4 }, (_, i) => i % 4 === 0 ? -1 : 0), 4));
   const inst = new THREE.InstancedMesh(box, buildingMaterial(), ruins.length);
   ruins.forEach(([m, col], i) => {
     inst.setMatrixAt(i, m);
@@ -243,10 +245,11 @@ function groundGeometry(wM: number, hM: number): THREE.PlaneGeometry {
   return g;
 }
 
-function groundTexture(map: MapInfo): THREE.DataTexture {
+function groundTexture(map: MapInfo, crossings: Uint8Array): THREE.DataTexture {
   const W = map.width * TPC;
   const H = map.height * TPC;
   const data = new Uint8Array(W * H * 4);
+  const centre = planCentreLines(map);
   const base: Record<number, number> = {
     [Ground.Street]: PALETTE.street,
     [Ground.Sidewalk]: PALETTE.sidewalk,
@@ -256,6 +259,15 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
     [Ground.Park]: PALETTE.park,
   };
   const g = (cx: number, cy: number) => (cx < 0 || cy < 0 || cx >= map.width || cy >= map.height ? -1 : map.ground[cy * map.width + cx]);
+  const reference = referenceBuildings(map);
+  const paving = new Set<number>();
+  for (const b of map.buildings) if (reference.has(b.id)) {
+    for (let y = Math.max(0, b.y0 - 1); y <= Math.min(map.height - 1, b.y1 + 1); y++) {
+      for (let x = Math.max(0, b.x0 - 1); x <= Math.min(map.width - 1, b.x1 + 1); x++) {
+        if (g(x, y) === Ground.Sidewalk) paving.add(y * map.width + x);
+      }
+    }
+  }
   const inSite = (cx: number, cy: number) => map.sites.some((st) => cx >= st.x0 && cx <= st.x1 && cy >= st.y0 && cy <= st.y1);
   for (let ty = 0; ty < H; ty++) {
     const cy = Math.floor(ty / TPC);
@@ -271,13 +283,13 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
       let mix: number | null = null;
       let mixT = 0;
       if (kind === Ground.Street) {
-        // Dashed centre lines where a street run is 2+ cells wide in one axis.
-        const horiz = g(cx, cy - 1) !== Ground.Street || g(cx, cy + 1) !== Ground.Street;
-        const vert = g(cx - 1, cy) !== Ground.Street || g(cx + 1, cy) !== Ground.Street;
-        const nsStreet = g(cx, cy - 1) === Ground.Street && g(cx, cy + 1) === Ground.Street;
-        const ewStreet = g(cx - 1, cy) === Ground.Street && g(cx + 1, cy) === Ground.Street;
-        if (nsStreet && !ewStreet && vert && g(cx + 1, cy) === Ground.Street && sx === TPC - 1 && cy % 2 === 0) c = PALETTE.marking;
-        if (ewStreet && !nsStreet && horiz && g(cx, cy + 1) === Ground.Street && sy === TPC - 1 && cx % 2 === 0) c = PALETTE.marking;
+        // Dashed centre line in the middle of the street, whatever its width (2, 3 or 4 cells): the
+        // texel just west (north) of the centre. It used to sit beside the curb lane, a third or a
+        // quarter of the way across on the wider streets.
+        const ns = centre.ns[cy * map.width + cx];
+        const ew = centre.ew[cy * map.width + cx];
+        if (ns >= 0 && tx === (ns * TPC) / 2 - 1 && cy % 2 === 0) c = PALETTE.marking;
+        if (ew >= 0 && ty === (ew * TPC) / 2 - 1 && cx % 2 === 0) c = PALETTE.marking;
         if (c === PALETTE.marking) {
           // Worn paint: gaps where the asphalt shows through.
           if (n2 > 0.72) c = PALETTE.street;
@@ -293,6 +305,14 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
       } else if (kind === Ground.Sidewalk) {
         if (sx === 0 || sy === 0) shade *= 0.9; // paving slabs
         const curb = (g(cx - 1, cy) === Ground.Street && sx === 0) || (g(cx + 1, cy) === Ground.Street && sx === TPC - 1) || (g(cx, cy - 1) === Ground.Street && sy === 0) || (g(cx, cy + 1) === Ground.Street && sy === TPC - 1);
+        if (paving.has(cy * map.width + cx)) {
+          const tune = PRESENTATION.architecture;
+          const slab = tune.pavingSlabTexels;
+          const row = Math.floor(ty / slab);
+          const staggeredX = tx + (row % 2) * slab / 2;
+          const joint = staggeredX % slab === 0 || ty % slab === 0;
+          shade *= joint ? tune.pavingJointShade : 1 + ((hash(Math.floor(staggeredX / slab) * 31 + row * 977) % 3) - 1) * tune.pavingVariation;
+        }
         if (curb) c = PALETTE.curb;
       } else if (kind === Ground.Park) {
         // Uneven grass: lighter dry patches, darker clumps, tufts.
@@ -320,6 +340,13 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
           c = (Math.floor((tx + ty) / 3) % 2 === 0) ? 0xc9a23a : 0x2a2a28;
           shade = n2 > 0.8 ? 0.8 : 1;
         }
+      }
+      const crossing = crossings[cy * map.width + cx];
+      const paint = PRESENTATION.street;
+      if (((crossing & 1) && Math.abs(sy - TPC / 2) < paint.crossingHalfWidthTexels && Math.floor(tx / paint.stripeTexels) % 2 === 0)
+        || ((crossing & 2) && Math.abs(sx - TPC / 2) < paint.crossingHalfWidthTexels && Math.floor(ty / paint.stripeTexels) % 2 === 0)) {
+        c = PALETTE.marking;
+        shade *= 0.9 + 0.1 * n1;
       }
       // Contact shadow at the foot of buildings (cheap ambient occlusion).
       if (kind !== Ground.Building) {
@@ -355,17 +382,28 @@ function groundTexture(map: MapInfo): THREE.DataTexture {
 }
 
 /** Cosmetic props: trees in parks and lamp posts on sidewalk corners. They do not block movement. */
-function buildProps(map: MapInfo): THREE.Group {
+function buildProps(map: MapInfo, crossings: Uint8Array): THREE.Group {
   const group = new THREE.Group();
   const cs = map.cellSize;
-  const trees: [number, number, number][] = [];
+  const trees: [number, number, number, number][] = [];
+  const signs: [number, number, boolean][] = [];
   const lamps: [number, number][] = [];
   for (let cy = 0; cy < map.height; cy++) {
     for (let cx = 0; cx < map.width; cx++) {
       const k = map.ground[cy * map.width + cx];
       const h = hash(cx * 73856093 ^ cy * 19349663);
-      if (k === Ground.Park && h % 2 === 0) trees.push([(cx + 0.2 + (h % 60) / 100) * cs, (cy + 0.2 + ((h >> 8) % 60) / 100) * cs, 0.8 + ((h >> 4) % 50) / 100]);
-      if (k === Ground.Sidewalk && h % 19 === 0) lamps.push([(cx + 0.5) * cs, (cy + 0.5) * cs]);
+      const style = vegetationStyle(map, cx, cy);
+      if (k === Ground.Park && h % PRESENTATION.street.treeDensityModulo[style] === 0) trees.push([(cx + 0.2 + (h % 60) / 100) * cs, (cy + 0.2 + ((h >>> 8) % 60) / 100) * cs, (0.8 + ((h >>> 4) % 50) / 100) * PRESENTATION.street.treeScale[style], style]);
+      let sign = false;
+      if (k === Ground.Sidewalk && h % 3 === 0) {
+        // Bit tests, not equality: where two crossings meet a street cell carries both bits (3).
+        const horizontal = (cx > 0 && (crossings[cy * map.width + cx - 1] & 1) !== 0) || (cx + 1 < map.width && (crossings[cy * map.width + cx + 1] & 1) !== 0);
+        const vertical = (cy > 0 && (crossings[(cy - 1) * map.width + cx] & 2) !== 0) || (cy + 1 < map.height && (crossings[(cy + 1) * map.width + cx] & 2) !== 0);
+        sign = horizontal || vertical;
+        if (sign) signs.push([(cx + 0.5) * cs, (cy + 0.5) * cs, vertical]);
+      }
+      // A sign and a lamp never share a sidewalk cell.
+      if (k === Ground.Sidewalk && !sign && h % 19 === 0) lamps.push([(cx + 0.5) * cs, (cy + 0.5) * cs]);
     }
   }
   const m = new THREE.Matrix4();
@@ -374,14 +412,33 @@ function buildProps(map: MapInfo): THREE.Group {
   const crownGeo = new THREE.IcosahedronGeometry(1.6, 0);
   crownGeo.translate(0, 3.2, 0);
   const trunks = new THREE.InstancedMesh(trunkGeo, toon({ color: PALETTE.trunk }), Math.max(1, trees.length));
-  const crowns = new THREE.InstancedMesh(crownGeo, toon({ color: PALETTE.foliage }), Math.max(1, trees.length));
-  trees.forEach(([x, y, s], i) => {
+  const crowns = new THREE.InstancedMesh(crownGeo, toon({ color: 0xffffff }), Math.max(1, trees.length));
+  trees.forEach(([x, y, s, style], i) => {
     m.makeScale(s, s, s).setPosition(x, 0, y);
     trunks.setMatrixAt(i, m);
     crowns.setMatrixAt(i, m);
+    crowns.setColorAt(i, new THREE.Color(PRESENTATION.street.foliage[style]));
   });
   trunks.count = crowns.count = trees.length;
   for (const mesh of [trunks, crowns]) {
+    mesh.castShadow = true;
+    group.add(mesh);
+  }
+  const signTuning = PRESENTATION.street;
+  const signPole = new THREE.BoxGeometry(0.1, signTuning.signHeight, 0.1);
+  signPole.translate(0, signTuning.signHeight / 2, 0);
+  const signBoard = new THREE.BoxGeometry(signTuning.signSize, signTuning.signSize, 0.1);
+  signBoard.translate(0, signTuning.signHeight, 0);
+  const signStripe = new THREE.BoxGeometry(signTuning.signSize * 0.65, signTuning.signSize * 0.15, 0.12);
+  signStripe.translate(0, signTuning.signHeight, 0);
+  for (const [geometry, color] of [[signPole, PALETTE.pole], [signBoard, PALETTE.base], [signStripe, PALETTE.marking]] as const) {
+    const mesh = new THREE.InstancedMesh(geometry, toon({ color }), Math.max(1, signs.length));
+    signs.forEach(([x, y, vertical], i) => {
+      m.makeRotationY(vertical ? Math.PI / 2 : 0).setPosition(x, 0, y);
+      mesh.setMatrixAt(i, m);
+    });
+    mesh.name = 'crossing-signs';
+    mesh.count = signs.length;
     mesh.castShadow = true;
     group.add(mesh);
   }
@@ -425,12 +482,4 @@ function valueNoise(x: number, y: number, seed: number): number {
   const a = v(0, 0) + (v(1, 0) - v(0, 0)) * sx;
   const b = v(0, 1) + (v(1, 1) - v(0, 1)) * sx;
   return a + (b - a) * sy;
-}
-
-/** Small integer hash for stable cosmetic variation. */
-export function hash(n: number): number {
-  let x = n | 0;
-  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
-  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
-  return (x ^ (x >>> 16)) >>> 0;
 }

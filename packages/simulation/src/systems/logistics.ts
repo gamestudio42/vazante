@@ -1,3 +1,4 @@
+import { truckWouldHitSoldier } from './vehicle-collision.ts';
 import {
   BASE_AMMO_LOW,
   CELL_SIZE,
@@ -455,10 +456,16 @@ export function stepVehicles(w: World): void {
       const dx = tx - v.x;
       const dy = ty - v.y;
       const d = Math.sqrt(dx * dx + dy * dy);
+      const oldHx = v.hx;
+      const oldHy = v.hy;
       if (d > 1e-6) {
         v.hx = dx / d;
         v.hy = dy / d;
       }
+      const travel = Math.min(d, remaining);
+      const nx = d > 1e-6 ? v.x + dx / d * travel : tx;
+      const ny = d > 1e-6 ? v.y + dy / d * travel : ty;
+      if (truckWouldHitSoldier(w, v, nx, ny, oldHx, oldHy)) { v.hx = oldHx; v.hy = oldHy; break; }
       if (d <= remaining) {
         v.x = tx;
         v.y = ty;

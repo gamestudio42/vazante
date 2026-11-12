@@ -1,3 +1,5 @@
+import { placeStaticProps } from './props.ts';
+import type { StaticProp } from '@vazante/shared';
 import { Rng } from '@vazante/kernel';
 import { type DifficultyId, BASE_START, Blocked, CELL_SIZE, SoldierCondition, ZOMBIES, type BuildingRect, type DistrictInfo, type SimEvent, type SimSpeed, type SiteInfo, type DayClock } from '@vazante/shared';
 import type { Base, Mission, Soldier, Squad, Structure, Vehicle } from './entities.ts';
@@ -20,6 +22,7 @@ export class World {
   readonly buildings: BuildingRect[];
   readonly districts: DistrictInfo[];
   readonly sites: SiteInfo[];
+  readonly props?: StaticProp[];
   readonly zombies: ZombiePool;
   readonly soldiers: Soldier[] = [];
   readonly squads: Squad[] = [];
@@ -70,6 +73,7 @@ export class World {
     this.buildings = buildings;
     this.districts = districts;
     this.sites = sites;
+    this.props = placeStaticProps(grid, sites);
     this.zombies = new ZombiePool(zombieCapacity);
     this.cellHead = new Int32Array(grid.size).fill(-1);
     this.cellNext = new Int32Array(zombieCapacity).fill(-1);

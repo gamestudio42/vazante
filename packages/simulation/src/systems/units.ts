@@ -14,7 +14,7 @@ import type { Soldier, Squad } from "../entities.ts";
 import { findPath } from "../navigation.ts";
 import { isActiveSoldier, type World } from "../world.ts";
 import { isCover, isObstacle } from "./morale.ts";
-import { moveWithCollision } from "./movement.ts";
+import { moveSoldier, soldierRouteCellFree } from "./vehicle-collision.ts";
 
 /** A panicking soldier runs from zombies this close, slightly faster than the squad walks. */
 const PANIC_FLEE_M = 15;
@@ -55,7 +55,7 @@ export function planMove(
   toY: number,
 ): boolean {
   const goal = w.grid.cellAt(toX, toY);
-  const cells = findPath(w.grid, w.grid.cellAt(q.ax, q.ay), goal);
+  const cells = findPath(w.grid, w.grid.cellAt(q.ax, q.ay), goal, { passable: c => soldierRouteCellFree(w, w.grid.cellCenterX(c), w.grid.cellCenterY(c)) });
   if (!cells) return false;
   const path: number[] = [];
   for (const c of cells)
@@ -77,6 +77,7 @@ function replan(w: World, q: Squad): void {
     w.grid,
     w.grid.cellAt(q.ax, q.ay),
     w.grid.cellAt(to.x, to.y),
+    { passable: c => soldierRouteCellFree(w, w.grid.cellCenterX(c), w.grid.cellCenterY(c)) },
   );
   q.path = [];
   q.pathIdx = 0;
@@ -278,8 +279,8 @@ function stepSquad(w: World, q: Squad): void {
     const d = Math.sqrt(dx * dx + dy * dy);
     const step = Math.min(d, speed * TICK_DT);
     if (d > 0.05) {
-      const m = moveWithCollision(
-        w.grid,
+      const m = moveSoldier(
+        w,
         s.x,
         s.y,
         (dx / d) * step,
@@ -333,10 +334,10 @@ function routeAround(w: World, q: Squad, s: Soldier, sx: number, sy: number, spe
   const g = w.grid;
   let goal = g.cellAt(sx, sy);
   if (!g.isWalkable(goal)) goal = g.cellAt(q.ax, q.ay);
-  const cells = findPath(g, g.cellAt(s.x, s.y), goal, ROUTE_MAX_EXPANDED);
+  const cells = findPath(g, g.cellAt(s.x, s.y), goal, { maxExpanded: ROUTE_MAX_EXPANDED, passable: c => soldierRouteCellFree(w, g.cellCenterX(c), g.cellCenterY(c)) });
   if (!cells || cells.length < 2) return;
   const route: number[] = [];
-  for (let k = 1; k < cells.length; k++) route.push(g.cellCenterX(cells[k]), g.cellCenterY(cells[k]));
+  for (let k = 0; k < cells.length; k++) route.push(g.cellCenterX(cells[k]), g.cellCenterY(cells[k]));
   s.route = route;
   const lengthM = (cells.length - 1) * CELL_SIZE;
   s.routeT = Math.ceil((lengthM / (speed * TICK_DT)) * ROUTE_TIME_FACTOR) + ROUTE_SPARE_TICKS;
@@ -416,8 +417,8 @@ function flee(w: World, speed: number, s: Soldier): void {
     dx = -s.fx;
     dy = -s.fy;
   }
-  const m = moveWithCollision(
-    w.grid,
+  const m = moveSoldier(
+    w,
     s.x,
     s.y,
     dx * speed * TICK_DT,
@@ -434,8 +435,8 @@ function stepDirect(w: World, s: Soldier): void {
   const inp = s.direct!;
   const q = w.squad(s.squad);
   const speed = (q ? q.speed : 3) * DIRECT_SPEED_FACTOR;
-  const m = moveWithCollision(
-    w.grid,
+  const m = moveSoldier(
+    w,
     s.x,
     s.y,
     inp.mx * speed * TICK_DT,

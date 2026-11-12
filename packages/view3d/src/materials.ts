@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { PRESENTATION, type MapInfo } from '@vazante/shared';
+import { FACADE_COLOR, GROUND_COLOR, SURFACE_NOISE } from './surface-shaders.ts';
 
 let gradient: THREE.DataTexture | null = null;
 
@@ -24,62 +26,95 @@ export function toon(params: THREE.MeshToonMaterialParameters = {}): THREE.MeshT
 /** Shared by every building: 0 by day, 1 at night (lit windows). */
 export const cityUniforms = { uNight: { value: 0 } };
 
+/** Shared quality controls for all procedural surfaces. */
+function surfaceUniforms() {
+  return {
+    uSurfaceStart: { value: PRESENTATION.surface.detailFadeStartM },
+    uSurfaceEnd: { value: PRESENTATION.surface.detailFadeEndM },
+    uGrain: { value: PRESENTATION.surface.grainStrength },
+  };
+}
+
+const SURFACE_UNIFORMS = /* glsl */ `
+  uniform float uSurfaceStart;
+  uniform float uSurfaceEnd;
+  uniform float uGrain;
+`;
+
 export function buildingMaterial(): THREE.MeshToonMaterial {
   const m = toon();
   m.onBeforeCompile = (shader) => {
-    shader.uniforms.uNight = cityUniforms.uNight;
+    Object.assign(shader.uniforms, surfaceUniforms(), {
+      uNight: cityUniforms.uNight,
+      uDetailStart: { value: PRESENTATION.facade.detailFadeStart },
+      uDetailEnd: { value: PRESENTATION.facade.detailFadeEnd },
+      uFloorHeight: { value: PRESENTATION.architecture.floorHeight },
+    });
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vWorldPos;\nvarying vec3 vWorldNormal;')
-      .replace(
-        '#include <worldpos_vertex>',
-        `#include <worldpos_vertex>
-        vec4 wp = vec4(transformed, 1.0);
-        #ifdef USE_INSTANCING
-          wp = instanceMatrix * wp;
-        #endif
-        wp = modelMatrix * wp;
-        vWorldPos = wp.xyz;
+      .replace('#include <common>', `#include <common>
+        attribute vec4 aFacade;
+        varying vec3 vFacadePos;
+        varying vec3 vBuildingSize;
+        varying vec3 vWorldNormal;
+        varying vec4 vFacadeInfo;`)
+      .replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
         mat3 nm = mat3(modelMatrix);
+        vBuildingSize = vec3(1.0);
         #ifdef USE_INSTANCING
           nm = nm * mat3(instanceMatrix);
+          vBuildingSize = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), length(instanceMatrix[2].xyz));
         #endif
-        vWorldNormal = normalize(nm * objectNormal);`,
-      );
+        vFacadePos = position * vBuildingSize;
+        vFacadeInfo = aFacade;
+        vWorldNormal = normalize(nm * objectNormal);`);
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vWorldPos;\nvarying vec3 vWorldNormal;\nuniform float uNight;')
-      .replace(
-        '#include <emissivemap_fragment>',
-        `#include <emissivemap_fragment>
-        totalEmissiveRadiance += vec3(1.0, 0.68, 0.34) * litWindow * uNight * 0.55;`,
-      )
-      .replace(
-        '#include <color_fragment>',
-        `#include <color_fragment>
-        float litWindow = 0.0;
-        vec3 n = normalize(vWorldNormal);
-        if (n.y > 0.5) {
-          // Roof: darker with a light parapet line every few metres for texture.
-          diffuseColor.rgb *= 0.62;
-          float g = step(0.92, fract(vWorldPos.x * 0.25)) + step(0.92, fract(vWorldPos.z * 0.25));
-          diffuseColor.rgb *= 1.0 - 0.08 * clamp(g, 0.0, 1.0);
-        } else {
-          float along = abs(n.x) > 0.5 ? vWorldPos.z : vWorldPos.x;
-          float floorY = fract(vWorldPos.y / 3.0);
-          float col = fract(along / 2.6);
-          float window = step(0.35, floorY) * step(floorY, 0.8) * step(0.25, col) * step(col, 0.75);
-          // Ground floor: shop fronts, no windows above 0.5 m slab line.
-          float ground = 1.0 - step(3.0, vWorldPos.y);
-          float slab = step(0.94, floorY);
-          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.15, 0.19), window * (1.0 - ground) * 0.85);
-          // A few windows stay lit at night: survivors, or lights nobody switched off.
-          float across = abs(n.x) > 0.5 ? vWorldPos.x : vWorldPos.z;
-          vec3 cellId = vec3(floor(along / 2.6), floor(vWorldPos.y / 3.0), floor(across * 0.5));
-          float rnd = fract(sin(dot(cellId, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-          litWindow = window * (1.0 - ground) * step(0.86, rnd);
-          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.2, 0.18, 0.16), ground * step(0.3, col) * step(col, 0.9) * step(0.15, floorY) * 0.7);
-          diffuseColor.rgb *= 1.0 - slab * 0.18;
-        }`,
-      );
+      .replace('#include <common>', `#include <common>
+        varying vec3 vFacadePos;
+        varying vec3 vBuildingSize;
+        varying vec3 vWorldNormal;
+        varying vec4 vFacadeInfo;
+        uniform float uNight;
+        uniform float uDetailStart;
+        uniform float uDetailEnd;
+        uniform float uFloorHeight;
+        ${SURFACE_UNIFORMS}
+        ${SURFACE_NOISE}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+${FACADE_COLOR}`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        totalEmissiveRadiance += vec3(1.0, 0.68, 0.34) * litWindow * uNight * 0.55;`);
   };
+  return m;
+}
+
+/** Preserve the map's road paint and baked contact shade; add only close-range surface detail. */
+export function groundMaterial(map: MapInfo, texture: THREE.DataTexture): THREE.MeshToonMaterial {
+  const kind = new THREE.DataTexture(new Uint8Array(map.ground), map.width, map.height, THREE.RedFormat);
+  kind.magFilter = kind.minFilter = THREE.NearestFilter;
+  kind.unpackAlignment = 1;
+  kind.needsUpdate = true;
+  const m = toon({ map: texture });
+  m.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, surfaceUniforms(), {
+      uGroundKind: { value: kind },
+      uGroundSize: { value: new THREE.Vector2(map.width * map.cellSize, map.height * map.cellSize) },
+      uPavementTile: { value: PRESENTATION.surface.pavementTileM },
+    });
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vSurfaceWorld;')
+      .replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+        vSurfaceWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        varying vec3 vSurfaceWorld;
+        uniform sampler2D uGroundKind;
+        uniform vec2 uGroundSize;
+        uniform float uPavementTile;
+        ${SURFACE_UNIFORMS}
+        ${SURFACE_NOISE}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+${GROUND_COLOR}`);
+  };
+  m.addEventListener('dispose', () => kind.dispose());
   return m;
 }

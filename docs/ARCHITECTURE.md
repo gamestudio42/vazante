@@ -140,6 +140,18 @@ Structure placement or destruction marks affected cells dirty; the flow field an
 4. Buildings merged per sector into one mesh. Zombies drawn with one `InstancedMesh` per kind. Soldiers and vehicles as individual low-poly meshes.
 5. The renderer never writes to the simulation.
 
+The M8 readability pass keeps the existing two-pass pixel pipeline and internal resolution.
+`PixelPost` preserves dark linear-light values rather than subtracting a contrast offset, fades
+outline/vignette strength towards the strategic view, and shades uncovered perspective background
+with a world-oriented zenith/horizon gradient. The horizon uses the same colour as the distance fog;
+outlines fade with that fog. Building shaders blend subpixel facade patterns towards their average
+coverage using screen derivatives. None of these presentation choices alters fog-of-war, navigation,
+entity counts or simulation time. Cosmetic tuning is in `shared/balance/presentation.ts`.
+
+`e2e/lighting.spec.ts` tests the actual WebGL composite against dark swatches, black and day/night
+sky gradients, then renders day/night fixtures in all three cameras while checking the paused
+worker's state hash and soldier count. GPU performance gates still require the reference machine.
+
 ## Persistence
 
 Save envelope: `{ format: 'vazante-save', version, seed, tick, checksum, state }`. Grid layers as base64, tables as JSON. Migrations are pure functions per version. Saves are written by the worker; IndexedDB in the browser, files through the preload bridge in Electron.
@@ -151,3 +163,78 @@ Required test: save mid-combat, load, run N ticks; the hash must equal running N
 - Electron loads `apps/game/dist` through a custom `app://` protocol, `contextIsolation: true`, `nodeIntegration: false`.
 - Preload exposes only `window.vazanteNative`: save/load file, optional Steam achievements (steamworks.js, absent client must not break the game), quit.
 - COOP/COEP headers on `app://` to enable `SharedArrayBuffer` (used for the horde buffer from v0.5; transfer fallback always works).
+
+### Architectural appearance (M8)
+
+`view3d/architecture.ts` derives four cosmetic families from building dimensions, seed and
+neighbourhood: residential plaster/masonry, commercial panels/glass, industrial brick/steel,
+and civic stone. The original solid body remains; cornices, shallow sill bands, pilasters and
+shop lintels stay inside the occupied rectangle and below its authoritative height. They are
+not entrances, cover, new entities or navigable terraces. Existing rooftop clutter is retained.
+
+Bodies share one instanced material with per-instance family, variation and wear attributes.
+Chunk splitting copies these attributes alongside instance transforms. Decorative boxes share
+one additional batch per visible chunk. Procedural surface patterns use local metre coordinates
+and derivative fading; coarse road paint and ground contact shadows remain intact. A one-byte
+per-cell terrain texture selects asphalt, paving or gravel detail without increasing the large
+ground colour texture. No extra render pass or external art dependency is added.
+
+Acceptance: architecture unit bounds/repeatability tests, a simulation scenario checking that
+city construction and chunking preserve map data and world hash, and the lighting WebGL suite.
+
+External skyline buildings use a reserved negative facade family: their roof shading preserves
+instance colour and the existing distance attenuation instead of replacing it with a fixed roof
+colour. Orthographic world views keep uncovered background black; perspective views retain sky.
+
+Rooftop fixture placement uses unsigned hash shifts and clamps the placement margin to half
+of each roof dimension. This prevents negative cosmetic offsets and unsupported fixtures on
+narrow roofs. `view3d/test/rooftops.test.ts` checks transformed fixture bounds and support heights
+across 500 building hashes and three footprint sizes; it reproduces the former signed-shift bug.
+
+### Solid set dressing and infantry/vehicle collision
+
+The worker generates `World.props` and reserves their grid cells with `Blocked.Prop`. `MapInfo.props`
+transfers these authoritative placements and occupied dimensions to the renderer. Tents, containers,
+parked tanks and other solid props are rendered from those placements only. Imported meshes fit
+inside their reserved rectangles. They are solid scenery, not usable vehicles or cover systems.
+
+Site dressing occupies vacant lots outside the deployment cross and truck parking position.
+Roadside dressing moves to vacant lots; it never reserves road cells. Tents are solid in this pass;
+there are no tent interiors or entry commands. Grid occupancy affects A*, zombie flow, physical
+movement and shared construction validation. The preview also respects non-buildable depots.
+
+Infantry uses swept, axis-separated movement against the grid and oriented truck rectangles,
+with an expanded navigation margin for routing. Trucks yield before sweeping into living infantry
+and resume when clear; they also test their new heading before turning. This runs in the same
+simulation in tactical, strategic and direct control. It adds no camera-dependent rules.
+
+New snapshots retain the prop list and grid occupancy. Legacy snapshots without `props` continue
+with their original occupancy and render no newly introduced solid props, avoiding invisible or
+retroactively overlapping obstacles. Collision changes do not add destructibility or zombie/truck
+body avoidance; existing zombie attack/ram rules remain in effect.
+
+### Architectural reference block
+
+A bounded presentation prototype selects the building nearest the starting base and its neighbours
+within 40 m along each axis. Only that cluster gets pitched residential/industrial roofs, setback crowns,
+ground-floor plinths/canopies and staggered sidewalk paving. The selection uses map geometry and
+never consumes simulation RNG. Other buildings retain the previous appearance.
+
+Roof volumes replace the upper portion of the facade, remain inside the occupied rectangle and
+reach the original maximum height. Flat-roof fixtures use the actual crown footprint; pitched
+roofs carry no flat-deck equipment. The simulation still uses its conservative rectangular height
+for visibility; these are cosmetic roofs, not accessible terraces or interiors. Two instanced roof
+batches reuse existing toon shading and chunk culling. No new per-tick system or render pass is added.
+
+Tests cover small footprints, support bounds, deterministic selection, chunk attributes and an
+unchanged world hash. `e2e/reference-block.spec.ts` captures the cluster close up, from the map and
+in perspective at noon and night. GPU performance acceptance remains the separate roadmap gate.
+
+### City-wide architecture (2026-11-12)
+
+The reference cluster remains a camera fixture, but roof silhouettes now extend to all buildings.
+A shared city appearance plan drives both bodies and supported rooftop equipment. Hospital sites
+select a nearby civic building with a blue upper band and setback crown; stations select a gabled
+hall with an amber band. A base within 12 cells of water selects a harbour-style warehouse with a
+steel-blue band. These reuse existing occupied buildings as visual anchors; no port gameplay,
+interiors or new collision volumes are introduced. Site assignment uses map geometry only.

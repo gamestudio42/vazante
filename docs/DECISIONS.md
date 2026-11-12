@@ -85,3 +85,26 @@ A save is a structured clone of the whole `World` plus its state hash. Loading r
 - **Medics do not cure.** They heal HP and slow a bite, so they never emit `soldier_cured`; only the hospital cures.
 - **`soldier_healed` once a second per treating medic.** A medic heals every tick, so an event per tick would flood the event stream. On ticks where `tick % TICK_HZ === 0` a medic who is treating someone emits it at the patient (`source` the patient, `target` the medic). A medic with no one hurt in reach emits nothing.
 - **Not an alert.** It is for the renderer (a small heal glow), not the alert log, where it would repeat every second.
+
+## D15. Solid scenery is placed by the simulation
+
+Tents, parked tanks and containers previously existed only in the view and could be walked through.
+The simulation now owns cell-aligned occupied footprints and supplies their render placements.
+Keep road cells and the deployment cross clear; place roadside dressing on vacant lots rather
+than silently closing convoy routes. Meshes fit the occupied footprint. Tents are solid: playable
+interiors and entrances need their own interaction design and are not implied by decorative art.
+Legacy saves keep their original occupancy and do not acquire new solid scenery after loading.
+
+Infantry routes around truck bodies and direct control uses the same collision rules. Trucks yield
+to living infantry instead of pushing or teleporting soldiers. Existing zombie attack and vehicle
+ramming rules continue separately. This preserves one authoritative world across all cameras.
+
+### D16 — bounded architectural reference cluster (2026-11-12)
+
+Validate the next architecture pass near the starting base before applying it city-wide. Use
+cosmetic gables and setback crowns within the existing authoritative building envelope. Keep
+conservative rectangular sight blocking: no apparent roof space is traversable or advertised as
+cover. This avoids changing navigation or combat balance for an art prototype. Place fixtures on
+the actual flat crown, never above a slope or an empty setback. Sidewalk treatment only recolours
+existing sidewalk cells; it does not create new pedestrian routes. Broader expansion follows visual
+review and the existing render performance gate.

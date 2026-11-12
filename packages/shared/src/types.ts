@@ -20,6 +20,7 @@ export enum Blocked {
   GateClosed = 2,
   Rubble = 4,
   Wreck = 8,
+  Prop = 32,
   /** Low structure (HESCO, nest): blocks movement, not sight. */
   Barrier = 16,
 }
@@ -106,4 +107,11 @@ export interface MapInfo {
   buildings: BuildingRect[];
   districts: DistrictInfo[];
   sites: SiteInfo[];
+  props?: StaticProp[];
+}
+
+/** A static solid prop owned by the simulation and rendered from its map description. */
+export interface StaticProp {
+  kind: 'Tent' | 'Tank' | 'Container_Long' | 'Debris_BrokenCar' | 'Barrier_Large' | 'SackTrench';
+  x: number; y: number; yaw: number; length: number; width: number;
 }

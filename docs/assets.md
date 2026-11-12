@@ -69,3 +69,10 @@ The music, ambience (wind, horde murmur, drone), siren, gate clank and UI sounds
 Everything else (city, vehicles, structures, effects) is procedural: `packages/view3d`.
 
 To rebuild the models, unpack the kit's `Characters/glTF/*.gltf` into `assets-src/toon-shooter/` and run `pnpm models`.
+
+## Procedural architecture materials (2026-11-12)
+
+The four facade families, roof patterns, damp/runoff marks, shutters, asphalt aggregate and
+pavement joints in `view3d/surface-shaders.ts` are original code-authored artwork. Cornices,
+sill bands, pilasters and lintels are instanced primitives from `view3d/architecture.ts`.
+No third-party textures or models were added for this pass.

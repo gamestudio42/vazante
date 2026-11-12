@@ -85,7 +85,7 @@ export class Grid {
     if (g === Ground.Building || g === Ground.Water) return false;
     const b = this.blocked[cell];
     if (b === Blocked.None || cell === fromCell) return true;
-    if ((b & (Blocked.Rubble | Blocked.Wreck)) !== 0) return false;
+    if ((b & (Blocked.Rubble | Blocked.Wreck | Blocked.Prop)) !== 0) return false;
     return this.isClimbable(cell);
   }
 
@@ -98,7 +98,7 @@ export class Grid {
     if (g === Ground.Building || g === Ground.Water) return -1;
     const b = this.blocked[cell];
     if (b === Blocked.None) return 0;
-    if ((b & (Blocked.Rubble | Blocked.Wreck)) !== 0) return -1;
+    if ((b & (Blocked.Rubble | Blocked.Wreck | Blocked.Prop)) !== 0) return -1;
     return this.isClimbable(cell) ? 0 : penalty;
   }
 

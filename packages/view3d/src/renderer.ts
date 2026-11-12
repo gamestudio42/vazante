@@ -223,6 +223,7 @@ export class GameRenderer {
     const wM = map.width * map.cellSize;
     const hM = map.height * map.cellSize;
     this.rig = new CameraRig(wM, hM);
+    this.rig.setBuildings(map.buildings, map.cellSize);
 
     this.hemi = new THREE.HemisphereLight(PALETTE.skyLight, PALETTE.groundLight, 1.6);
     this.scene.add(this.hemi);
@@ -595,7 +596,7 @@ export class GameRenderer {
     });
     this.renderer.compile(this.scene, this.rig.active);
     this.renderer.shadowMap.needsUpdate = true;
-    this.post.render(this.renderer, this.scene, this.rig.active);
+    this.post.render(this.renderer, this.scene, this.rig.active, this.rig.strategicBlend);
     for (const o of hidden) o.visible = false;
     for (const e of empty) {
       if (e instanceof THREE.InstancedMesh) e.count = 0;
@@ -653,7 +654,7 @@ export class GameRenderer {
     this.lights.end(this.night);
     this.updateLighting();
     this.districts.visible = !this.economy && this.rig.band !== 'tactical' && !this.rig.direct;
-    this.post.render(this.renderer, this.scene, this.rig.active);
+    this.post.render(this.renderer, this.scene, this.rig.active, this.rig.strategicBlend);
   }
 
   private readonly cDay = new THREE.Color();
@@ -951,6 +952,7 @@ export class GameRenderer {
       if (cond === SoldierCondition.Bitten) colors.skin.setHex(PALETTE.soldierBitten);
       if (cond !== SoldierCondition.Dead) this.sDeadAt[sid] = -1;
       else if (this.sDeadAt[sid] < 0) this.sDeadAt[sid] = t;
+      if (local && this.rig.hideControlledSoldier) continue;
       const crowd = this.soldierCrowd;
       if (crowd) {
         const dist = (this.sPhase[sid] * STRIDE_M) / (Math.PI * 2);

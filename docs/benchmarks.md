@@ -114,3 +114,42 @@ Intel Xeon @ 2.10 GHz, Node 22.22, after the horde pass:
 | 8,000 | 3.28 ms | 4.30 | 9.7 |
 
 Flow field cost by map size (open field, two sources), before → after the bucket queue: 128² 3.3 → 0.8 ms, 256² 13 → 5 ms, 512² (a 2 km city) 57 → 13 ms. It is rebuilt every 5 ticks, so v0.5 still needs sector LOD or a bounded search before the 2 km map.
+
+## 2026-11-12: architectural variety, preliminary render cost
+
+Chromium/SwiftShader, seed 1 slice, 1440×900 CSS pixels, unchanged internal resolution.
+Counts include shadow and composite passes. Fixed centre (256,256), tactical spans 110/45 m,
+map at maximum span; direct camera at (256,285), facing north. Before → after draw calls:
+162→189 tactical, 106→124 close, 203→225 direct, 346→376 map. Triangles increased by about
+33k–51k across these views, from about 621k–751k to 654k–802k. The extra work is the bounded
+facade detail batch plus richer fragment shaders; no new render pass is used.
+
+Software timings were noisy with validation processes running concurrently (roughly 2.5–4.6 ms
+before and 3.4–7.2 ms after for short synchronous samples). They are not a hardware frame-rate
+comparison or a passed performance gate. Measure on the reference GPU before increasing the
+detail budget; the 5,000-visible-agent gate remains pending.
+
+## 2026-11-12: solid scenery and infantry/vehicle collision
+
+Before/after `pnpm bench 300 --json`, same i7-13620H and Node 22.23.4, six seeded benchmark scripts.
+Mean tick milliseconds: slice 0.385→0.377; slice with attack 0.387→0.335; 1,000 agents
+0.569→0.486; 4,000 1.545→1.370; 8,000 3.087→2.843; Porto Velário 8,000 5.227→4.363.
+No case increased its mean tick time above 10%. These short samples do not establish a speedup:
+new occupied cells affect routes and initial horde placement, so workload and state hashes change.
+
+Collision work runs under the existing `units` and `vehicles` profiler entries. Slice vehicle time
+rose from about 0.004 to 0.007 ms/tick, consistent with checking swept volumes against infantry;
+city vehicle time was about 0.009→0.005 ms. Static footprints are generated once, not each tick.
+This is a simulation comparison, not validation of the dense visible-horde rendering gate.
+
+### Abandoned-car placement regression (2026-11-12)
+
+300 ticks, i7-13620H, Node v22.23.4. Before/after mean tick times in ms:
+slice 0.394/0.377, slice+attack 0.329/0.329, 1,000 agents 0.495/0.507,
+4,000 agents 1.448/1.508, 8,000 agents 2.960/2.944, Porto Velário 8,000
+4.700/4.494. No mean regression exceeds 10%. After measurements ran without
+concurrent tests; the earlier concurrent measurement is not comparable. New occupied
+cells alter paths and hashes, so decreases are not evidence of an optimization.
+Placement only runs on world creation; there is no new per-tick system. The GPU
+render gate remains pending. Seeds 1/7/42 produce 13 cars in the slice and 203/211/206
+in the city, including the existing sparse dressing.

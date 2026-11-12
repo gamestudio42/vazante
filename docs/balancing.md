@@ -154,10 +154,23 @@ Veteran is the reference; every other table in this file is tuned for it. Chosen
 | Turn time after bite | 60 to 180 s |
 | Rise time after death by zombie | 20 s |
 
+## Presentation (`balance/presentation.ts`)
+
+Cosmetic values only; these do not change visibility, combat, clocks or the world hash.
+
+- Post saturation: 1.04. Shadow gain: up to 20%, fading to zero at linear luminance 0.35.
+- Outline blend: 0.62 in tactical/direct, smoothly falling to 0.28 in strategic view.
+- Vignette: 0.18 in tactical/direct, 0.08 in strategic view.
+- Sky reaches its zenith colour at world-space ray elevation 0.65.
+- Facade detail fades between projected footprints of 0.25 and 0.75 pattern periods per pixel.
+- Lighting colours remain in the renderer's `palette.ts`: daytime zenith `#657e91`, horizon/fog
+  `#aaa99b`, ground bounce `#655b4e`; night horizon/fog `#2b3446`.
+
 ## Change log
 
 | Date | Value | Old → new | Reason |
 | --- | --- | --- | --- |
+| 2026-11-12 | M8 visual readability | subtractive contrast → black-preserving shadow gain; outline 0.85 → 0.62/0.28; vignette 0.35 → 0.18/0.08; saturation 1.1 → 1.04 | keep shadow detail and reduce distant edge noise without changing simulation or internal resolution |
 | 2026-10-26 | — | — | initial tables from the Vazante spec |
 | 2026-10-26 | structure HP | thousands → 250..600 zombie attacks | HP is counted in attacks; old values made walls immortal |
 | 2026-10-26 | structure footprint | 2×2 nest, 2×1 gate → 1×1 | one cell per piece for the slice; multi-cell later |
@@ -177,3 +190,68 @@ Veteran is the reference; every other table in this file is tuned for it. Chosen
 | 2026-10-30 | survival day | 40 → 30 min (still from 08:00) | Diogo found 40 min too long; 20 min was too short |
 | 2026-10-30 | wall climbing | PILE_UNIT_M 0.5 → 0.25 (14 stacked zombies top a 3.5 m wall, 9 a hesco); once climbable, one zombie per wall cell per second (CLIMB_INTERVAL_S 1); base ammo alerts below 800 and at 0 | Diogo saw hordes pour over walls: 7 zombies were enough and the whole pile went over at once, while the base sat at 0 ammo without warning. Bot at veteran unchanged: night shift, last convoy, hospital 3/3, bridge 2/3, survival 4 nights |
 | 2026-10-30 | horde routing | flow field ignores zombies → each zombie beyond the first in a cell adds 10 (one cell of walking) to it, up to 80; lane lean 0.15 → 0.3 and slack 10 → 20 | Diogo saw the whole horde file through one gap in a single line; now a queue makes going round or hitting another stretch of wall look shorter. Bot at veteran: night shift, last convoy, hospital, bridge 3/3 |
+
+### 2026-11-12 — architecture presentation tuning
+
+Cosmetic settings in `balance/presentation.ts`: body inset 0.3 m, trim projection 0.12 m,
+cornice height/width 0.28/0.24 m, facade floor spacing 3 m, shop lintel 2.6 m, neighbourhood
+size 16 cells. Industrial variants require height at most 12 m and both dimensions at least
+8 m. Up to three residential sill rows or three civic columns; at most 12 detail boxes per
+building. Wear ranges from 0.12 to below 0.42. Fine material detail fades at projected
+footprints of 0.12–0.65 m/pixel, with grain strength 0.12 and pavement tiles of 0.75 m.
+These are new appearance controls; simulation balance is unchanged.
+
+### Solid scenery and vehicle collision (2026-11-12)
+
+New controls in `balance/collision.ts`: soldier radius 0.3 m, sweep step at most 0.15 m,
+truck body 7×2.5 m. Solid tents, containers, tanks and car wrecks reserve 8×4 m; barriers and
+sandbags reserve 4×4 m. Models fit within those footprints. Site deployment clearance is 8 m,
+with at most eight tents. Objects previously placed independently by the renderer now reserve
+real cells on vacant lots. Road cells remain open. Tents currently have no traversable interior.
+
+This changes navigation and movement, not resource costs, unit stats or damage. Trucks yield to
+infantry rather than overlapping it. The separate static-prop flag is not a climbable structure.
+
+### 2026-11-12 — bounded architectural reference block
+
+Presentation only: the nearest building to the base anchors a cluster with a 40 m half-extent.
+Roof rise is at most 2.4 m or 25% of building height; setbacks are at most 1.2 m or 25% of the
+narrower footprint. Residential and industrial buildings up to 15 m use gables. Ground-floor plinths are 0.45 m
+high, canopies 0.5 m deep and 65% of facade width. The detail budget rises from 12 to 20 boxes
+per building in this prototype. Existing sidewalk cells around the cluster use staggered
+4-texel slabs (2 m at the current ground-texture density), joint shade 0.84 and colour variation
+±0.035. No occupied cells, terrain kinds, sight-blocking heights or gameplay balance change.
+
+### 2026-11-12 — abandoned-car distribution
+
+Scan every vacant lot cell instead of sampling every third cell for cars. Candidate hashing uses
+modulo 11, with 24 m minimum spacing and one new car per 32-cell sector. Cars require two free
+lot cells adjacent to a street or sidewalk and keep the two-cell exclusion around bases/depots.
+Existing sparse dressing remains. This restores cars without occupying streets or sidewalks;
+existing saves retain their saved placements.
+
+### Direct-camera obstruction (2026-11-12)
+
+Camera clearance is 0.6 m around building envelopes. The default offset is 12 m behind,
+8 m above ground, measured from a 1.5 m target. Obstructions retract the camera immediately;
+return to the full offset eases over 0.3 s. Presentation only.
+
+### Close direct-camera visibility (2026-11-12)
+
+Hide the controlled soldier's rendered body and selection ring below 2.5 m camera-to-target
+separation; restore above 3 m to avoid oscillation at the threshold. Applies to both the baked
+model and procedural fallback. Simulation state, other soldiers and camera obstacle clearance
+are unchanged. This keeps the camera from looking through its own soldier at tight walls.
+
+### City-wide architecture (2026-11-12)
+
+Apply the validated roof profiles city-wide. Waterfront visual anchors search within 12 cells
+of a base for water. Landmark bands increase the detail budget to 22 boxes per building;
+all parts stay below the authoritative height and within the occupied footprint.
+
+### Image cleanup (2026-11-12)
+
+Surface ordered-dither amplitude decreases from 0.5 to 0.22. Perspective sky and fully fogged
+surfaces keep smooth gradients instead of colour quantization; intermediate fog blends the two.
+Facade detail now fades at 0.18–0.55 projected window periods (previously 0.25–0.75), and glass
+variation converges to its mean at distance. Black map background and world visibility remain intact.
