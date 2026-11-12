@@ -5,7 +5,7 @@ import { buildArchitecture, planCityBuildings, referenceBuildings } from './arch
 import { hash } from './cosmetic.ts';
 export { hash } from './cosmetic.ts';
 import { PALETTE } from './palette.ts';
-import { planCrossings, vegetationStyle } from './streets.ts';
+import { planCentreLines, planCrossings, vegetationStyle } from './streets.ts';
 
 /** Texels per cell in the ground texture (lane markings, curbs, grain). */
 const TPC = 8;
@@ -249,6 +249,7 @@ function groundTexture(map: MapInfo, crossings: Uint8Array): THREE.DataTexture {
   const W = map.width * TPC;
   const H = map.height * TPC;
   const data = new Uint8Array(W * H * 4);
+  const centre = planCentreLines(map);
   const base: Record<number, number> = {
     [Ground.Street]: PALETTE.street,
     [Ground.Sidewalk]: PALETTE.sidewalk,
@@ -282,13 +283,13 @@ function groundTexture(map: MapInfo, crossings: Uint8Array): THREE.DataTexture {
       let mix: number | null = null;
       let mixT = 0;
       if (kind === Ground.Street) {
-        // Dashed centre lines where a street run is 2+ cells wide in one axis.
-        const horiz = g(cx, cy - 1) !== Ground.Street || g(cx, cy + 1) !== Ground.Street;
-        const vert = g(cx - 1, cy) !== Ground.Street || g(cx + 1, cy) !== Ground.Street;
-        const nsStreet = g(cx, cy - 1) === Ground.Street && g(cx, cy + 1) === Ground.Street;
-        const ewStreet = g(cx - 1, cy) === Ground.Street && g(cx + 1, cy) === Ground.Street;
-        if (nsStreet && !ewStreet && vert && g(cx + 1, cy) === Ground.Street && sx === TPC - 1 && cy % 2 === 0) c = PALETTE.marking;
-        if (ewStreet && !nsStreet && horiz && g(cx, cy + 1) === Ground.Street && sy === TPC - 1 && cx % 2 === 0) c = PALETTE.marking;
+        // Dashed centre line in the middle of the street, whatever its width (2, 3 or 4 cells): the
+        // texel just west (north) of the centre. It used to sit beside the curb lane, a third or a
+        // quarter of the way across on the wider streets.
+        const ns = centre.ns[cy * map.width + cx];
+        const ew = centre.ew[cy * map.width + cx];
+        if (ns >= 0 && tx === (ns * TPC) / 2 - 1 && cy % 2 === 0) c = PALETTE.marking;
+        if (ew >= 0 && ty === (ew * TPC) / 2 - 1 && cx % 2 === 0) c = PALETTE.marking;
         if (c === PALETTE.marking) {
           // Worn paint: gaps where the asphalt shows through.
           if (n2 > 0.72) c = PALETTE.street;

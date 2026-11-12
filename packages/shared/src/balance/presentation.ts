@@ -46,6 +46,8 @@ export const PRESENTATION = {
   },
   street: {
     crossingMaxCells: 12,
+    /** Widest street (cells) that gets a centre line; avenues are 4, wider runs are junctions. */
+    centreLineMaxWidthCells: 6,
     stripeTexels: 2,
     crossingHalfWidthTexels: 2,
     signHeight: 2.4,

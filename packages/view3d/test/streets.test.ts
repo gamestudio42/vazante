@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { Ground, PRESENTATION, type MapInfo } from '@vazante/shared';
-import { planCrossings, vegetationStyle } from '../src/streets.ts';
+import { planCentreLines, planCrossings, vegetationStyle } from '../src/streets.ts';
 
 function blankMap(size: number): MapInfo {
   return { seed: 1, width: size, height: size, cellSize: 4, ground: new Uint8Array(size * size).fill(Ground.Building), heights: new Uint8Array(size * size), buildings: [], districts: [], sites: [] };
@@ -63,4 +63,27 @@ test('trees share one style per district, and districts differ', () => {
   const t = PRESENTATION.street;
   expect(t.foliage.length).toBe(t.treeDensityModulo.length);
   expect(t.foliage.length).toBe(t.treeScale.length);
+});
+
+test('the centre line sits in the middle of 2-, 3- and 4-cell streets, and junctions get none', () => {
+  const map = blankMap(20);
+  const at = (x: number, y: number) => y * map.width + x;
+  // North-south streets 3 (x 5-7), 4 (x 10-13) and 2 (x 16-17) cells wide, and one east-west street (y 9-10).
+  for (let y = 0; y < 20; y++) for (const x of [5, 6, 7, 10, 11, 12, 13, 16, 17]) map.ground[at(x, y)] = Ground.Street;
+  for (let x = 0; x < 20; x++) for (const y of [9, 10]) map.ground[at(x, y)] = Ground.Street;
+  const { ns, ew } = planCentreLines(map);
+  // Twice the centre in cells: 6.5 for x 5-7, 12 for x 10-13, 17 for x 16-17, on every cell across.
+  for (const x of [5, 6, 7]) expect(ns[at(x, 3)]).toBe(13);
+  for (const x of [10, 11, 12, 13]) expect(ns[at(x, 3)]).toBe(24);
+  for (const x of [16, 17]) expect(ns[at(x, 15)]).toBe(34);
+  // The east-west street centres between rows 9 and 10.
+  expect(ew[at(2, 9)]).toBe(20);
+  expect(ew[at(2, 10)]).toBe(20);
+  // Inside the junctions neither line is painted.
+  for (const x of [6, 11, 16]) {
+    expect(ns[at(x, 9)]).toBe(-1);
+    expect(ew[at(x, 9)]).toBe(-1);
+  }
+  // Not a street, no line.
+  expect(ns[at(0, 0)]).toBe(-1);
 });
