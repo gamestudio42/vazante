@@ -37,3 +37,22 @@ test('reference silhouettes have supported roofs and retain the authoritative ma
   }
   expect([...shapes].sort()).toEqual(['gable', 'setback']);
 });
+
+test('landmarks have distinct silhouettes and keep their details inside the occupied envelope', () => {
+  const b = { id: 1, x0: 0, y0: 0, x1: 4, y1: 4, height: 18 };
+  const hospital = planBuilding(b, 4, 1, true, 'hospital');
+  const station = planBuilding(b, 4, 1, true, 'station');
+  const port = planBuilding(b, 4, 1, true, 'port');
+  expect(hospital.family).toBe('civic');
+  expect(hospital.roofShape).toBe('setback');
+  expect(station.roofShape).toBe('gable');
+  expect(port.roofShape).toBe('gable');
+  expect(station.details.at(-1)!.color).not.toBe(port.details.at(-1)!.color);
+  for (const a of [hospital, station, port]) for (const p of a.details) {
+    expect(p.x - p.width / 2).toBeGreaterThanOrEqual(0);
+    expect(p.x + p.width / 2).toBeLessThanOrEqual(20);
+    expect(p.z - p.depth / 2).toBeGreaterThanOrEqual(0);
+    expect(p.z + p.depth / 2).toBeLessThanOrEqual(20);
+    expect(p.y + p.height).toBeLessThanOrEqual(18);
+  }
+});

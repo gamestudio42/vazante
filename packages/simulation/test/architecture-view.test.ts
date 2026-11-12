@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { SimulationEngine } from '../src/index.ts';
 import { buildCity } from '../../view3d/src/city.ts';
-import { planBuilding, referenceBuildings } from '../../view3d/src/architecture.ts';
+import { planCityBuildings, referenceBuildings } from '../../view3d/src/architecture.ts';
 
 test('city architecture preserves the world and styles through chunking', () => {
   const engine = SimulationEngine.create(1, 'last_convoy');
@@ -13,6 +13,7 @@ test('city architecture preserves the world and styles through chunking', () => 
   expect(reference.size).toBeLessThan(map.buildings.length);
   expect(referenceBuildings(map)).toEqual(reference);
   const city = buildCity(map);
+  const appearances = planCityBuildings(map);
   let count = 0;
   city.traverse(o => {
     if (o.name !== 'buildings') return;
@@ -23,7 +24,7 @@ test('city architecture preserves the world and styles through chunking', () => 
       const z = mesh.instanceMatrix.array[i * 16 + 14];
       const b = map.buildings.find(b => (b.x0 + b.x1 + 1) * 2 === x && (b.y0 + b.y1 + 1) * 2 === z)!;
       expect(b).toBeDefined();
-      const look = planBuilding(b, map.cellSize, map.seed, reference.has(b.id));
+      const look = appearances.get(b.id)!;
       expect(style.getX(i)).toBe(look.familyIndex);
       expect(style.getY(i)).toBe(look.variation);
       expect(mesh.instanceMatrix.array[i * 16 + 5]).toBeCloseTo(look.body.height, 5);

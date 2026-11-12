@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PRESENTATION, type BuildingRect, type MapInfo } from '@vazante/shared';
+import { Ground, PRESENTATION, type BuildingRect, type MapInfo } from '@vazante/shared';
 import { hash } from './cosmetic.ts';
 import { buildingMaterial, toon } from './materials.ts';
 import { PALETTE } from './palette.ts';
@@ -18,6 +18,8 @@ export interface FacadePart {
   depth: number;
   color: number;
 }
+
+export type Landmark = 'hospital' | 'station' | 'port';
 
 export interface BuildingAppearance {
   family: BuildingFamily;
@@ -52,20 +54,20 @@ export function referenceBuildings(map: MapInfo): Set<number> {
 }
 
 /** All details stay inside the engine's occupied rectangle and below its sight-blocking height. */
-export function planBuilding(b: BuildingRect, cellSize: number, seed: number, reference = false): BuildingAppearance {
+export function planBuilding(b: BuildingRect, cellSize: number, seed: number, reference = false, landmark?: Landmark): BuildingAppearance {
   const tuning = PRESENTATION.architecture;
   const district = hash(Math.floor(b.x0 / tuning.neighborhoodCells) * 73856093 ^ Math.floor(b.y0 / tuning.neighborhoodCells) * 19349663 ^ seed);
   const variation = hash(b.id * 92821 ^ district);
   const width = (b.x1 - b.x0 + 1) * cellSize - tuning.inset * 2;
   const depth = (b.y1 - b.y0 + 1) * cellSize - tuning.inset * 2;
-  const familyIndex = b.height <= tuning.industrialMaxHeight && Math.min(width, depth) >= tuning.industrialMinWidth && variation % 3 === 0
+  const familyIndex = landmark === 'hospital' ? 3 : landmark === 'station' || landmark === 'port' ? 2 : b.height <= tuning.industrialMaxHeight && Math.min(width, depth) >= tuning.industrialMinWidth && variation % 3 === 0
     ? 2 : variation % 7 === 0 ? 3 : variation % 3 === 1 ? 1 : 0;
   const family = BUILDING_FAMILIES[familyIndex];
   const colors = PALETTE.architecture[family];
   const x = (b.x0 + b.x1 + 1) * cellSize / 2;
   const z = (b.y0 + b.y1 + 1) * cellSize / 2;
   const body: FacadePart = { x, y: 0, z, width, height: b.height, depth, color: colors.walls[variation % colors.walls.length] };
-  const roofShape = !reference ? 'flat' : (family === 'industrial' || family === 'residential') && b.height <= tuning.pitchedMaxHeight ? 'gable' : 'setback';
+  const roofShape = landmark === 'station' || landmark === 'port' ? 'gable' : !reference ? 'flat' : (family === 'industrial' || family === 'residential') && b.height <= tuning.pitchedMaxHeight ? 'gable' : 'setback';
   const rise = Math.min(tuning.roofRise, b.height * tuning.roofMaxFraction);
   const setback = Math.min(tuning.roofSetback, Math.min(width, depth) * tuning.roofMaxFraction);
   const roof: FacadePart | null = roofShape === 'flat' ? null : {
@@ -117,14 +119,44 @@ export function planBuilding(b: BuildingRect, cellSize: number, seed: number, re
         width * tuning.canopyWidthFraction, band, tuning.canopyDepth, colors.accent);
     }
   }
+  if (landmark) {
+    const accent = landmark === 'hospital' ? PALETTE.base : landmark === 'station' ? PALETTE.depot : PALETTE.architecture.industrial.accent;
+    for (const side of [-1, 1]) add(x, Math.max(0, wallHeight - band * 3), z + side * depth / 2, width, band * 2, faceDepth, accent);
+  }
   return { roof, roofShape, family, familyIndex, variation: variation % 251, wear: tuning.wearMin + ((variation >>> 8) % 100) / 100 * tuning.wearRange, body, details };
+}
+
+
+/** City-wide silhouettes; strategic sites get a distinct existing building, never a new obstacle. */
+export function planCityBuildings(map: MapInfo): Map<number, BuildingAppearance> {
+  const landmarks = new Map<number, Landmark>();
+  for (const site of map.sites) {
+    let role: Landmark | undefined = site.role === 'hospital' || site.role === 'station' ? site.role : undefined;
+    if (!role && site.kind === 'base') {
+      const reach = PRESENTATION.architecture.waterfrontCells;
+      for (let y = Math.max(0, site.y0 - reach); y <= Math.min(map.height - 1, site.y1 + reach); y++) {
+        for (let x = Math.max(0, site.x0 - reach); x <= Math.min(map.width - 1, site.x1 + reach); x++) {
+          if (map.ground[y * map.width + x] === Ground.Water) role = 'port';
+        }
+      }
+    }
+    if (!role) continue;
+    let nearest: BuildingRect | undefined;
+    let distance = Infinity;
+    for (const b of map.buildings) {
+      if (landmarks.has(b.id)) continue;
+      const d = ((b.x0 + b.x1 - site.x0 - site.x1) ** 2 + (b.y0 + b.y1 - site.y0 - site.y1) ** 2);
+      if (d < distance) { distance = d; nearest = b; }
+    }
+    if (nearest) landmarks.set(nearest.id, role);
+  }
+  return new Map(map.buildings.map(b => [b.id, planBuilding(b, map.cellSize, map.seed, true, landmarks.get(b.id))]));
 }
 
 /** One body batch and one detail batch, subsequently culled in the city's existing chunks. */
 export function buildArchitecture(map: MapInfo): THREE.Group {
   const group = new THREE.Group();
-  const reference = referenceBuildings(map);
-  const appearances = map.buildings.map(b => planBuilding(b, map.cellSize, map.seed, reference.has(b.id)));
+  const appearances = [...planCityBuildings(map).values()];
   const box = new THREE.BoxGeometry(1, 1, 1);
   box.translate(0, 0.5, 0);
   const attributes = new Float32Array(Math.max(1, appearances.length) * 4);

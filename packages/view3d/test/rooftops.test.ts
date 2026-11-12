@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { buildRooftops } from '../src/city.ts';
-import { planBuilding, type ArchitectureMesh } from '../src/architecture.ts';
+import { planBuilding, planCityBuildings, type ArchitectureMesh } from '../src/architecture.ts';
 import type { MapInfo } from '@vazante/shared';
 
 test('roof fixtures are supported by their building across cosmetic hashes and roof sizes', () => {
@@ -9,7 +9,7 @@ test('roof fixtures are supported by their building across cosmetic hashes and r
       const building = { id, x0: 10, y0: 20, x1: 9 + cells, y1: 19 + cells, height: 18 };
       const map: MapInfo = { seed: 1, width: 32, height: 32, cellSize: 4, ground: new Uint8Array(1024), heights: new Uint8Array(1024), buildings: [building], sites: [], districts: [] };
       if (reference) map.sites.push({ name: 'reference', kind: 'base', x0: 0, y0: 0, x1: 1, y1: 1 });
-      const appearance = planBuilding(building, 4, 1, reference);
+      const appearance = planCityBuildings(map).get(building.id)!;
       const deck = appearance.roof ?? appearance.body;
       const group = buildRooftops(map);
       group.traverse(o => {

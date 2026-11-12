@@ -229,3 +229,12 @@ batches reuse existing toon shading and chunk culling. No new per-tick system or
 Tests cover small footprints, support bounds, deterministic selection, chunk attributes and an
 unchanged world hash. `e2e/reference-block.spec.ts` captures the cluster close up, from the map and
 in perspective at noon and night. GPU performance acceptance remains the separate roadmap gate.
+
+### City-wide architecture (2026-11-12)
+
+The reference cluster remains a camera fixture, but roof silhouettes now extend to all buildings.
+A shared city appearance plan drives both bodies and supported rooftop equipment. Hospital sites
+select a nearby civic building with a blue upper band and setback crown; stations select a gabled
+hall with an amber band. A base within 12 cells of water selects a harbour-style warehouse with a
+steel-blue band. These reuse existing occupied buildings as visual anchors; no port gameplay,
+interiors or new collision volumes are introduced. Site assignment uses map geometry only.

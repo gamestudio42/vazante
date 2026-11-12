@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Ground, PRESENTATION, type MapInfo } from '@vazante/shared';
 import { buildingMaterial, groundMaterial, toon } from './materials.ts';
-import { buildArchitecture, planBuilding, referenceBuildings } from './architecture.ts';
+import { buildArchitecture, planCityBuildings, referenceBuildings } from './architecture.ts';
 import { hash } from './cosmetic.ts';
 export { hash } from './cosmetic.ts';
 import { PALETTE } from './palette.ts';
@@ -104,13 +104,12 @@ export function buildDistrictOverlay(map: MapInfo): THREE.Group {
  */
 export function buildRooftops(map: MapInfo): THREE.Group {
   const group = new THREE.Group();
-  const cs = map.cellSize;
   const ac: THREE.Matrix4[] = [];
   const stairs: THREE.Matrix4[] = [];
   const tanks: THREE.Matrix4[] = [];
-  const reference = referenceBuildings(map);
+  const appearances = planCityBuildings(map);
   for (const b of map.buildings) {
-    const appearance = planBuilding(b, cs, map.seed, reference.has(b.id));
+    const appearance = appearances.get(b.id)!;
     // Pitched roofs carry no flat-deck equipment. Setback crowns own a smaller support area.
     if (appearance.roofShape === 'gable') continue;
     const deck = appearance.roof ?? appearance.body;

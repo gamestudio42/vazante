@@ -242,3 +242,9 @@ Hide the controlled soldier's rendered body and selection ring below 2.5 m camer
 separation; restore above 3 m to avoid oscillation at the threshold. Applies to both the baked
 model and procedural fallback. Simulation state, other soldiers and camera obstacle clearance
 are unchanged. This keeps the camera from looking through its own soldier at tight walls.
+
+### City-wide architecture (2026-11-12)
+
+Apply the validated roof profiles city-wide. Waterfront visual anchors search within 12 cells
+of a base for water. Landmark bands increase the detail budget to 22 boxes per building;
+all parts stay below the authoritative height and within the occupied footprint.
