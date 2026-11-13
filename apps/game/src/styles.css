@@ -133,6 +133,28 @@ b {
   text-transform: uppercase;
   color: var(--muted);
 }
+.boot.fatal {
+  place-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.boot.fatal h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.boot.fatal p {
+  margin: 0 auto;
+  max-width: 52ch;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
 .row {
   display: flex;
   gap: 8px;
@@ -1501,6 +1523,16 @@ button.big {
   gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--line);
+}
+.settings .playtest {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.settings .playtest p {
+  margin: 0;
+  font-size: 13px;
 }
 .settings select {
   font: inherit;

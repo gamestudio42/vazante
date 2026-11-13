@@ -385,12 +385,42 @@ function SettingsPanel({ shell }: { shell: Shell }) {
           <input type="checkbox" checked={s.edgePan} onChange={(e) => set({ edgePan: e.target.checked })} />
           <span className="muted">{s.edgePan ? t('settings.on') : t('settings.off')}</span>
         </label>
+        {shell.playtest && <PlaytestRow shell={shell} />}
         <div className="row end">
           <button className="primary" onClick={() => shell.openPanel(null)}>
             <Undo2 size={14} />
             {t('menu.back')}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Export or clear the local playtest log; the file is what testers send back. */
+function PlaytestRow({ shell }: { shell: Shell }) {
+  const rec = shell.playtest;
+  const [count, setCount] = useState(rec?.sessions ?? 0);
+  if (!rec) return null;
+  return (
+    <div className="playtest">
+      <span>{t('settings.playtest')}</span>
+      <p className="muted">{t('settings.playtestHint').replace('{n}', String(count))}</p>
+      <div className="row">
+        <button onClick={() => rec.exportFile()} disabled={count === 0}>
+          <Download size={14} />
+          {t('settings.playtestExport')}
+        </button>
+        <button
+          onClick={() => {
+            rec.clear();
+            setCount(0);
+          }}
+          disabled={count === 0}
+        >
+          <Trash2 size={14} />
+          {t('settings.playtestClear')}
+        </button>
       </div>
     </div>
   );

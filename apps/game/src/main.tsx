@@ -9,6 +9,7 @@ import { loadSettings, newGameSeed } from './settings.ts';
 import { Shell, type Screen } from './shell.ts';
 import { getSave } from './storage.ts';
 import { probe } from './probe.ts';
+import { PlaytestRecorder } from './playtest-recorder.ts';
 import { runFrameBench } from './bench.ts';
 import { App } from './ui/App.tsx';
 import '@fontsource/barlow/400.css';
@@ -30,9 +31,41 @@ document.body.prepend(canvas);
 const reactRoot = createRoot(root);
 reactRoot.render(<div className="boot">{t('boot.loading')}</div>);
 
-void boot();
+void boot().catch((err: unknown) => fatal('boot.failed', err));
+
+/** A screen that replaces the game when it cannot run, so the player is never left on "loading". */
+function fatal(key: 'boot.noWebgl' | 'boot.failed', err?: unknown): void {
+  if (err) console.error(err);
+  canvas.remove();
+  reactRoot.render(
+    <div className="boot fatal" role="alert">
+      <h1>{t(`${key}.title`)}</h1>
+      <p>{t(`${key}.body`)}</p>
+    </div>,
+  );
+}
+
+/** The renderer needs WebGL 2; checked before the city is generated. */
+function webgl2Available(): boolean {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    return gl !== null;
+  } catch {
+    return false;
+  }
+}
+
+function gpuName(gl: WebGLRenderingContext | WebGL2RenderingContext): string {
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  return dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : 'unknown';
+}
 
 async function boot(): Promise<void> {
+  if (!webgl2Available()) {
+    fatal('boot.noWebgl');
+    return;
+  }
   const slot = params.get('load');
   let save: SaveGame | null = null;
   if (slot) {
@@ -49,7 +82,7 @@ async function boot(): Promise<void> {
     const map = client.state.map;
     if (!map) return;
     unsubscribe();
-    void start(client, map, initial);
+    start(client, map, initial).catch((err: unknown) => fatal('boot.failed', err));
   });
 }
 
@@ -76,6 +109,8 @@ async function start(client: GameClient, map: NonNullable<GameClient['state']['m
     audio.onFrame(f);
   });
   const shell = new Shell(client, input, view, audio, settings, initial);
+  const playtest = new PlaytestRecorder(client, shell, gpuName(view.renderer.getContext()));
+  shell.playtest = playtest;
   // A save that no longer matches the rules starts a fresh game on the same city.
   let reported = false;
   client.subscribe(() => {
@@ -95,6 +130,7 @@ async function start(client: GameClient, map: NonNullable<GameClient['state']['m
     last = now;
     const t0 = performance.now();
     shell.update(dt);
+    playtest.update(dt);
     const t1 = performance.now();
     input.update(dt, now);
     const t2 = performance.now();
