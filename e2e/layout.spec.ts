@@ -35,7 +35,7 @@ for (const [w, h] of [
         topbar: one('.topbar'),
         leftcol: one('.leftcol'),
         minimap: one('.minimap'),
-        bottom: [...document.querySelector('.bottomcol')!.children].map(box),
+        bottom: Array.from(document.querySelector('.bottomcol')!.children, box),
       };
     });
     for (const b of boxes.bottom) {
