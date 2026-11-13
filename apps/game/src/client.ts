@@ -1,4 +1,4 @@
-import type { Command, DifficultyId, Frame, FromWorker, MapInfo, SaveGame, SimEvent, ToWorker } from '@vazante/shared';
+import type { Command, CrewSeat, DifficultyId, Frame, FromWorker, MapInfo, SaveGame, SimEvent, ToWorker } from '@vazante/shared';
 
 export interface Alert {
   id: number;
@@ -6,6 +6,8 @@ export interface Alert {
   type: SimEvent['type'];
   reason?: string;
   value?: number;
+  /** Soldier, squad or vehicle the event is about. */
+  source?: number;
   x?: number;
   y?: number;
 }
@@ -71,10 +73,10 @@ export class GameClient {
   private pendingSaves = new Map<string, (s: SaveGame) => void>();
   state: ClientState = { map: null, frame: null, selected: [], vehicle: null, structure: null, alerts: [], limited: false, loadError: null, version: 0 };
 
-  constructor(seed: number, save?: SaveGame, difficulty?: DifficultyId, scenario = 'last_convoy') {
+  constructor(seed: number, save?: SaveGame, difficulty?: DifficultyId, scenario = 'last_convoy', crew?: CrewSeat[][]) {
     this.worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
     this.worker.onmessage = (ev: MessageEvent<FromWorker>) => this.onMessage(ev.data);
-    this.post({ type: 'init', seed, scenario: save?.scenario ?? scenario, save, difficulty });
+    this.post({ type: 'init', seed, scenario: save?.scenario ?? scenario, save, difficulty, crew });
   }
 
   /** Rebuild the (not yet started) scenario at another difficulty. */
@@ -115,7 +117,7 @@ export class GameClient {
       let alerts = this.state.alerts;
       const fresh = f.events.filter((e) => ALERT_TYPES.has(e.type));
       if (fresh.length > 0) {
-        alerts = [...fresh.map((e) => ({ id: ++this.alertSeq, tick: e.tick, type: e.type, reason: e.reason, value: e.value, x: e.x, y: e.y })).reverse(), ...alerts].slice(0, 30);
+        alerts = [...fresh.map((e) => ({ id: ++this.alertSeq, tick: e.tick, type: e.type, reason: e.reason, value: e.value, source: e.source, x: e.x, y: e.y })).reverse(), ...alerts].slice(0, 30);
       }
       for (const fn of this.frameListeners) fn(f);
       this.update({ frame: f, alerts, limited });

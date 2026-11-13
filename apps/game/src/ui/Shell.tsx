@@ -4,6 +4,9 @@ import { DIFFICULTY_IDS, MISSION_IDS, TICK_HZ, type MissionId, type SaveMeta } f
 import { LOCALES, LOCALE_NAMES, t, type Locale } from '../i18n.ts';
 import type { Settings } from '../settings.ts';
 import type { Shell } from '../shell.ts';
+import { rankForXp } from '@vazante/shared';
+import type { Trooper } from '../roster.ts';
+import { soldierLabel } from './soldier.ts';
 
 /** Menus that cover the game: main menu, campaign, briefing, pause, settings, load. */
 export function ShellOverlay({ shell, seed }: { shell: Shell; seed: number }) {
@@ -321,12 +324,73 @@ function CampaignPanel({ shell }: { shell: Shell }) {
             );
           })}
         </ol>
+        <RosterView shell={shell} />
         <div className="row end">
           <button className="primary" onClick={() => shell.openPanel(null)}>
             <Undo2 size={14} />
             {t('menu.back')}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** The soldiers who carry over between missions, and the memorial of those who fell. */
+function RosterView({ shell }: { shell: Shell }) {
+  const r = shell.roster;
+  const units = Object.entries(r.units).filter(([, u]) => u.some(Boolean));
+  if (units.length === 0 && r.fallen.length === 0) return <p className="muted roster-empty">{t('roster.empty')}</p>;
+  const label = (key: string) => {
+    const [kind, n] = key.split(':');
+    return `${t(`squadKind.${kind}`)}${Number(n) > 0 ? ` ${Number(n) + 1}` : ''}`;
+  };
+  return (
+    <div className="roster">
+      <h3>{t('roster.title')}</h3>
+      {units.map(([key, u]) => (
+        <div key={key} className="roster-unit">
+          <span className="roster-kind">{label(key)}</span>
+          <ul>
+            {u
+              .filter((x): x is Trooper => x !== null)
+              .map((x) => (
+                <li key={x.rid} title={t('roster.record').replace('{m}', String(x.missions)).replace('{k}', String(x.kills))}>
+                  <b>{soldierLabel(rankForXp(x.xp), x.name)}</b>
+                  <span className="muted">
+                    {x.missions}·{x.kills}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ))}
+      {r.fallen.length > 0 && (
+        <>
+          <h3>
+            <Skull size={14} /> {t('roster.memorial')}
+          </h3>
+          <ul className="memorial">
+            {r.fallen.slice(0, 12).map((x) => (
+              <li key={`${x.rid}-${x.at}`}>
+                <b>{soldierLabel(x.rank, x.name)}</b>
+                <span className="muted">
+                  {t(`roster.fate.${x.fate}`)} · {t(`brief.${x.mission}.title`)} · {x.kills}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <div className="row">
+        <button
+          onClick={() => {
+            if (confirm(t('roster.resetConfirm'))) shell.resetRoster();
+          }}
+        >
+          <RefreshCw size={14} />
+          {t('roster.reset')}
+        </button>
       </div>
     </div>
   );

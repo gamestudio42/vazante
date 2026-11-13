@@ -108,3 +108,20 @@ cover. This avoids changing navigation or combat balance for an art prototype. P
 the actual flat crown, never above a slope or an empty setback. Sidewalk treatment only recolours
 existing sidewalk cells; it does not create new pedestrian routes. Broader expansion follows visual
 review and the existing render performance gate.
+
+## D17. The campaign roster lives in the client; rank lives in the simulation (2026-11-13)
+
+- **Why a roster.** Playtest notes and the 2026-11-13 review found nothing carries between
+  missions, so a loss had no weight after the summary and a win no reward but the next mission.
+- **Split.** Names, experience and the memorial are player meta-progression, stored with the
+  settings in `localStorage` (`apps/game/src/roster.ts`). The simulation only receives seats
+  (`rid`, `rank`) when a campaign mission is built, keeps them on the soldier, counts kills per
+  soldier and exposes them in `Frame.crew`. Ranks are part of the hash and of saves; an empty crew
+  hashes exactly as before.
+- **Settled once, at the summary.** The client writes the result when the mission summary first
+  shows. A rid that is no longer on the roster is ignored, so loading a save from before a death
+  cannot revive anyone. Save-scumming a whole mission is still possible; an ironman option can come
+  later if playtests show it matters.
+- **Practice.** A game with the guided tutorial does not touch the roster, so learning the controls
+  never kills a named soldier.
+

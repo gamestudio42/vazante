@@ -14,6 +14,10 @@ export function killZombie(w: World, slot: number, source: number): void {
   const kind = z.kind[slot];
   z.kill(slot);
   w.stats.zombiesKilled++;
+  if (source) {
+    const s = w.soldier(source);
+    if (s) s.kills = (s.kills ?? 0) + 1;
+  }
   w.emit({ type: 'zombie_killed', source, target: slot, x, y, value: kind });
   if (kind === ZombieKind.Bloater) burst(w, x, y);
 }

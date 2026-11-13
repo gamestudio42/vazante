@@ -317,6 +317,7 @@ export class SimulationEngine {
         ammoTotal,
         tickMs: this.lastTickMs,
       },
+      crew: w.soldiers.filter((s) => s.rid).map((s) => ({ id: s.id, rid: s.rid ?? 0, rank: s.rank ?? 0, kills: s.kills ?? 0 })),
     };
   }
 
@@ -377,6 +378,10 @@ export class SimulationEngine {
       h.byte(s.outOfAmmoReported ? 1 : 0).f64Value(s.stress).u32(s.panicT).u32(s.panicCd).byte(s.inCover ? 1 : 0);
       // Hashed only when set, so saves from before catch-up routes still load.
       if (s.stuckT) h.u32(s.stuckT);
+      // Roster fields, hashed only when set so older saves still load.
+      if (s.rid) h.str('rid').u32(s.rid);
+      if (s.rank) h.str('rank').u32(s.rank);
+      if (s.kills) h.str('kills').u32(s.kills);
       if (s.route) {
         h.u32(s.route.length).u32(s.routeT ?? 0);
         for (const v of s.route) h.f64Value(v);

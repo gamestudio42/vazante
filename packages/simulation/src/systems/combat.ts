@@ -18,6 +18,7 @@ import {
   SPECIAL_PRIORITY,
   TARGET_SHARE_PENALTY,
   TICK_DT,
+  VETERANCY,
   ZombieKind,
   TICK_HZ,
   WEAPONS,
@@ -260,7 +261,8 @@ function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: numb
   const rangeFactor = 1 - r * r * 0.5;
   const stanceFactor = s.moving ? ACCURACY_MOVING : s.inCover ? ACCURACY_STATIONARY * COVER_ACCURACY_BONUS : ACCURACY_STATIONARY;
   const nerve = 1 - (STRESS.aimPenalty * s.stress) / 100;
-  const p = clamp01(wpn.accuracy * clamp01(rangeFactor) * stanceFactor * nerve * (suppress ? SUPPRESS.accuracy : 1) + bonus);
+  const veteran = (s.rank ?? 0) * VETERANCY.accuracyPerRank;
+  const p = clamp01(wpn.accuracy * clamp01(rangeFactor) * stanceFactor * nerve * (suppress ? SUPPRESS.accuracy : 1) + bonus + veteran);
   if (suppress) pin(w, zx, zy, Math.round(STAGGER_TICKS[s.weapon] * SUPPRESS.stagger));
   let hits = 0;
   for (let i = 0; i < wpn.pellets; i++) if (w.rng.chance(p)) hits++;
