@@ -1,4 +1,4 @@
-import { MISSION_IDS, TICK_HZ, type DifficultyId, type RequisitionId, type Frame, type MissionId, type SaveMeta, type SimSpeed } from '@vazante/shared';
+import { MISSION_IDS, SCENES, TICK_HZ, type DifficultyId, type RequisitionId, type Frame, type MissionId, type SaveMeta, type SimSpeed } from '@vazante/shared';
 import type { AudioDirector } from '@vazante/audio';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
@@ -103,8 +103,59 @@ export class Shell {
     this.input.enabled = this.screen === 'playing';
   }
 
-  /** Slow orbit behind the main menu. */
+  /** Seconds into the opening scene; null when it is not playing. */
+  private opening: number | null = null;
+  /** The opening camera move is playing: the HUD panels stay out of the picture. */
+  get inOpening(): boolean {
+    return this.opening !== null;
+  }
+  /** The mission title card is on screen. */
+  titleCard = false;
+
+  /**
+   * Opening scene: the view starts wide over the district and closes in on the base while the
+   * mission title shows. Anything the player does ends the camera move at once.
+   */
+  private beginOpening(): void {
+    const rig = this.view.rig;
+    this.titleCard = true;
+    setTimeout(() => {
+      this.titleCard = false;
+      this.changed();
+    }, SCENES.titleSeconds * 1000);
+    // Players who asked for less motion get the title without the camera move.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    rig.span = rig.targetSpan = Math.min(rig.maxSpan, SCENES.openingSpan);
+    this.opening = 0;
+    const stop = () => {
+      window.removeEventListener('pointerdown', stop, true);
+      window.removeEventListener('wheel', stop, true);
+      window.removeEventListener('keydown', stop, true);
+      if (this.opening === null) return;
+      this.opening = null;
+      this.changed();
+      // Settle at the tactical view unless the player is already zooming somewhere else.
+      if (rig.targetSpan > 110) rig.targetSpan = 110;
+    };
+    window.addEventListener('pointerdown', stop, true);
+    window.addEventListener('wheel', stop, true);
+    window.addEventListener('keydown', stop, true);
+  }
+
+  /** Slow orbit behind the main menu; the opening and victory camera scenes. */
   update(dtS: number): void {
+    const rig = this.view.rig;
+    if (this.opening !== null && this.screen === 'playing') {
+      this.opening += dtS;
+      const k = Math.min(1, this.opening / SCENES.openingSeconds);
+      const from = Math.min(rig.maxSpan, SCENES.openingSpan);
+      rig.targetSpan = from + (110 - from) * (k * k * (3 - 2 * k));
+      if (k >= 1) {
+        this.opening = null;
+        this.changed();
+      }
+    }
+    if (this.screen === 'playing' && this.client.state.frame?.mission?.phase === 'won' && !rig.direct) rig.targetYaw += dtS * SCENES.victoryOrbit;
     if (this.screen === 'menu') this.view.rig.targetYaw += dtS * 0.05;
     if (this.screen === 'playing') this.tutorial.update(performance.now());
   }
@@ -298,7 +349,7 @@ export class Shell {
     if (this.withTutorial) {
       this.practice = true;
       this.tutorial.begin();
-    }
+    } else this.beginOpening(); // The tutorial points at things on screen: it keeps the camera still.
     this.changed();
   }
 

@@ -41,6 +41,7 @@ export class PixelPost {
         surfaceDither: { value: PRESENTATION.post.surfaceDither },
         vignette: { value: PRESENTATION.post.vignetteTactical },
         saturation: { value: PRESENTATION.post.saturation },
+        grade: { value: new THREE.Vector3(1, 1, 1) },
         shadowLift: { value: PRESENTATION.post.shadowLift },
         shadowLiftEnd: { value: PRESENTATION.post.shadowLiftEnd },
         skyElevation: { value: PRESENTATION.post.skyElevation },
@@ -72,6 +73,7 @@ export class PixelPost {
         uniform float surfaceDither;
         uniform float vignette;
         uniform float saturation;
+        uniform vec3 grade;
         uniform float shadowLift;
         uniform float shadowLiftEnd;
         uniform float skyElevation;
@@ -145,7 +147,7 @@ export class PixelPost {
           // Multiplicative grading keeps dark surfaces distinct and true black at zero.
           // The old contrast offset subtracted 0.03 in linear space, crushing dark streets.
           float luma = dot(c, vec3(0.299, 0.587, 0.114));
-          c = mix(vec3(luma), c, saturation);
+          c = mix(vec3(luma), c, saturation) * grade;
           c *= 1.0 + shadowLift * (1.0 - smoothstep(0.0, shadowLiftEnd, luma));
           // Posterize in gamma space (keeps dark tones apart) with a light ordered dither.
           c = sqrt(max(c, 0.0));
@@ -170,6 +172,9 @@ export class PixelPost {
     this.scene.add(this.quad);
   }
 
+  /** The mission mood and the end-of-mission grade, set by the renderer each frame. */
+  look: { saturation: number; vignette: number; grade: readonly [number, number, number] } = { saturation: 1, vignette: 0, grade: [1, 1, 1] };
+
   setSize(w: number, h: number): void {
     this.target.setSize(w, h);
     this.material.uniforms.resolution.value.set(w, h);
@@ -186,7 +191,9 @@ export class PixelPost {
     const blend = ortho ? Math.max(0, Math.min(1, strategicBlend)) : 0;
     const style = PRESENTATION.post;
     u.outlineStrength.value = THREE.MathUtils.lerp(style.outlineTactical, style.outlineStrategic, blend);
-    u.vignette.value = THREE.MathUtils.lerp(style.vignetteTactical, style.vignetteStrategic, blend);
+    u.vignette.value = THREE.MathUtils.lerp(style.vignetteTactical, style.vignetteStrategic, blend) + this.look.vignette;
+    u.saturation.value = style.saturation * this.look.saturation;
+    u.grade.value.set(this.look.grade[0], this.look.grade[1], this.look.grade[2]);
     const sky = !ortho && scene.background instanceof THREE.Color && scene.fog !== null;
     u.skyEnabled.value = sky ? 1 : 0;
     if (sky) {

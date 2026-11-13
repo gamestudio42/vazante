@@ -163,6 +163,23 @@ Cosmetic values only; these do not change visibility, combat, clocks or the worl
 - Vignette: 0.18 in tactical/direct, 0.08 in strategic view.
 - Sky reaches its zenith colour at world-space ray elevation 0.65.
 - Facade detail fades between projected footprints of 0.25 and 0.75 pattern periods per pixel.
+- **Mission moods** (`MOODS`, `MISSION_MOOD`): multipliers on the light, the sky and the final
+  image, plus a saturation scale and extra vignette. All within 0.7–1.15 so every mood stays readable.
+
+  | Mission | Mood | Look | Saturation | Vignette |
+  | --- | --- | --- | --- | --- |
+  | O Último Comboio | amber | last warm light | ×1.06 | +0.04 |
+  | Hospital São Lucas | overcast | flat, cold, washed out | ×0.78 | +0.06 |
+  | A Ponte | haze | blue river haze | ×0.86 | +0.05 |
+  | Retomar a Ribeira | ember | smoke over a burning district | ×1.10 | +0.10 |
+  | Linha de Suprimento | dust | dry ochre | ×0.94 | +0.03 |
+  | Plantão Noturno | sodium | lamp orange against teal | ×1.12 | +0.10 |
+  | O Último Trem | storm | heavy steel sky | ×0.74 | +0.14 |
+  | Survival, sandbox | clear | unchanged | ×1.00 | +0 |
+
+- **End of mission** (`OUTCOME_GRADE`, eased over 2.5 s): defeat drains saturation to ×0.30 and adds
+  0.30 vignette; victory lifts saturation to ×1.12 and the camera circles at 0.04 rad/s.
+- **Opening** (`SCENES`): the view starts 320 m wide and closes to 110 m in 4 s; the title shows 5 s.
 - Special infected are marked by a ground diamond scaled with the unit size: runner `#f2d14a`,
   brute `#c06bff`, Gritador `#ff5a3c` (the scream colour), Inchado `#a9b84a` (the bile colour).
 - Lighting colours remain in the renderer's `palette.ts`: daytime zenith `#657e91`, horizon/fog
