@@ -103,7 +103,7 @@ export class Shell {
     this.input.enabled = this.screen === 'playing';
   }
 
-  /** Seconds into the opening scene; null when it is not playing. */
+  /** When the opening scene started (`performance.now()`); null when it is not playing. */
   private opening: number | null = null;
   /** The opening camera move is playing: the HUD panels stay out of the picture. */
   get inOpening(): boolean {
@@ -126,7 +126,7 @@ export class Shell {
     // Players who asked for less motion get the title without the camera move.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     rig.span = rig.targetSpan = Math.min(rig.maxSpan, SCENES.openingSpan);
-    this.opening = 0;
+    this.opening = performance.now();
     const stop = () => {
       window.removeEventListener('pointerdown', stop, true);
       window.removeEventListener('wheel', stop, true);
@@ -146,8 +146,8 @@ export class Shell {
   update(dtS: number): void {
     const rig = this.view.rig;
     if (this.opening !== null && this.screen === 'playing') {
-      this.opening += dtS;
-      const k = Math.min(1, this.opening / SCENES.openingSeconds);
+      // Wall time, not frame steps: on a slow machine the scene must still end on time.
+      const k = Math.min(1, (performance.now() - this.opening) / (SCENES.openingSeconds * 1000));
       const from = Math.min(rig.maxSpan, SCENES.openingSpan);
       rig.targetSpan = from + (110 - from) * (k * k * (3 - 2 * k));
       if (k >= 1) {

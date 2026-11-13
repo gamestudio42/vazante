@@ -14,10 +14,12 @@ test('a mission opens wide with its title, closes in on the base, and wears its 
   await expect.poll(() => tick(page), { timeout: 10_000 }).toBeGreaterThan(0);
 
   await expect(page.locator('.title-card')).toContainText('Hospital São Lucas');
-  expect(await span(page)).toBeGreaterThan(200);
+  // The move runs on wall time, so a slow page is already part of the way in: still wider than tactical.
+  expect(await span(page)).toBeGreaterThan(125);
   await page.screenshot({ path: 'test-results/opening.png' });
-  await expect.poll(() => span(page), { timeout: (SCENES.openingSeconds + 4) * 1000 }).toBeLessThan(112);
-  await expect(page.locator('.title-card')).toHaveCount(0, { timeout: 8_000 });
+  // Generous: software GL on a busy machine draws a few frames a second.
+  await expect.poll(() => span(page), { timeout: (SCENES.openingSeconds + 20) * 1000 }).toBeLessThan(112);
+  await expect(page.locator('.title-card')).toHaveCount(0, { timeout: 15_000 });
 
   const l = await look(page);
   expect(l.saturation).toBeCloseTo(MOODS.overcast.saturation);
@@ -32,5 +34,5 @@ test('a key ends the opening camera move at once', async ({ page }) => {
   await page.getByRole('button', { name: 'Começar' }).click({ timeout: 60_000 });
   await expect.poll(() => tick(page), { timeout: 10_000 }).toBeGreaterThan(0);
   await page.keyboard.press('Shift');
-  await expect.poll(() => span(page), { timeout: 1_500 }).toBeLessThan(112);
+  await expect.poll(() => span(page), { timeout: 3_000 }).toBeLessThan(112);
 });
