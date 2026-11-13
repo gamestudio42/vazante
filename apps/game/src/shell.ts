@@ -4,6 +4,7 @@ import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
 import { setLocale, t } from './i18n.ts';
 import type { InputController } from './input.ts';
+import type { PlaytestRecorder } from './playtest-recorder.ts';
 import { newGameSeed, saveSettings, type Settings, type SurvivalRecord } from './settings.ts';
 import { Tutorial } from './tutorial.ts';
 import { deleteSave, download, exportSave, getSave, importSave, listSaves, putSave } from './storage.ts';
@@ -31,6 +32,8 @@ export class Shell {
   private lastAutosaveTick = 0;
   private toastSeq = 0;
   readonly tutorial: Tutorial;
+  /** Local playtest log, set once the game has started. */
+  playtest: PlaytestRecorder | null = null;
   /** Start the guided tutorial when the briefing closes (on until it was finished or skipped once). */
   withTutorial: boolean;
   readonly desktop: DesktopBridge | null = (window as unknown as { vazanteDesktop?: DesktopBridge }).vazanteDesktop ?? null;

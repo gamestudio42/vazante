@@ -121,7 +121,7 @@ Still to do for v0.5:
 
 - [ ] Render gate with a dense on-screen horde (5,000 visible) on Marcel's laptop.
 - [ ] Sector LOD L0/L1/L2 with conservation and calibration tests (only needed if the render gate fails).
-- [ ] Human playtest and balance (Diogo's feedback rounds are under way).
+- [ ] Human playtest and balance (Diogo's feedback rounds are under way). Testers can export a local playtest log from Settings (sessions, outcomes, where they stopped, fps); nothing is sent over the network.
 - [ ] Armored vehicles, helicopters (fast-rope, clinging), fire support.
 - [ ] Evacuation and quarantine triage, the full Choir, building damage and rubble.
 
