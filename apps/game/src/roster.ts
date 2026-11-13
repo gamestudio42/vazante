@@ -103,15 +103,15 @@ export function slotKeys(squads: readonly { kind: SquadKind }[]): string[] {
   });
 }
 
-/** Fill the mission's slots (recruits where empty) and return the seats for the simulation. */
-export function crewFor(roster: Roster, squads: readonly { kind: SquadKind }[], rand: () => number): { roster: Roster; crew: CrewSeat[][] } {
+/** Fill the mission's slots (recruits with `recruitXp` where empty) and return the seats for the simulation. */
+export function crewFor(roster: Roster, squads: readonly { kind: SquadKind }[], rand: () => number, recruitXp = 0): { roster: Roster; crew: CrewSeat[][] } {
   let r: Roster = { ...roster, units: { ...roster.units } };
   const crew = slotKeys(squads).map((key, i) => {
     const size = SQUADS[squads[i].kind].weapons.length;
     const unit = [...(r.units[key] ?? [])].slice(0, size);
     for (let k = 0; k < size; k++) {
       if (unit[k]) continue;
-      unit[k] = { rid: r.nextRid, name: pickName(r, rand), xp: 0, kills: 0, missions: 0 };
+      unit[k] = { rid: r.nextRid, name: pickName(r, rand), xp: recruitXp, kills: 0, missions: 0 };
       r = { ...r, nextRid: r.nextRid + 1, units: { ...r.units, [key]: unit } };
     }
     r = { ...r, units: { ...r.units, [key]: unit } };
@@ -166,6 +166,11 @@ export function settle(
     }
   }
   return { roster: { ...roster, units, fallen: [...fallen, ...roster.fallen].slice(0, MAX_FALLEN) }, report };
+}
+
+/** Every living soldier on the roster. */
+export function living(roster: Roster): Trooper[] {
+  return Object.values(roster.units).flatMap((u) => u.filter((x): x is Trooper => x !== null));
 }
 
 /** Soldier name by roster id, for the HUD. */

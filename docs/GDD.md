@@ -180,7 +180,20 @@ create the highest-scoring directive if score > 25 and will ≥ cost
 - Names appear in the alerts, in direct control and in the end-of-mission report. A game played with
   the guided tutorial is practice and does not change the roster. Survival does not use it.
 
-### 4.15 End of match and campaign hook
+### 4.15 Operation (roguelite runs)
+
+- A run of five missions drawn from the city missions, all on the same city, played with a task force
+  of the run's own (the campaign roster is not touched). It starts from recruits and keeps its
+  survivors, ranks and dead between missions, as in 4.14.
+- **Each mission is harder:** more wandering infected for every mission already played.
+- **Requisitions:** after each won mission the player takes one of three: ammunition or materials at
+  the base, aerial recon (fewer infected), a field drill (experience for everyone) or seasoned
+  replacements (recruits arrive as privates). The offers come from the run's seed.
+- **The first lost mission ends the run** [pillar 4]; giving up ends it too. No retry button.
+- **Daily operation:** the same city, missions and offers for every player on a UTC date, at veteran.
+  The best score of each day and the best overall are kept locally.
+
+### 4.16 End of match and campaign hook
 
 - **Victory (full scenario):** evacuate at least 30% of the initial population to the port and board the ship. **Defeat:** lose every base or the port.
 - **Campaign hook [FACT]:** what reaches the port (troops, vehicles, refugees, stocks) becomes the starting state of the next region. In the MVP this is a summary screen that writes that state into the save.

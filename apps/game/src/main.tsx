@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { AudioDirector } from '@vazante/audio';
-import { MISSION_IDS, MISSIONS, type CrewSeat, type SaveGame } from '@vazante/shared';
+import { MISSION_IDS, MISSIONS, type CrewSeat, type DifficultyId, type MissionTweaks, type SaveGame } from '@vazante/shared';
 import { GameRenderer } from '@vazante/view3d';
 import { GameClient } from './client.ts';
 import { setLocale, t } from './i18n.ts';
@@ -13,6 +13,7 @@ import { PlaytestRecorder } from './playtest-recorder.ts';
 import { runFrameBench } from './bench.ts';
 import { App } from './ui/App.tsx';
 import { crewFor, loadRoster, saveRoster } from './roster.ts';
+import { canDeploy, currentMission, deploy, loadOperation, missionTweaks, saveOperation } from './operation.ts';
 import '@fontsource/barlow/400.css';
 import '@fontsource/barlow/500.css';
 import '@fontsource/barlow/600.css';
@@ -79,23 +80,41 @@ async function boot(): Promise<void> {
   const seed = (save?.seed ?? (params.has('seed') ? Number(params.get('seed')) : newGameSeed(settings))) >>> 0;
   const initial: Screen = params.has('bench') ? 'playing' : save ? 'paused' : params.has('play') ? 'briefing' : 'menu';
   const scenario = params.get('scenario') ?? 'last_convoy';
-  // Campaign missions field the roster: the same soldiers, ranked, with recruits in empty slots.
   let crew: CrewSeat[][] | undefined;
-  if (!save && !params.has('bench') && (MISSION_IDS as readonly string[]).includes(scenario)) {
+  let tweaks: MissionTweaks | undefined;
+  let difficulty: DifficultyId = params.has('bench') ? 'veteran' : settings.difficulty;
+  const op = operationGame(scenario, save);
+  if (op) {
+    // An Operation mission fields the run's own task force, on the run's city and difficulty.
+    const store = loadOperation();
+    const d = deploy(store.run!, Math.random);
+    saveOperation({ ...store, run: d.run });
+    crew = d.crew;
+    tweaks = missionTweaks(d.run);
+    difficulty = d.run.difficulty;
+  } else if (!save && !params.has('bench') && (MISSION_IDS as readonly string[]).includes(scenario)) {
+    // Campaign missions field the roster: the same soldiers, ranked, with recruits in empty slots.
     const filled = crewFor(loadRoster(), MISSIONS[scenario as keyof typeof MISSIONS].squads, Math.random);
     saveRoster(filled.roster);
     crew = filled.crew;
   }
-  const client = new GameClient(seed, save ?? undefined, params.has('bench') ? 'veteran' : settings.difficulty, scenario, crew);
+  const client = new GameClient(seed, save ?? undefined, difficulty, scenario, crew, tweaks);
   const unsubscribe = client.subscribe(() => {
     const map = client.state.map;
     if (!map) return;
     unsubscribe();
-    start(client, map, initial).catch((err: unknown) => fatal('boot.failed', err));
+    start(client, map, initial, op).catch((err: unknown) => fatal('boot.failed', err));
   });
 }
 
-async function start(client: GameClient, map: NonNullable<GameClient['state']['map']>, initial: Screen): Promise<void> {
+/** `?op=<index>` opens the stored run's current mission; anything that does not match it is an ordinary game. */
+function operationGame(scenario: string, save: SaveGame | null): boolean {
+  if (save || !params.has('op')) return false;
+  const run = loadOperation().run;
+  return canDeploy(run) && String(run.index) === params.get('op') && currentMission(run) === scenario && run.seed === Number(params.get('seed'));
+}
+
+async function start(client: GameClient, map: NonNullable<GameClient['state']['map']>, initial: Screen, operation: boolean): Promise<void> {
   const view = new GameRenderer(canvas, map);
   try {
     await view.loadModels(`${import.meta.env.BASE_URL}models/`);
@@ -118,6 +137,7 @@ async function start(client: GameClient, map: NonNullable<GameClient['state']['m
     audio.onFrame(f);
   });
   const shell = new Shell(client, input, view, audio, settings, initial);
+  if (operation) shell.enterOperation();
   const playtest = new PlaytestRecorder(client, shell, gpuName(view.renderer.getContext()));
   shell.playtest = playtest;
   // A save that no longer matches the rules starts a fresh game on the same city.

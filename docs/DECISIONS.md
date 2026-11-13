@@ -125,3 +125,17 @@ review and the existing render performance gate.
 - **Practice.** A game with the guided tutorial does not touch the roster, so learning the controls
   never kills a named soldier.
 
+## D18. Operation runs are client data; the simulation only receives tweaks (2026-11-13)
+
+- **Why.** The campaign is seven missions played once. The 2026-11-13 review asked for a reason to
+  come back every day: a short run with stakes, a choice between missions and a shared daily seed.
+- **Split.** The run (missions, task force, requisitions, score, daily bests) lives in
+  `localStorage` (`apps/game/src/operation.ts`), like the roster in D17. The simulation receives
+  the crew seats and `MissionTweaks` (zombie scale, extra base ammo and materials) when the mission
+  is built; they are bounded there, change only the initial state and are not stored apart from it,
+  so saves and the hash are unchanged in shape.
+- **Daily seed.** The city and the draws come from the UTC date through FNV-1a and a small seeded
+  generator in the client, so every player gets the same operation without a server. Names of
+  recruits are still random; they do not change the game.
+- **Known gaps.** Leaving a mission before its end and redeploying replays it; a save loaded from
+  the menu plays as an ordinary game. Scores are local; a shared leaderboard needs a server.

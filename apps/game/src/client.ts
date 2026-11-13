@@ -1,4 +1,4 @@
-import type { Command, CrewSeat, DifficultyId, Frame, FromWorker, MapInfo, SaveGame, SimEvent, ToWorker } from '@vazante/shared';
+import type { Command, CrewSeat, DifficultyId, Frame, FromWorker, MapInfo, MissionTweaks, SaveGame, SimEvent, ToWorker } from '@vazante/shared';
 
 export interface Alert {
   id: number;
@@ -73,10 +73,10 @@ export class GameClient {
   private pendingSaves = new Map<string, (s: SaveGame) => void>();
   state: ClientState = { map: null, frame: null, selected: [], vehicle: null, structure: null, alerts: [], limited: false, loadError: null, version: 0 };
 
-  constructor(seed: number, save?: SaveGame, difficulty?: DifficultyId, scenario = 'last_convoy', crew?: CrewSeat[][]) {
+  constructor(seed: number, save?: SaveGame, difficulty?: DifficultyId, scenario = 'last_convoy', crew?: CrewSeat[][], tweaks?: MissionTweaks) {
     this.worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
     this.worker.onmessage = (ev: MessageEvent<FromWorker>) => this.onMessage(ev.data);
-    this.post({ type: 'init', seed, scenario: save?.scenario ?? scenario, save, difficulty, crew });
+    this.post({ type: 'init', seed, scenario: save?.scenario ?? scenario, save, difficulty, crew, tweaks });
   }
 
   /** Rebuild the (not yet started) scenario at another difficulty. */

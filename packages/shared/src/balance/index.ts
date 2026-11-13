@@ -13,3 +13,4 @@ export * from './economy.ts';
 export * from './presentation.ts';
 export * from './collision.ts';
 export * from './veterancy.ts';
+export * from './operation.ts';

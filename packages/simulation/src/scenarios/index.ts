@@ -1,4 +1,4 @@
-import { CELL_SIZE, DIFFICULTY, clampRank, type CrewSeat, MISSIONS, MISSION_IDS, SLICE, type DifficultyId, type MissionId, ZOMBIE_POOL_CAPACITY, ZombieState } from '@vazante/shared';
+import { CELL_SIZE, DIFFICULTY, clampRank, type CrewSeat, MISSIONS, type MissionTweaks, MISSION_IDS, SLICE, type DifficultyId, type MissionId, ZOMBIE_POOL_CAPACITY, ZombieState } from '@vazante/shared';
 import { Grid } from '../grid.ts';
 import { generateCityMap, generateSliceMap } from '../mapgen.ts';
 import { rollZombieKind, spawnSquad } from '../spawn.ts';
@@ -16,6 +16,13 @@ export interface ScenarioOptions {
   difficulty?: DifficultyId;
   /** Campaign roster seats per mission squad (by index), then per member slot. */
   crew?: readonly (readonly CrewSeat[] | undefined)[];
+  /** Operation threat and requisitions: more or fewer zombies, a larger base stock. */
+  tweaks?: MissionTweaks;
+}
+
+/** Tweaks come from outside the simulation: keep them finite and in range. */
+function bounded(v: number | undefined, min: number, max: number, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
 }
 
 /** Scatter wandering zombies over walkable cells, keeping `clearM` metres around (bx, by) empty. */
@@ -65,15 +72,16 @@ export function buildMission(id: MissionId, seed: number, opts: ScenarioOptions 
     });
   });
 
-  home.materials = def.materials + diff.baseMaterials;
-  home.ammo = def.ammo + diff.baseAmmo;
+  const tw = opts.tweaks;
+  home.materials = def.materials + diff.baseMaterials + Math.round(bounded(tw?.materials, 0, 5000, 0));
+  home.ammo = def.ammo + diff.baseAmmo + Math.round(bounded(tw?.ammo, 0, 20000, 0));
   const trucks = def.trucks.map((t) => {
     const site = t.at === 'base' ? home : t.at === 'depot' ? w.bases.find((b) => b.kind === 'depot')! : w.bases.find((b) => b.name === t.at)!;
     // Parked off-centre so it does not sit on the command post.
     const off = site === home ? 3 * CELL_SIZE : 0;
     return spawnTruck(w, ((site.x0 + site.x1 + 1) / 2) * CELL_SIZE + off, ((site.y0 + site.y1 + 1) / 2) * CELL_SIZE + off, t.ammo, t.materials).id;
   });
-  scatterHorde(w, opts.zombies ?? Math.round(def.zombies * diff.cityZombies), bx, by, def.clearRadiusM);
+  scatterHorde(w, opts.zombies ?? Math.round(def.zombies * diff.cityZombies * bounded(tw?.zombieScale, 0.1, 3, 1)), bx, by, def.clearRadiusM);
   startMission(w, def, trucks);
   return w;
 }

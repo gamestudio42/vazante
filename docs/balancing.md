@@ -182,6 +182,24 @@ Experience: 1 per infected killed, plus 15 for surviving a won mission or 5 for 
 hit-chance bonus is added after the other factors, like the direct-control bonus. Dead, turned
 and bitten soldiers leave the roster at the end of the mission.
 
+## Operation (`balance/operation.ts`)
+
+A run of five city missions on one city; each won mission offers three requisitions, one is taken.
+
+| Value | Number | Effect |
+| --- | --- | --- |
+| Missions per run | 5 of 6 | drawn from the city missions (not O Último Comboio), order by the run's seed |
+| Threat per mission | +0.12 | wandering zombies ×1.00, ×1.12, ×1.24, ×1.36, ×1.48 |
+| Ammunition drop | +800 | base ammunition, next mission |
+| Engineering supplies | +150 | base materials, next mission |
+| Aerial recon | −20 % | wandering zombies, next mission (after the threat) |
+| Field drill | +25 xp | every living soldier, at once |
+| Seasoned replacements | 25 xp | the next mission's recruits start as privates |
+
+Score: 1,000 per won mission plus 250 for each mission before it (1,000, 1,250, … 2,000), 1 per
+infected killed, and 50 per soldier alive when all five are won. The daily operation is always at
+veteran difficulty.
+
 ## Change log
 
 | Date | Value | Old → new | Reason |
@@ -280,3 +298,10 @@ The balance bot plays without a roster (every soldier a recruit), so its results
 fully veteran infantry squad facing 300 commons (five seeds) killed the same number as recruits but
 fired 12–25 % fewer rounds (481–522 against 579–643), on top of steadier nerves: rank saves ammo, the
 resource the campaign is built around. Reaching it takes several missions of keeping people alive.
+
+### 2026-11-13 — Operation mode
+
+New table `balance/operation.ts` (above). The threat ramp and the requisition sizes are first
+guesses and have not been through the balance bot: the bot plays single missions, and only the
+pressure of the wandering horde grows, not the waves or the pressure groups. The fifth mission at
+×1.48 is meant to be hard with a weakened task force; playtest logs will show where runs end.
