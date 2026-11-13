@@ -1,4 +1,5 @@
-import type { Command, CrewSeat, DifficultyId, Frame, FromWorker, MapInfo, MissionTweaks, SaveGame, SimEvent, ToWorker } from '@vazante/shared';
+import { SOLDIER_STRIDE, SoldierField, type Command, type CrewSeat, type DifficultyId, type Frame, type FromWorker, type MapInfo, type MissionTweaks, type SaveGame, type SimEvent, type ToWorker } from '@vazante/shared';
+import { Radio, type RadioContext, type RadioLine } from './radio.ts';
 
 export interface Alert {
   id: number;
@@ -8,6 +9,8 @@ export interface Alert {
   value?: number;
   /** Soldier, squad or vehicle the event is about. */
   source?: number;
+  /** The other party: the bitten soldier (whose biter is `source`), a panicking soldier's squad. */
+  target?: number;
   x?: number;
   y?: number;
 }
@@ -19,8 +22,6 @@ const ALERT_TYPES = new Set<SimEvent['type']>([
   'zombie_risen',
   'out_of_ammo',
   'soldier_panicked',
-  'squad_contact',
-  'squad_arrived',
   'command_rejected',
   'structure_built',
   'structure_destroyed',
@@ -57,6 +58,8 @@ export interface ClientState {
   /** Selected structure id (exclusive with squads and vehicles). */
   structure: number | null;
   alerts: Alert[];
+  /** Latest radio lines, oldest first (contact and arrival calls go here, not to the alerts). */
+  radio: RadioLine[];
   limited: boolean;
   /** Set when a save could not be loaded (the game then starts fresh). */
   loadError: string | null;
@@ -69,9 +72,10 @@ export class GameClient {
   private listeners = new Set<() => void>();
   private frameListeners = new Set<(f: Frame) => void>();
   private alertSeq = 0;
+  private readonly radio = new Radio();
   private lastFrameAt = 0;
   private pendingSaves = new Map<string, (s: SaveGame) => void>();
-  state: ClientState = { map: null, frame: null, selected: [], vehicle: null, structure: null, alerts: [], limited: false, loadError: null, version: 0 };
+  state: ClientState = { map: null, frame: null, selected: [], vehicle: null, structure: null, alerts: [], radio: [], limited: false, loadError: null, version: 0 };
 
   constructor(seed: number, save?: SaveGame, difficulty?: DifficultyId, scenario = 'last_convoy', crew?: CrewSeat[][], tweaks?: MissionTweaks) {
     this.worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
@@ -117,10 +121,11 @@ export class GameClient {
       let alerts = this.state.alerts;
       const fresh = f.events.filter((e) => ALERT_TYPES.has(e.type));
       if (fresh.length > 0) {
-        alerts = [...fresh.map((e) => ({ id: ++this.alertSeq, tick: e.tick, type: e.type, reason: e.reason, value: e.value, source: e.source, x: e.x, y: e.y })).reverse(), ...alerts].slice(0, 30);
+        alerts = [...fresh.map((e) => ({ id: ++this.alertSeq, tick: e.tick, type: e.type, reason: e.reason, value: e.value, source: e.source, target: e.target, x: e.x, y: e.y })).reverse(), ...alerts].slice(0, 30);
       }
+      const heard = f.events.length > 0 ? this.radio.hear(f.events, radioContext(f)) : [];
       for (const fn of this.frameListeners) fn(f);
-      this.update({ frame: f, alerts, limited });
+      this.update({ frame: f, alerts, limited, ...(heard.length > 0 ? { radio: this.radio.lines } : {}) });
     }
   }
 
@@ -152,4 +157,31 @@ export class GameClient {
     this.state = { ...this.state, ...patch, version: this.state.version + 1 };
     for (const fn of this.listeners) fn();
   }
+}
+
+/** Who is where in a frame, for attributing radio lines. */
+function radioContext(f: Frame): RadioContext {
+  let squads: Map<number, number> | null = null;
+  return {
+    squadOf(id) {
+      if (!squads) {
+        squads = new Map();
+        for (let o = 0; o < f.soldiers.length; o += SOLDIER_STRIDE) squads.set(f.soldiers[o + SoldierField.Id], f.soldiers[o + SoldierField.Squad]);
+      }
+      return squads.get(id);
+    },
+    nearestSquad(x, y, maxM) {
+      let best: number | undefined;
+      let bestD = maxM * maxM;
+      for (const q of f.squads) {
+        if (q.alive === 0) continue;
+        const d = (q.anchorX - x) ** 2 + (q.anchorY - y) ** 2;
+        if (d <= bestD) {
+          bestD = d;
+          best = q.id;
+        }
+      }
+      return best;
+    },
+  };
 }

@@ -255,7 +255,8 @@ export class Shell {
 
   private setRoster(r: Roster): void {
     this.roster = r;
-    this.names = namesByRid(r);
+    // The fallen leave the roster but keep their names in this game's alerts and radio.
+    this.names = new Map([...this.names, ...namesByRid(r)]);
     saveRoster(r);
   }
 

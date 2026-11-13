@@ -111,6 +111,8 @@ export class GameRenderer {
   private readonly corpseBatch: CharacterBatch;
   private readonly ringMesh: THREE.InstancedMesh;
   private readonly markerMesh: THREE.InstancedMesh;
+  /** Diamond on the ground under each special infected on screen, coloured by kind. */
+  private readonly threatMesh: THREE.InstancedMesh;
   private readonly tracerGeo: THREE.BufferGeometry;
   private readonly pathGeo: THREE.BufferGeometry;
   private readonly districts: THREE.Group;
@@ -276,6 +278,14 @@ export class GameRenderer {
     this.ringMesh.count = 0;
     this.ringMesh.frustumCulled = false;
     this.scene.add(this.ringMesh);
+
+    // Four segments: a diamond, so it never reads as a soldier's round selection ring.
+    const diamond = new THREE.RingGeometry(0.62, 0.86, 4);
+    diamond.rotateX(-Math.PI / 2);
+    this.threatMesh = new THREE.InstancedMesh(diamond, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, fog: false, transparent: true, opacity: 0.9, depthWrite: false }), MAX_THREAT_MARKS);
+    this.threatMesh.count = 0;
+    this.threatMesh.frustumCulled = false;
+    this.scene.add(this.threatMesh);
 
     const marker = new THREE.CircleGeometry(1, 16);
     marker.rotateX(-Math.PI / 2);
@@ -995,6 +1005,7 @@ export class GameRenderer {
     this.zombies.begin();
     this.updateViewFrustum();
     const crowd = this.zombieCrowd;
+    let threats = 0;
     // Animated models for the nearest zombies, block figures for the rest.
     let cutoff = Infinity;
     if (crowd) {
@@ -1070,6 +1081,16 @@ export class GameRenderer {
       const climb = this.structures.heightAt[cell] ?? 0;
       if (state === ZombieState.Stacked) w.lean = 0.5; // pressed against the wall, clawing upward
       const yaw = this.zYaw[slot] + shamble * 0.08;
+      if (kind !== ZombieKind.Common && threats < MAX_THREAT_MARKS) {
+        const s = boost * kindScale(kind);
+        this.tmpS.set(s, 1, s);
+        this.tmpQ.identity();
+        this.tmpP.set(x, climb + 0.06, y);
+        this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
+        this.threatMesh.setMatrixAt(threats, this.tmpM);
+        this.threatMesh.setColorAt(threats, this.tmpC.set(PALETTE.threat[kind] ?? PALETTE.scream));
+        threats++;
+      }
       if (crowd && this.zDist[i] < cutoff) {
         let row: number;
         const sp = this.zSpeed[slot];
@@ -1085,6 +1106,9 @@ export class GameRenderer {
     }
     this.zombies.end();
     crowd?.end();
+    this.threatMesh.count = threats;
+    this.threatMesh.instanceMatrix.needsUpdate = true;
+    if (this.threatMesh.instanceColor) this.threatMesh.instanceColor.needsUpdate = true;
   }
 
   private readonly frustum = new THREE.Frustum();
@@ -1337,6 +1361,9 @@ export class GameRenderer {
     return this.curr;
   }
 }
+
+/** Special infected marked on the ground at once; enough for a wave on screen. */
+const MAX_THREAT_MARKS = 1024;
 
 function kindScale(kind: number): number {
   return kind === ZombieKind.Brute ? 1.3 : kind === ZombieKind.Bloater ? 1.22 : kind === ZombieKind.Runner ? 0.95 : kind === ZombieKind.Screamer ? 0.92 : 1;
