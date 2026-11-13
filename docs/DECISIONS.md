@@ -156,3 +156,18 @@ review and the existing render performance gate.
   the zombie), and the fallen keep their names in the alerts until the game ends.
 - **Readability.** Special infected get a ground diamond by kind in the renderer only. A diamond, so
   it never reads as a soldier's round selection ring.
+
+## D20. Mission moods and camera scenes are presentation only (2026-11-13)
+
+- **Why.** The 2026-11-13 review found every mission looked the same: the same afternoon, the same
+  grade, a cut from the briefing straight to the HUD and a summary card over an unchanged scene.
+  A mission should be recognisable from one screenshot and its start and end should feel like moments.
+- **Moods without touching the clock.** Changing a mission's hour would change night vision and
+  with it the balance, so the mood is a set of multipliers applied in the renderer and the post
+  pass (`MOODS` in `balance/presentation.ts`). The simulation, the frame and the hash know nothing
+  about it; the values are bounded by a test so no mood hides the infected.
+- **Scenes in the Shell.** The opening is a zoom the Shell drives through the camera rig, ended by
+  any input so it never costs a player control; it is skipped with the guided tutorial (which
+  points at things on screen) and under `prefers-reduced-motion`. The simulation runs during it:
+  missions give the player minutes before first contact, and pausing would make the clock lie.
+- **Small screens.** The briefing card now scrolls; at 800×450 its start button was off screen.

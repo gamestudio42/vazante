@@ -118,6 +118,7 @@ Done:
 - [x] Campaign roster: named soldiers who carry over, gain rank and fall for good; a memorial.
 - [x] Operation: five-mission runs on one city with a task force of their own, requisitions between missions, rising threat, and a daily operation that is the same for everyone.
 - [x] Radio chatter from the squads and command, by name; special infected marked on the ground by kind.
+- [x] Art direction: a mood per mission (light and grade), an opening shot with the mission title, defeat and victory grades.
 - [x] Balance bot for every mission (veteran, three seeds): all campaign missions win except A Ponte at 2 to 3 of 3; survival reaches about four nights.
 
 Still to do for v0.5:

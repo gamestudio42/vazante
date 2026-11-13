@@ -9,6 +9,10 @@ import {
   ZombieField,
   ZombieKind,
   ZombieState,
+  MOODS,
+  OUTCOME_GRADE,
+  moodFor,
+  type Mood,
   clockHours,
   siteZone,
   type DayClock,
@@ -657,6 +661,7 @@ export class GameRenderer {
     this.orders.update(dtS, this.unitScale());
     this.zone.update(t);
     this.pulses.update(dtS);
+    this.updateLook(f, dtS);
     this.updateTimeOfDay(f ? f.tick + this.alpha(nowMs) : 0, f?.day);
     this.lights.beginDynamic();
     if (f) this.drawFlashlights(f, this.alpha(nowMs));
@@ -669,6 +674,29 @@ export class GameRenderer {
 
   private readonly cDay = new THREE.Color();
   private readonly cNight = new THREE.Color();
+  private readonly cMood = new THREE.Color();
+  /** The mission's look (see MOODS) and how far the end-of-mission grade has come in, 0..1. */
+  private mood: Mood = MOODS.clear;
+  private outcome: 'won' | 'lost' | null = null;
+  private outcomeT = 0;
+
+  /** Mood by mission, and the grade of a finished mission eased in. Cosmetic only. */
+  private updateLook(f: Frame | null, dtS: number): void {
+    this.mood = moodFor(f?.mission?.id);
+    const phase = f?.mission?.phase;
+    const outcome = phase === 'won' || phase === 'lost' ? phase : null;
+    if (outcome !== this.outcome) {
+      this.outcome = outcome;
+      this.outcomeT = 0;
+    }
+    if (outcome) this.outcomeT = Math.min(1, this.outcomeT + dtS / OUTCOME_GRADE.seconds);
+    const k = this.outcomeT * this.outcomeT * (3 - 2 * this.outcomeT);
+    const end = outcome ? OUTCOME_GRADE[outcome] : null;
+    const look = this.post.look;
+    look.saturation = this.mood.saturation * (end ? 1 + (end.saturation - 1) * k : 1);
+    look.vignette = this.mood.vignette + (end ? end.vignette * k : 0);
+    look.grade = this.mood.grade;
+  }
 
   /** Sun or moon, sky, fog and ambient follow the game clock. */
   private updateTimeOfDay(tick: number, clock?: DayClock): void {
@@ -677,16 +705,18 @@ export class GameRenderer {
     this.hours = h;
     this.night = 1 - day;
     const bg = this.scene.background as THREE.Color;
-    bg.copy(this.cDay.set(PALETTE.sky)).lerp(this.cNight.set(PALETTE.skyNight), this.night);
-    this.fog.color.copy(this.cDay.set(PALETTE.fog)).lerp(this.cNight.set(PALETTE.fogNight), this.night);
-    this.hemi.color.copy(this.cDay.set(PALETTE.skyLight)).lerp(this.cNight.set(PALETTE.skyLightNight), this.night);
+    const mood = this.mood;
+    bg.copy(this.cDay.set(PALETTE.sky)).lerp(this.cNight.set(PALETTE.skyNight), this.night).multiply(this.cMood.setRGB(mood.sky[0], mood.sky[1], mood.sky[2]));
+    this.fog.color.copy(this.cDay.set(PALETTE.fog)).lerp(this.cNight.set(PALETTE.fogNight), this.night).multiply(this.cMood);
+    this.cMood.setRGB(mood.light[0], mood.light[1], mood.light[2]);
+    this.hemi.color.copy(this.cDay.set(PALETTE.skyLight)).lerp(this.cNight.set(PALETTE.skyLightNight), this.night).multiply(this.cMood);
     this.hemi.groundColor.copy(this.cDay.set(PALETTE.groundLight)).lerp(this.cNight.set(PALETTE.groundLightNight), this.night);
     this.hemi.intensity = 1.9 - 0.3 * day;
     cityUniforms.uNight.value = Math.max(0, (this.night - 0.3) / 0.7);
     // Low warm sun around dawn and dusk, cold moonlight at night.
     const low = Math.min(1, Math.abs(h - 12) / 6);
     this.sun.color.copy(this.cDay.set(PALETTE.sun)).lerp(this.cNight.set(PALETTE.sunDusk), Math.max(0, low - 0.5) * 2 * day);
-    this.sun.color.lerp(this.cNight.set(PALETTE.moon), this.night);
+    this.sun.color.lerp(this.cNight.set(PALETTE.moon), this.night).multiply(this.cMood);
     this.sun.intensity = 1.5 + 0.7 * day;
     this.sunHeight = day > 0.5 ? Math.max(0.25, 1 - low * 0.75) : 0.9;
   }

@@ -63,3 +63,74 @@ export const PRESENTATION = {
     pavementTileM: 0.75,
   },
 } as const;
+
+/**
+ * A mission's look. Cosmetic only: the clock, sight ranges and the hash are the same under every
+ * mood. `light` multiplies the sun and the ambient light, `sky` the sky and the fog, `grade` the
+ * final image (after saturation); `saturation` scales PRESENTATION.post.saturation and `vignette`
+ * is added to the view's vignette.
+ */
+export interface Mood {
+  light: readonly [number, number, number];
+  sky: readonly [number, number, number];
+  grade: readonly [number, number, number];
+  saturation: number;
+  vignette: number;
+}
+
+export type MoodId = 'clear' | 'amber' | 'overcast' | 'haze' | 'ember' | 'dust' | 'sodium' | 'storm';
+
+export const MOODS: Readonly<Record<MoodId, Mood>> = {
+  /** No change: survival and the sandbox, where a long day should look like a day. */
+  clear: { light: [1, 1, 1], sky: [1, 1, 1], grade: [1, 1, 1], saturation: 1, vignette: 0 },
+  /** O Último Comboio: the last warm light of the day. */
+  amber: { light: [1.06, 0.98, 0.86], sky: [1.08, 0.96, 0.84], grade: [1.04, 1, 0.93], saturation: 1.06, vignette: 0.04 },
+  /** Hospital São Lucas: flat, cold and washed out. */
+  overcast: { light: [0.9, 0.97, 1], sky: [0.86, 0.94, 0.98], grade: [0.95, 1, 1.01], saturation: 0.78, vignette: 0.06 },
+  /** A Ponte: river haze, blue and soft. */
+  haze: { light: [0.92, 0.98, 1.06], sky: [0.9, 1, 1.1], grade: [0.95, 1, 1.07], saturation: 0.86, vignette: 0.05 },
+  /** Retomar a Ribeira: smoke over a burning district. */
+  ember: { light: [1.1, 0.9, 0.76], sky: [1.12, 0.84, 0.7], grade: [1.07, 0.97, 0.88], saturation: 1.1, vignette: 0.1 },
+  /** Linha de Suprimento: dry dust on the road. */
+  dust: { light: [1.05, 1, 0.84], sky: [1.06, 1, 0.82], grade: [1.03, 1.01, 0.9], saturation: 0.94, vignette: 0.03 },
+  /** Plantão Noturno: street-lamp orange against teal shadow. */
+  sodium: { light: [1.02, 0.96, 0.88], sky: [0.84, 1, 1.04], grade: [1.02, 1, 0.96], saturation: 1.12, vignette: 0.1 },
+  /** O Último Trem: heavy steel sky before the storm. */
+  storm: { light: [0.84, 0.9, 0.98], sky: [0.72, 0.8, 0.9], grade: [0.94, 0.98, 1.03], saturation: 0.74, vignette: 0.14 },
+};
+
+/** The mood of each mission, by mission id; anything else is `clear`. */
+export const MISSION_MOOD: Readonly<Record<string, MoodId>> = {
+  last_convoy: 'amber',
+  hospital: 'overcast',
+  bridge: 'haze',
+  retake: 'ember',
+  supply_line: 'dust',
+  night_shift: 'sodium',
+  last_train: 'storm',
+  survival: 'clear',
+};
+
+export function moodFor(mission: string | undefined): Mood {
+  return MOODS[(mission && MISSION_MOOD[mission]) || 'clear'];
+}
+
+/** Camera scenes around a mission. The player's first click, key or wheel ends the opening. */
+export const SCENES = {
+  /** Opening: the view starts this wide (metres of visible height) and closes in on the base. */
+  openingSpan: 320,
+  openingSeconds: 4,
+  /** The mission title stays on screen this long. */
+  titleSeconds: 5,
+  /** Victory: the camera circles the field at this many radians a second. */
+  victoryOrbit: 0.04,
+} as const;
+
+/** How the image changes when the mission ends, eased in over `seconds`. */
+export const OUTCOME_GRADE = {
+  seconds: 2.5,
+  /** Defeat drains the colour and closes the frame. */
+  lost: { saturation: 0.3, vignette: 0.3 },
+  /** Victory is a little richer. */
+  won: { saturation: 1.12, vignette: 0 },
+} as const;

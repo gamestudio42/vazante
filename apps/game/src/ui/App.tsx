@@ -154,7 +154,7 @@ export function App({ client, input, view, shell }: Props) {
   return (
     <>
       <MapLabels client={client} view={view} />
-      <div className="hud">
+      <div className={shell.inOpening && shell.screen === "playing" ? "hud cinematic" : "hud"}>
         <TopBar
           frame={f}
           limited={state.limited}
@@ -187,6 +187,7 @@ export function App({ client, input, view, shell }: Props) {
             {!f.economy && <DistrictList frame={f} />}
           </div>
         )}
+        {shell.titleCard && f.mission && shell.screen === "playing" && !ended && <TitleCard frame={f} />}
         <EventBanner alerts={state.alerts} />
         <RadioFeed lines={state.radio} frame={f} onJump={(x, y) => view.rig.centerOn(x, y)} />
         {!input.inDirect && (
@@ -957,6 +958,21 @@ function Alerts({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Opening title: the mission, the city and the hour, over the establishing shot. */
+function TitleCard({ frame }: { frame: Frame }) {
+  const h = clockHours(frame.tick, frame.day);
+  const hh = String(Math.floor(h)).padStart(2, "0");
+  const mm = String(Math.floor((h % 1) * 60)).padStart(2, "0");
+  return (
+    <div className="title-card" aria-hidden="true">
+      <span className="title-card-place">
+        {t("menu.subtitle")} · {hh}:{mm}
+      </span>
+      <span className="title-card-name">{t(`brief.${frame.mission!.id}.title`)}</span>
     </div>
   );
 }

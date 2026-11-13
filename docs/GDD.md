@@ -223,6 +223,7 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | --- | --- |
 | Boot | logo, current step, progress bar |
 | Main menu | New game, Continue, Load, Settings, Quit (desktop only); city simulating in attract mode behind |
+| Opening | after the briefing the view starts wide over the district and closes in on the base while the mission title, the city and the hour show; the panels stay out of the picture; any click, key or wheel ends it; skipped with the tutorial and for players who ask for reduced motion |
 | Briefing | scenario, seed, difficulty (initial zombies and Choir will), content warning, toggle for triage execution |
 | Top bar | game clock and day/night, speed, soldiers, civilians saved, ammo and fuel summed across bases, fleet magazines |
 | District list (left) | name, state color, pressure, civilians left; click centers |
@@ -237,6 +238,7 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | Minimap | districts, units, view rectangle; hidden in map view |
 | Special infected | a diamond on the ground under each one on screen, by kind: yellow runner, purple brute, red Gritador, green Inchado (legend in the help panel) |
 | Direct-control HUD | crosshair, ammo, health, "TAB to exit"; hides the rest |
+| Mission mood | each mission has its own light and grade (see `balancing.md`); defeat drains the colour, victory warms it and the camera circles the field |
 | Summary | result, civilians saved, casualties, zombies killed, what embarked |
 | Settings | volume, language, internal resolution scale, agent cap, key bindings |
 

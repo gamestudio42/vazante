@@ -49,4 +49,7 @@ export async function startGame(page: Page, seed = 1): Promise<void> {
   await page.getByRole('checkbox', { name: 'Tutorial guiado' }).uncheck();
   await page.getByRole('button', { name: 'Começar' }).click();
   await expect.poll(() => tick(page), { timeout: 10_000 }).toBeGreaterThan(0);
+  // Any key ends the opening camera move; wait for the view to settle at the tactical zoom.
+  await page.keyboard.press('Shift');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { vazante: { view: { rig: { span: number } } } }).vazante.view.rig.span), { timeout: 5_000 }).toBeLessThan(112);
 }
