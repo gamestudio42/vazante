@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { DIFFICULTY_IDS, MAX_TICKS_PER_FRAME, TICK_HZ, type DifficultyId, type FromWorker, type ToWorker } from '@vazante/shared';
+import { DIFFICULTY_IDS, MAX_TICKS_PER_FRAME, TICK_HZ, type CrewSeat, type DifficultyId, type FromWorker, type ToWorker } from '@vazante/shared';
 import { SCENARIO_IDS, SimulationEngine } from '@vazante/simulation';
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -7,6 +7,8 @@ declare const self: DedicatedWorkerGlobalScope;
 let engine: SimulationEngine | null = null;
 let last = 0;
 let acc = 0;
+/** Campaign roster seats for this game, kept to rebuild it at another difficulty. */
+let crew: CrewSeat[][] | undefined;
 
 function post(msg: FromWorker, transfer: Transferable[] = []): void {
   self.postMessage(msg, transfer);
@@ -42,14 +44,15 @@ self.onmessage = (ev: MessageEvent<ToWorker>) => {
     case 'init': {
       const scenario = SCENARIO_IDS.find((id) => id === msg.scenario) ?? 'last_convoy';
       const difficulty = difficultyOf(msg.difficulty);
+      crew = msg.crew;
       if (msg.save) {
         try {
           engine = SimulationEngine.load(msg.save);
         } catch (err) {
           post({ type: 'error', reason: err instanceof Error ? err.message : 'save_invalid' });
-          engine = SimulationEngine.create(msg.seed, scenario, { difficulty });
+          engine = SimulationEngine.create(msg.seed, scenario, { difficulty, crew });
         }
-      } else engine = SimulationEngine.create(msg.seed, scenario, { difficulty });
+      } else engine = SimulationEngine.create(msg.seed, scenario, { difficulty, crew });
       // Every game opens paused: behind the menu, the briefing or a loaded save.
       engine.world.speed = 0;
       const map = engine.mapInfo();
@@ -62,7 +65,7 @@ self.onmessage = (ev: MessageEvent<ToWorker>) => {
       // Same city, new numbers: only before the first tick, so nothing the player did is lost.
       const difficulty = difficultyOf(msg.difficulty);
       if (!engine || engine.world.tick > 0 || engine.world.difficulty === difficulty) return;
-      engine = SimulationEngine.create(engine.world.seed, engine.scenarioId, { difficulty });
+      engine = SimulationEngine.create(engine.world.seed, engine.scenarioId, { difficulty, crew });
       engine.world.speed = 0;
       post({ type: 'frame', frame: engine.frame(false) });
       break;

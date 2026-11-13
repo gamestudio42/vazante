@@ -85,6 +85,8 @@ import { ShellOverlay, TutorialCard } from "./Shell.tsx";
 import { Minimap } from "./Minimap.tsx";
 import { MapLabels } from "./MapLabels.tsx";
 import { objectiveTarget } from "./objective.ts";
+import { soldierLabel } from "./soldier.ts";
+import type { ReportRow } from "../roster.ts";
 
 interface Props {
   client: GameClient;
@@ -135,6 +137,11 @@ export function App({ client, input, view, shell }: Props) {
 
   const f = state.frame;
   if (!f) return <div className="boot">{t("boot.loading")}</div>;
+  nameSoldier = (id) => {
+    const c = f.crew.find((x) => x.id === id);
+    const tr = c && shell.trooper(c.rid);
+    return c && tr ? soldierLabel(c.rank, tr.name) : null;
+  };
 
   const selected = f.squads.filter((q) => state.selected.includes(q.id));
   const seed = state.map?.seed ?? 1;
@@ -1532,6 +1539,7 @@ function DirectHud({ frame }: { frame: Frame }) {
     total = frame.soldiers[o + SoldierField.Ammo];
   }
   const hpShown = Math.max(0, Math.round(hp));
+  const name = id !== null ? nameSoldier(id) : null;
   return (
     <>
       <div className="crosshair" aria-hidden="true">
@@ -1546,6 +1554,7 @@ function DirectHud({ frame }: { frame: Frame }) {
         </svg>
       </div>
       <div className="direct">
+        {name && <span className="direct-name">{name}</span>}
         <div className="direct-hp panel">
           <Heart size={18} />
           <span className="big">{hpShown}</span>
@@ -1599,6 +1608,11 @@ function Summary({
     // Once, when the run ends.
   }, [endless, m.phase]);
   const best = endless ? shell.settings.survivalBest[frame.difficulty] : undefined;
+  // Written once, when the summary first shows: the roster takes the mission's survivors and fallen.
+  const [report, setReport] = useState<ReportRow[]>([]);
+  useEffect(() => {
+    if (!endless) setReport(shell.settleMission(frame));
+  }, []);
   const rows: [LucideIcon, string, ReactNode][] = [
     [Flag, t("summary.objectives"), `${done}/${m.objectives.length}`],
   ];
@@ -1649,6 +1663,7 @@ function Summary({
             </div>
           ))}
         </div>
+        {report.length > 0 && <TroopReport rows={report} practice={shell.practiceGame} />}
         <div className="row end">
           <button onClick={() => shell.restart(seed, false)}>
             {t("pause.mainMenu")}
@@ -1674,6 +1689,38 @@ function Summary({
   );
 }
 
+/** Each roster soldier after the mission: kills, promotion or fate. */
+function TroopReport({ rows, practice }: { rows: ReportRow[]; practice: boolean }) {
+  return (
+    <div className="troop-report">
+      <div className="troop-head">
+        {t("roster.report")}
+        {practice && <span className="muted"> · {t("roster.practice")}</span>}
+      </div>
+      <ul>
+        {rows.map((r) => (
+          <li key={r.rid} className={`troop ${r.fate}`}>
+            <span className="troop-name">{soldierLabel(r.rankBefore, r.name)}</span>
+            <span className="troop-kills">
+              <Crosshair size={12} /> {r.kills}
+            </span>
+            <span className="troop-fate">
+              {r.fate !== "alive"
+                ? t(`roster.fate.${r.fate}`)
+                : r.rankAfter > r.rankBefore
+                  ? t("roster.promoted").replace("{r}", t(`rank.${r.rankAfter}`))
+                  : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Names a roster soldier by entity id in this game; set by App on every render. */
+let nameSoldier: (id: number) => string | null = () => null;
+
 function alertText(a: GameClient["state"]["alerts"][number]): string {
   // Pressure groups arrive as wave 0.
   if (a.type === "wave_started" && !a.value) return t("alert.pressure");
@@ -1681,6 +1728,12 @@ function alertText(a: GameClient["state"]["alerts"][number]): string {
     .replace("{n}", String(a.value ?? ""))
     .replace("{s}", a.reason ?? "");
   switch (a.type) {
+    case "soldier_died":
+    case "soldier_turned":
+    case "soldier_bitten": {
+      const name = a.source !== undefined ? nameSoldier(a.source) : null;
+      return name ? `${base}: ${name}` : base;
+    }
     case "structure_built":
     case "structure_destroyed":
       return `${base} (${t(`structure.${a.reason}`)})`;

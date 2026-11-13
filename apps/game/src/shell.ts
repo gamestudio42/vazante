@@ -1,4 +1,4 @@
-import { MISSION_IDS, TICK_HZ, type DifficultyId, type MissionId, type SaveMeta, type SimSpeed } from '@vazante/shared';
+import { MISSION_IDS, TICK_HZ, type DifficultyId, type Frame, type MissionId, type SaveMeta, type SimSpeed } from '@vazante/shared';
 import type { AudioDirector } from '@vazante/audio';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
@@ -7,6 +7,7 @@ import type { InputController } from './input.ts';
 import type { PlaytestRecorder } from './playtest-recorder.ts';
 import { newGameSeed, saveSettings, type Settings, type SurvivalRecord } from './settings.ts';
 import { Tutorial } from './tutorial.ts';
+import { crewResults, emptyRoster, loadRoster, namesByRid, saveRoster, settle, type ReportRow, type Roster, type Trooper } from './roster.ts';
 import { deleteSave, download, exportSave, getSave, importSave, listSaves, putSave } from './storage.ts';
 
 export type Screen = 'menu' | 'briefing' | 'playing' | 'paused';
@@ -34,6 +35,16 @@ export class Shell {
   readonly tutorial: Tutorial;
   /** Local playtest log, set once the game has started. */
   playtest: PlaytestRecorder | null = null;
+  /** Campaign roster as stored; `report` is this game's result once it is settled. */
+  roster: Roster = loadRoster();
+  report: ReportRow[] | null = null;
+  /** The guided tutorial ran in this game: practice, so the roster is not touched. */
+  get practiceGame(): boolean {
+    return this.practice;
+  }
+  private names = namesByRid(this.roster);
+  /** The guided tutorial ran in this game: practice, so the roster is not touched. */
+  private practice = false;
   /** Start the guided tutorial when the briefing closes (on until it was finished or skipped once). */
   withTutorial: boolean;
   readonly desktop: DesktopBridge | null = (window as unknown as { vazanteDesktop?: DesktopBridge }).vazanteDesktop ?? null;
@@ -138,6 +149,37 @@ export class Shell {
     return true;
   }
 
+  /** Roster soldier behind a roster id, for names in the HUD. */
+  trooper(rid: number): Trooper | undefined {
+    return this.names.get(rid);
+  }
+
+  /**
+   * Write a finished campaign mission into the roster, once per game: survivors gain experience,
+   * the fallen go to the memorial. A game with the guided tutorial on changes nothing.
+   */
+  settleMission(frame: Frame): ReportRow[] {
+    if (this.report) return this.report;
+    const m = frame.mission;
+    if (!m || m.phase === 'active' || frame.crew.length === 0) return (this.report = []);
+    const done = settle(loadRoster(), m.id, m.phase === 'won', crewResults(frame.crew, frame.soldiers), Date.now());
+    if (!this.practice) this.setRoster(done.roster);
+    this.report = done.report;
+    return this.report;
+  }
+
+  /** Start the campaign roster over: every soldier and the memorial are cleared. */
+  resetRoster(): void {
+    this.setRoster(emptyRoster());
+    this.changed();
+  }
+
+  private setRoster(r: Roster): void {
+    this.roster = r;
+    this.names = namesByRid(r);
+    saveRoster(r);
+  }
+
   completeMission(id: MissionId): void {
     if (this.settings.completed.includes(id)) return;
     this.applySettings({ ...this.settings, completed: [...this.settings.completed, id] });
@@ -173,7 +215,10 @@ export class Shell {
   start(): void {
     this.screen = 'playing';
     this.setSpeed(1);
-    if (this.withTutorial) this.tutorial.begin();
+    if (this.withTutorial) {
+      this.practice = true;
+      this.tutorial.begin();
+    }
     this.changed();
   }
 

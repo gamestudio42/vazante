@@ -1,4 +1,4 @@
-import { CELL_SIZE, DIFFICULTY, MISSIONS, MISSION_IDS, SLICE, type DifficultyId, type MissionId, ZOMBIE_POOL_CAPACITY, ZombieState } from '@vazante/shared';
+import { CELL_SIZE, DIFFICULTY, clampRank, type CrewSeat, MISSIONS, MISSION_IDS, SLICE, type DifficultyId, type MissionId, ZOMBIE_POOL_CAPACITY, ZombieState } from '@vazante/shared';
 import { Grid } from '../grid.ts';
 import { generateCityMap, generateSliceMap } from '../mapgen.ts';
 import { rollZombieKind, spawnSquad } from '../spawn.ts';
@@ -14,6 +14,8 @@ export const SCENARIO_IDS: readonly ScenarioId[] = [...MISSION_IDS, 'survival', 
 export interface ScenarioOptions {
   zombies?: number;
   difficulty?: DifficultyId;
+  /** Campaign roster seats per mission squad (by index), then per member slot. */
+  crew?: readonly (readonly CrewSeat[] | undefined)[];
 }
 
 /** Scatter wandering zombies over walkable cells, keeping `clearM` metres around (bx, by) empty. */
@@ -49,7 +51,19 @@ export function buildMission(id: MissionId, seed: number, opts: ScenarioOptions 
   const by = ((home.y0 + home.y1 + 1) / 2) * CELL_SIZE;
   const gap = def.map === 'city' ? 16 : 20;
   const n = def.squads.length;
-  def.squads.forEach((q, i) => spawnSquad(w, q.kind, q.name, bx + (i - (n - 1) / 2) * gap, by));
+  def.squads.forEach((q, i) => {
+    const squad = spawnSquad(w, q.kind, q.name, bx + (i - (n - 1) / 2) * gap, by);
+    const seats = opts.crew?.[i];
+    if (!seats) return;
+    squad.members.forEach((id, k) => {
+      const seat = seats[k];
+      const s = w.soldier(id);
+      if (!seat || !s || !(seat.rid > 0)) return;
+      s.rid = seat.rid;
+      const rank = clampRank(seat.rank);
+      if (rank) s.rank = rank;
+    });
+  });
 
   home.materials = def.materials + diff.baseMaterials;
   home.ammo = def.ammo + diff.baseAmmo;

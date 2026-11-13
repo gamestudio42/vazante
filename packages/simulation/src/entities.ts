@@ -51,6 +51,12 @@ export interface Soldier {
   /** Ticks the soldier has been blocked far from the slot, and ticks the current route may still run. */
   stuckT?: number;
   routeT?: number;
+  /** Campaign roster id (absent for soldiers outside the roster). */
+  rid?: number;
+  /** Veterancy rank 0..MAX_RANK carried in from the roster; absent = recruit. */
+  rank?: number;
+  /** Infected this soldier killed in this game. */
+  kills?: number;
 }
 
 export interface Squad {

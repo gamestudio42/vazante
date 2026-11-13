@@ -166,6 +166,22 @@ Cosmetic values only; these do not change visibility, combat, clocks or the worl
 - Lighting colours remain in the renderer's `palette.ts`: daytime zenith `#657e91`, horizon/fog
   `#aaa99b`, ground bounce `#655b4e`; night horizon/fog `#2b3446`.
 
+## Veterancy (`balance/veterancy.ts`)
+
+Campaign roster soldiers earn experience between missions; rank is applied in the simulation.
+
+| Rank | Experience | Hit chance | Stress taken |
+| --- | --- | --- | --- |
+| Recruit | 0 | +0 | ×1.00 |
+| Private | 25 | +0.02 | ×0.92 |
+| Corporal | 75 | +0.04 | ×0.84 |
+| Sergeant | 175 | +0.06 | ×0.76 |
+| Veteran | 350 | +0.08 | ×0.68 |
+
+Experience: 1 per infected killed, plus 15 for surviving a won mission or 5 for a lost one. The
+hit-chance bonus is added after the other factors, like the direct-control bonus. Dead, turned
+and bitten soldiers leave the roster at the end of the mission.
+
 ## Change log
 
 | Date | Value | Old → new | Reason |
@@ -255,3 +271,12 @@ Surface ordered-dither amplitude decreases from 0.5 to 0.22. Perspective sky and
 surfaces keep smooth gradients instead of colour quantization; intermediate fog blends the two.
 Facade detail now fades at 0.18–0.55 projected window periods (previously 0.25–0.75), and glass
 variation converges to its mean at distance. Black map background and world visibility remain intact.
+
+### 2026-11-13 — campaign roster and veterancy
+
+New table `balance/veterancy.ts` (above). Survivors of a mission now carry over with experience and
+rank, so the campaign rewards keeping soldiers alive and losses cost something beyond the mission.
+The balance bot plays without a roster (every soldier a recruit), so its results are unchanged; a
+fully veteran infantry squad facing 300 commons (five seeds) killed the same number as recruits but
+fired 12–25 % fewer rounds (481–522 against 579–643), on top of steadier nerves: rank saves ammo, the
+resource the campaign is built around. Reaching it takes several missions of keeping people alive.

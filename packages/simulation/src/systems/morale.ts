@@ -1,4 +1,4 @@
-import { COVER_STRESS_FACTOR, DAY, DIFFICULTY, Ground, SoldierActivity, STRESS, TICK_DT, clockHours, daylight } from '@vazante/shared';
+import { COVER_STRESS_FACTOR, DAY, DIFFICULTY, Ground, SoldierActivity, STRESS, TICK_DT, VETERANCY, clockHours, daylight } from '@vazante/shared';
 import type { Grid } from '../grid.ts';
 import type { Soldier } from '../entities.ts';
 import { isActiveSoldier, type World } from '../world.ts';
@@ -41,7 +41,7 @@ export function stepMorale(w: World): void {
       if (night && !atSite) gain += STRESS.dark;
       if (matesNear(w, s) >= STRESS.cohesionMates) gain *= STRESS.cohesionFactor;
       if (s.inCover) gain *= COVER_STRESS_FACTOR;
-      s.stress += gain * DIFFICULTY[w.difficulty].stress * TICK_DT;
+      s.stress += gain * steadiness(s) * DIFFICULTY[w.difficulty].stress * TICK_DT;
     } else {
       s.stress -= (atSite ? STRESS.recoverAtSite : STRESS.recover) * TICK_DT;
     }
@@ -81,9 +81,15 @@ export function stepMorale(w: World): void {
   }
 }
 
-/** Add stress to one soldier (cover softens it). */
+/** Share of stress a soldier takes: veterans keep their nerve. */
+export function steadiness(s: Soldier): number {
+  return 1 - (s.rank ?? 0) * VETERANCY.stressPerRank;
+}
+
+/** Add stress to one soldier (cover and rank soften it). */
 export function addStress(s: Soldier, amount: number): void {
-  s.stress = clampStress(s.stress + (s.inCover ? amount * COVER_STRESS_FACTOR : amount));
+  const a = amount * steadiness(s);
+  s.stress = clampStress(s.stress + (s.inCover ? a * COVER_STRESS_FACTOR : a));
 }
 
 /** Everyone active within sight of `victim` takes a morale hit. */

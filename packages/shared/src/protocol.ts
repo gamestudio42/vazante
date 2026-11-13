@@ -203,6 +203,21 @@ export interface FrameStats {
   tickMs: number;
 }
 
+/** A campaign roster soldier in a mission squad slot. */
+export interface CrewSeat {
+  rid: number;
+  rank: number;
+}
+
+/** A soldier from the campaign roster, as the HUD and the summary see it. */
+export interface CrewView {
+  /** Soldier entity id. */
+  id: number;
+  rid: number;
+  rank: number;
+  kills: number;
+}
+
 /** Per-tick snapshot for the renderer and HUD. Arrays are transferred. */
 export interface Frame {
   tick: number;
@@ -226,10 +241,12 @@ export interface Frame {
   day?: DayClock;
   events: SimEvent[];
   stats: FrameStats;
+  /** Roster soldiers in this game (empty outside the campaign). */
+  crew: CrewView[];
 }
 
 export type ToWorker =
-  | { type: 'init'; seed: number; scenario: string; save?: SaveGame; difficulty?: string }
+  | { type: 'init'; seed: number; scenario: string; save?: SaveGame; difficulty?: string; crew?: CrewSeat[][] }
   /** Rebuild the scenario at another difficulty; ignored once the game has run a tick. */
   | { type: 'set_difficulty'; difficulty: string }
   | { type: 'save'; slot: string }

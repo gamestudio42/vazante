@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { AudioDirector } from '@vazante/audio';
-import type { SaveGame } from '@vazante/shared';
+import { MISSION_IDS, MISSIONS, type CrewSeat, type SaveGame } from '@vazante/shared';
 import { GameRenderer } from '@vazante/view3d';
 import { GameClient } from './client.ts';
 import { setLocale, t } from './i18n.ts';
@@ -12,6 +12,7 @@ import { probe } from './probe.ts';
 import { PlaytestRecorder } from './playtest-recorder.ts';
 import { runFrameBench } from './bench.ts';
 import { App } from './ui/App.tsx';
+import { crewFor, loadRoster, saveRoster } from './roster.ts';
 import '@fontsource/barlow/400.css';
 import '@fontsource/barlow/500.css';
 import '@fontsource/barlow/600.css';
@@ -77,7 +78,15 @@ async function boot(): Promise<void> {
   }
   const seed = (save?.seed ?? (params.has('seed') ? Number(params.get('seed')) : newGameSeed(settings))) >>> 0;
   const initial: Screen = params.has('bench') ? 'playing' : save ? 'paused' : params.has('play') ? 'briefing' : 'menu';
-  const client = new GameClient(seed, save ?? undefined, params.has('bench') ? 'veteran' : settings.difficulty, params.get('scenario') ?? undefined);
+  const scenario = params.get('scenario') ?? 'last_convoy';
+  // Campaign missions field the roster: the same soldiers, ranked, with recruits in empty slots.
+  let crew: CrewSeat[][] | undefined;
+  if (!save && !params.has('bench') && (MISSION_IDS as readonly string[]).includes(scenario)) {
+    const filled = crewFor(loadRoster(), MISSIONS[scenario as keyof typeof MISSIONS].squads, Math.random);
+    saveRoster(filled.roster);
+    crew = filled.crew;
+  }
+  const client = new GameClient(seed, save ?? undefined, params.has('bench') ? 'veteran' : settings.difficulty, scenario, crew);
   const unsubscribe = client.subscribe(() => {
     const map = client.state.map;
     if (!map) return;

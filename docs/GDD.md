@@ -168,7 +168,19 @@ create the highest-scoring directive if score > 25 and will ≥ cost
 - Speeds: pause, 1x, 2x, 4x [FACT: up to 4x]. While paused the player can inspect and queue orders.
 - All timers (AI, construction, consumption, reload, infection) use simulation ticks, never wall-clock time.
 
-### 4.14 End of match and campaign hook
+### 4.14 Campaign roster and veterancy
+
+- Campaign missions field named soldiers who carry over from one mission to the next. A slot is the
+  squad kind and its order in the mission (the first and second infantry squads keep their own
+  people), so the same soldiers return whenever that squad is fielded.
+- Survivors earn experience (kills and missions) and rank: recruit, private, corporal, sergeant,
+  veteran. Rank adds to the hit chance and reduces the stress a soldier takes (`balancing.md`).
+- **Losses are permanent [pillar 4]:** the killed, the turned and the bitten leave the roster for the
+  memorial; a recruit takes the empty slot. Loading an older save never brings anyone back.
+- Names appear in the alerts, in direct control and in the end-of-mission report. A game played with
+  the guided tutorial is practice and does not change the roster. Survival does not use it.
+
+### 4.15 End of match and campaign hook
 
 - **Victory (full scenario):** evacuate at least 30% of the initial population to the port and board the ship. **Defeat:** lose every base or the port.
 - **Campaign hook [FACT]:** what reaches the port (troops, vehicles, refugees, stocks) becomes the starting state of the next region. In the MVP this is a summary screen that writes that state into the save.
