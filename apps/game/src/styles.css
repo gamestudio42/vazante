@@ -1038,7 +1038,7 @@ button {
   position: static;
   min-width: 440px;
   padding: 22px 28px;
-  max-width: calc(100vw - 32px);
+  max-width: min(720px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
   overflow-y: auto;
   border-top: 3px solid var(--danger);
@@ -1160,6 +1160,13 @@ button.primary {
   border-color: var(--accent) !important;
   color: #fff;
   background: linear-gradient(90deg, rgba(240, 176, 63, 0.28), rgba(240, 176, 63, 0.1)) !important;
+}
+/* A primary action that cannot be taken yet must not look ready. */
+button.primary:disabled {
+  border-color: var(--dim) !important;
+  background: none !important;
+  color: var(--dim);
+  cursor: not-allowed;
 }
 button.primary svg {
   color: var(--accent) !important;
@@ -2199,4 +2206,14 @@ input[type='checkbox'] {
 .hud.cinematic .minimap {
   opacity: 0;
   pointer-events: none;
+}
+/* With the Operation block under it, the troop list is shorter so the requisitions stay in view. */
+.summary .card:has(.op-summary) {
+  max-width: min(820px, calc(100vw - 32px));
+}
+.summary .card:has(.op-summary) .troop-report ul {
+  max-height: 116px;
+}
+button.primary:disabled svg {
+  color: var(--dim);
 }

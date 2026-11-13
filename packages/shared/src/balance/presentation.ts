@@ -91,10 +91,10 @@ export const MOODS: Readonly<Record<MoodId, Mood>> = {
   haze: { light: [0.92, 0.98, 1.06], sky: [0.9, 1, 1.1], grade: [0.95, 1, 1.07], saturation: 0.86, vignette: 0.05 },
   /** Retomar a Ribeira: smoke over a burning district. */
   ember: { light: [1.1, 0.9, 0.76], sky: [1.12, 0.84, 0.7], grade: [1.07, 0.97, 0.88], saturation: 1.1, vignette: 0.1 },
-  /** Linha de Suprimento: dry dust on the road. */
-  dust: { light: [1.05, 1, 0.84], sky: [1.06, 1, 0.82], grade: [1.03, 1.01, 0.9], saturation: 0.94, vignette: 0.03 },
-  /** Plantão Noturno: street-lamp orange against teal shadow. */
-  sodium: { light: [1.02, 0.96, 0.88], sky: [0.84, 1, 1.04], grade: [1.02, 1, 0.96], saturation: 1.12, vignette: 0.1 },
+  /** Linha de Suprimento: dry yellow dust on the road. */
+  dust: { light: [1.1, 1.02, 0.78], sky: [1.08, 1, 0.78], grade: [1.06, 1.02, 0.84], saturation: 0.88, vignette: 0.03 },
+  /** Plantão Noturno: teal shadow, for the orange street lamps to stand against. */
+  sodium: { light: [0.92, 1, 1.02], sky: [0.8, 1, 1.06], grade: [0.94, 1.02, 1.04], saturation: 1.12, vignette: 0.1 },
   /** O Último Trem: heavy steel sky before the storm. */
   storm: { light: [0.84, 0.9, 0.98], sky: [0.72, 0.8, 0.9], grade: [0.94, 0.98, 1.03], saturation: 0.74, vignette: 0.14 },
 };

@@ -172,8 +172,8 @@ Cosmetic values only; these do not change visibility, combat, clocks or the worl
   | Hospital São Lucas | overcast | flat, cold, washed out | ×0.78 | +0.06 |
   | A Ponte | haze | blue river haze | ×0.86 | +0.05 |
   | Retomar a Ribeira | ember | smoke over a burning district | ×1.10 | +0.10 |
-  | Linha de Suprimento | dust | dry ochre | ×0.94 | +0.03 |
-  | Plantão Noturno | sodium | lamp orange against teal | ×1.12 | +0.10 |
+  | Linha de Suprimento | dust | dry yellow dust | ×0.88 | +0.03 |
+  | Plantão Noturno | sodium | teal shadow under orange lamps | ×1.12 | +0.10 |
   | O Último Trem | storm | heavy steel sky | ×0.74 | +0.14 |
   | Survival, sandbox | clear | unchanged | ×1.00 | +0 |
 
@@ -324,3 +324,10 @@ New table `balance/operation.ts` (above). The threat ramp and the requisition si
 guesses and have not been through the balance bot: the bot plays single missions, and only the
 pressure of the wandering horde grows, not the waves or the pressure groups. The fifth mission at
 ×1.48 is meant to be hard with a weakened task force; playtest logs will show where runs end.
+
+### 2026-11-13 — moods after a look at every mission, by day and by night
+
+Every mood was captured by day and at 23:00. All stay readable. By day `dust` and `sodium` were
+nearly the same picture, so `dust` went yellower and less saturated (×0.94 → ×0.88) and `sodium`
+moved to teal light and shadow. At night the moods converge on the night palette and differ little;
+that was left as it is.
