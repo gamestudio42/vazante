@@ -153,3 +153,32 @@ cells alter paths and hashes, so decreases are not evidence of an optimization.
 Placement only runs on world creation; there is no new per-tick system. The GPU
 render gate remains pending. Seeds 1/7/42 produce 13 cars in the slice and 203/211/206
 in the city, including the existing sparse dressing.
+
+## 2026-11-13: after the roster, Operation, radio and mission moods
+
+`pnpm bench 1200` on `main` at `fca76cb`, i7-13620H, Node v22.23.5, load average about 1 to 3
+(a browser and the editor open).
+
+| Case | Zombies alive | Mean tick | p95 | Worst | Top systems (ms per tick) |
+| --- | --- | --- | --- | --- | --- |
+| Slice | 199 | 0.25 ms | 0.78 | 1.4 | flow 0.11, horde 0.07 |
+| Slice + attack | 390 | 0.29 ms | 0.77 | 1.5 | horde 0.12, flow 0.11 |
+| 1,000 | 1,194 | 0.48 ms | 0.97 | 2.8 | horde 0.28, flow 0.12 |
+| 4,000 | 4,160 | 1.33 ms | 1.91 | 5.5 | horde 1.06, flow 0.12 |
+| 8,000 | 8,121 | 2.76 ms | 3.38 | 11.5 | horde 2.40, hash 0.15 |
+| Porto Velário 8,000 | 8,158 | 4.47 ms | 6.95 | 11.2 | horde 2.03, flow 1.86 |
+
+Of the work since the 2026-11-12 runs, only the roster touches the tick: a rank lookup in the hit
+chance and in stress, a kill credited per soldier, and three optional fields in the hash. The
+benchmark fields no crew, so those paths run with every soldier a recruit. Operation tweaks apply
+when the world is built; radio and moods are client and renderer only.
+
+Means are level with the 2026-11-12 after-values (4,000: 1.508, 8,000: 2.944, Porto Velário:
+4.494). Those were 300-tick samples and these are 1,200, so the lower numbers here are not
+evidence of a speedup. Both 8,000 cases had one tick of about 11 ms with the mean and p95
+unmoved; the cause was not investigated. The v0.5 simulation gate (8,000 agents, mean under
+12 ms) passes.
+
+Not measured: frames on the GPU. The ground marks under special infected (one instanced draw) and
+the mood grade (one multiply in the post shader) are render costs, so the desktop frame benchmark
+is the one that would show them.
