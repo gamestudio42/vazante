@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { Check, ChevronRight, CircleCheck, Lock, Map as MapIcon, Download, FolderOpen, GraduationCap, LogOut, Moon, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
-import { DIFFICULTY_IDS, MISSION_IDS, TICK_HZ, type MissionId, type SaveMeta } from '@vazante/shared';
+import { Calendar, Check, ChevronRight, CircleCheck, Dices, Flag, Lock, Map as MapIcon, Download, FolderOpen, GraduationCap, LogOut, Moon, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
+import { DIFFICULTY_IDS, MISSION_IDS, OPERATION, TICK_HZ, type MissionId, type RequisitionId, type SaveMeta } from '@vazante/shared';
 import { LOCALES, LOCALE_NAMES, t, type Locale } from '../i18n.ts';
 import type { Settings } from '../settings.ts';
 import type { Shell } from '../shell.ts';
 import { rankForXp } from '@vazante/shared';
-import type { Trooper } from '../roster.ts';
+import { living, type Roster, type Trooper } from '../roster.ts';
+import { canDeploy, missionTweaks, scoreOf, type OperationRun } from '../operation.ts';
 import { soldierLabel } from './soldier.ts';
 
 /** Menus that cover the game: main menu, campaign, briefing, pause, settings, load. */
@@ -17,6 +18,7 @@ export function ShellOverlay({ shell, seed }: { shell: Shell; seed: number }) {
       {panel === 'settings' && <SettingsPanel shell={shell} />}
       {panel === 'load' && <LoadPanel shell={shell} />}
       {panel === 'campaign' && <CampaignPanel shell={shell} />}
+      {panel === 'operation' && <OperationPanel shell={shell} />}
       {!panel && screen === 'menu' && <MainMenu shell={shell} seed={seed} />}
       {!panel && screen === 'briefing' && <Briefing shell={shell} />}
       {!panel && screen === 'paused' && <PauseMenu shell={shell} />}
@@ -59,6 +61,14 @@ function MainMenu({ shell, seed }: { shell: Shell; seed: number }) {
           <span className="muted">
             {' '}
             · {shell.settings.completed.length}/{MISSION_IDS.length}
+          </span>
+        </button>
+        <button onClick={() => shell.openPanel('operation')}>
+          <Flag size={16} />
+          {t('op.title')}
+          <span className="muted">
+            {' '}
+            · {shell.operation.run?.status === 'active' ? t('op.mission').replace('{n}', String(shell.operation.run.index + 1)).replace('{t}', String(OPERATION.missions)) : t('op.tag')}
           </span>
         </button>
         <button onClick={() => shell.openSurvival()}>
@@ -117,7 +127,10 @@ function Briefing({ shell }: { shell: Shell }) {
   const city = shell.scenario === 'city_war';
   const survival = shell.scenario === 'survival';
   const id: MissionId = survival ? 'survival' : (MISSION_IDS as readonly string[]).includes(shell.scenario) ? (shell.scenario as MissionId) : 'last_convoy';
-  const kicker = city ? t('menu.experimental') : survival ? t('brief.survival.kicker') : t('campaign.mission').replace('{n}', String(MISSION_IDS.indexOf(id) + 1)).replace('{t}', String(MISSION_IDS.length));
+  const run = shell.inOperation ? shell.operation.run : null;
+  const kicker = run
+    ? `${t('op.mission').replace('{n}', String(run.index + 1)).replace('{t}', String(run.missions.length))}${run.daily ? ` · ${t('op.daily')}` : ''}`
+    : city ? t('menu.experimental') : survival ? t('brief.survival.kicker') : t('campaign.mission').replace('{n}', String(MISSION_IDS.indexOf(id) + 1)).replace('{t}', String(MISSION_IDS.length));
   return (
     <div className="modal">
       <div className="panel card briefing">
@@ -129,6 +142,8 @@ function Briefing({ shell }: { shell: Shell }) {
             <p key={i}>{p}</p>
           ))}
         {!city && <p className="muted tips">{t(`brief.${id}.tips`)}</p>}
+        {run && <OperationBrief run={run} />}
+        {!run && (
         <div className="difficulty" role="radiogroup" aria-label={t('diff.title')}>
           {DIFFICULTY_IDS.map((d) => {
             const Icon = DIFF_ICON[d];
@@ -143,12 +158,17 @@ function Briefing({ shell }: { shell: Shell }) {
             );
           })}
         </div>
+        )}
         <div className="row between">
-          <label className="tut-toggle">
-            <input type="checkbox" checked={shell.withTutorial} onChange={(e) => shell.setTutorial(e.target.checked)} />
-            <GraduationCap size={14} />
-            {t('brief.tutorial')}
-          </label>
+          {run ? (
+            <span />
+          ) : (
+            <label className="tut-toggle">
+              <input type="checkbox" checked={shell.withTutorial} onChange={(e) => shell.setTutorial(e.target.checked)} />
+              <GraduationCap size={14} />
+              {t('brief.tutorial')}
+            </label>
+          )}
           <button className="primary big" autoFocus onClick={() => shell.start()}>
             <Play size={16} />
             {t('brief.start')}
@@ -336,9 +356,173 @@ function CampaignPanel({ shell }: { shell: Shell }) {
   );
 }
 
+/** What the Operation brings to this mission: its threat, its requisitions and the task force. */
+function OperationBrief({ run }: { run: OperationRun }) {
+  const tw = missionTweaks(run);
+  const R = OPERATION.requisitions;
+  const notes = [t('op.threat').replace('{x}', (tw.zombieScale ?? 1).toFixed(2))];
+  if (run.next.ammo) notes.push(t('req.ammo.desc').replace('{n}', String(run.next.ammo)));
+  if (run.next.materials) notes.push(t('req.materials.desc').replace('{n}', String(run.next.materials)));
+  if (run.next.recon) notes.push(t('req.recon.desc').replace('{n}', String(Math.round(R.recon * 100))));
+  if (run.next.recruitXp) notes.push(t('req.veterans.desc'));
+  return (
+    <div className="op-brief">
+      <OperationTrack run={run} />
+      <span className="muted">{notes.join(' · ')}</span>
+    </div>
+  );
+}
+
+const REQ_AMOUNT: Record<RequisitionId, number> = {
+  ammo: OPERATION.requisitions.ammo,
+  materials: OPERATION.requisitions.materials,
+  recon: Math.round(OPERATION.requisitions.recon * 100),
+  drill: OPERATION.requisitions.drillXp,
+  veterans: 0,
+};
+
+/** The requisitions offered after a won mission; one must be taken before the next mission. */
+export function RequisitionChoice({ shell, run }: { shell: Shell; run: OperationRun }) {
+  if (run.offers.length === 0) return null;
+  return (
+    <div className="requisitions" role="group" aria-label={t('op.choose')}>
+      <div className="troop-head">{t('op.choose')}</div>
+      {run.offers.map((r) => (
+        <button key={r} className="requisition" onClick={() => shell.chooseRequisition(r)}>
+          <b>{t(`req.${r}`)}</b>
+          <span className="muted">{t(`req.${r}.desc`).replace('{n}', String(REQ_AMOUNT[r]))}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The run's missions as numbered marks: won, lost, next. */
+export function OperationTrack({ run }: { run: OperationRun }) {
+  return (
+    <ol className="op-track">
+      {run.missions.map((m, i) => {
+        const log = run.log[i];
+        return (
+          <li key={m} className={log?.won ? 'done' : log ? 'lost' : i === run.index && run.status === 'active' ? 'now' : ''} title={t(`brief.${m}.title`)}>
+            {i + 1}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** Operation: today's daily run or a random one, the run in progress, and the bests. */
+function OperationPanel({ shell }: { shell: Shell }) {
+  const { run, best, daily } = shell.operation;
+  const today = daily[shell.today];
+  const active = run?.status === 'active' ? run : null;
+  const start = (isDaily: boolean) => {
+    if (active && !confirm(t('op.replaceConfirm'))) return;
+    shell.startOperation(isDaily);
+  };
+  return (
+    <div className="modal">
+      <div className="panel card campaign operation">
+        <h2>
+          <Flag size={16} />
+          {t('op.title')}
+        </h2>
+        <p className="muted">{t('op.body')}</p>
+        {active ? (
+          <div className="op-run">
+            <OperationRunView run={active} />
+            <RequisitionChoice shell={shell} run={active} />
+            <div className="row">
+              {canDeploy(active) && (
+                <button className="primary" onClick={() => shell.deployOperation()}>
+                  <Play size={14} />
+                  {t('op.continue').replace('{m}', t(`brief.${active.missions[active.index]}.title`))}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (confirm(t('op.abandonConfirm'))) shell.abandonOperation();
+                }}
+              >
+                <X size={14} />
+                {t('op.abandon')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="muted">{t('op.none')}</p>
+        )}
+        <div className="op-start">
+          <button className={active ? '' : 'primary'} onClick={() => start(true)}>
+            <Calendar size={16} />
+            <span className="mission-text">
+              <b>{t('op.daily')}</b>
+              <span className="muted">{t('op.dailyHint').replace('{d}', shell.today)}</span>
+            </span>
+            {today && <span className="op-score">{today.score}</span>}
+          </button>
+          <button onClick={() => start(false)}>
+            <Dices size={16} />
+            <span className="mission-text">
+              <b>{t('op.random')}</b>
+              <span className="muted">
+                {t('op.randomHint')} · {t(`diff.${shell.settings.difficulty}`)}
+              </span>
+            </span>
+          </button>
+        </div>
+        {best && (
+          <p className="muted">
+            {t('op.best')}: <b>{best.score}</b> · {best.missions}/{OPERATION.missions}
+          </p>
+        )}
+        <div className="row end">
+          <button className="primary" onClick={() => shell.openPanel(null)}>
+            <Undo2 size={14} />
+            {t('menu.back')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Missions of a run with their results, its score and its task force. */
+export function OperationRunView({ run }: { run: OperationRun }) {
+  return (
+    <>
+      <ol className="missions op-missions">
+        {run.missions.map((m, i) => {
+          const log = run.log[i];
+          return (
+            <li key={m} className={`mission-row ${log?.won ? 'won' : log ? 'lost' : i === run.index ? 'now' : ''}`}>
+              <span className="mission-n">{i + 1}</span>
+              <span className="mission-text">
+                <b>{t(`brief.${m}.title`)}</b>
+                {log && (
+                  <span className="muted">
+                    {log.kills} {t('top.killed').toLowerCase()} · {t('op.fallen').replace('{n}', String(log.fallen))}
+                  </span>
+                )}
+              </span>
+              {log?.won ? <CircleCheck size={16} className="ok" /> : log ? <Skull size={14} /> : null}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="op-line">
+        {t('op.score')}: <b>{scoreOf(run)}</b> · {t('roster.title')}: {living(run.roster).length}
+        {run.roster.fallen.length > 0 && ` · ${t('op.fallen').replace('{n}', String(run.roster.fallen.length))}`}
+      </p>
+    </>
+  );
+}
+
 /** The soldiers who carry over between missions, and the memorial of those who fell. */
 function RosterView({ shell }: { shell: Shell }) {
-  const r = shell.roster;
+  const r: Roster = shell.roster;
   const units = Object.entries(r.units).filter(([, u]) => u.some(Boolean));
   if (units.length === 0 && r.fallen.length === 0) return <p className="muted roster-empty">{t('roster.empty')}</p>;
   const label = (key: string) => {

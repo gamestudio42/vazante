@@ -1,6 +1,7 @@
 import type { DifficultyId } from './balance/difficulty.ts';
 import type { RiskPolicy } from './balance/logistics.ts';
 import type { MissionId, StageKind } from './balance/missions.ts';
+import type { MissionTweaks } from './balance/operation.ts';
 import type { StructureKind } from './balance/structures.ts';
 import type { SquadKind } from './balance/units.ts';
 import type { Command } from './commands.ts';
@@ -246,7 +247,7 @@ export interface Frame {
 }
 
 export type ToWorker =
-  | { type: 'init'; seed: number; scenario: string; save?: SaveGame; difficulty?: string; crew?: CrewSeat[][] }
+  | { type: 'init'; seed: number; scenario: string; save?: SaveGame; difficulty?: string; crew?: CrewSeat[][]; tweaks?: MissionTweaks }
   /** Rebuild the scenario at another difficulty; ignored once the game has run a tick. */
   | { type: 'set_difficulty'; difficulty: string }
   | { type: 'save'; slot: string }

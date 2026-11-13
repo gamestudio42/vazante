@@ -81,12 +81,13 @@ import type { GameClient } from "../client.ts";
 import type { InputController } from "../input.ts";
 import { t } from "../i18n.ts";
 import type { Shell } from "../shell.ts";
-import { ShellOverlay, TutorialCard } from "./Shell.tsx";
+import { OperationTrack, RequisitionChoice, ShellOverlay, TutorialCard } from "./Shell.tsx";
 import { Minimap } from "./Minimap.tsx";
 import { MapLabels } from "./MapLabels.tsx";
 import { objectiveTarget } from "./objective.ts";
 import { soldierLabel } from "./soldier.ts";
-import type { ReportRow } from "../roster.ts";
+import { living, type ReportRow } from "../roster.ts";
+import { canDeploy, scoreOf } from "../operation.ts";
 
 interface Props {
   client: GameClient;
@@ -1664,6 +1665,9 @@ function Summary({
           ))}
         </div>
         {report.length > 0 && <TroopReport rows={report} practice={shell.practiceGame} />}
+        {shell.inOperation ? (
+          <OperationSummary shell={shell} seed={seed} />
+        ) : (
         <div className="row end">
           <button onClick={() => shell.restart(seed, false)}>
             {t("pause.mainMenu")}
@@ -1684,6 +1688,48 @@ function Summary({
             </button>
           )}
         </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** After an Operation mission: the run so far, the requisition to take, and the way on. */
+function OperationSummary({ shell, seed }: { shell: Shell; seed: number }) {
+  useSyncExternalStore(shell.subscribe, () => shell.version);
+  const run = shell.operation.run;
+  if (!run) return null;
+  const over = run.status !== "active";
+  const best = run.daily ? shell.operation.daily[run.daily] : shell.operation.best;
+  return (
+    <div className="op-summary">
+      <div className="troop-head">
+        {over ? t(run.status === "won" ? "op.won" : "op.lost") : t("op.mission").replace("{n}", String(run.index)).replace("{t}", String(run.missions.length))}
+        {run.daily && <span className="muted"> · {t("op.daily")}</span>}
+      </div>
+      <div className="op-line">
+        <OperationTrack run={run} />
+        <span>
+          {t("op.score")}: <b>{scoreOf(run)}</b> · {t("roster.title")}: {living(run.roster).length}
+        </span>
+        {over && best && (
+          <span className="op-best">
+            <Trophy size={14} /> {shell.operationNewBest ? t("op.newBest") : `${t(run.daily ? "op.today" : "op.best")}: ${best.score}`}
+          </span>
+        )}
+      </div>
+      <RequisitionChoice shell={shell} run={run} />
+      <div className="row end">
+        <button onClick={() => shell.restart(seed, false)}>{t("pause.mainMenu")}</button>
+        {over ? (
+          <button className="primary" onClick={() => shell.startOperation(run.daily !== null)}>
+            {t("op.new")} <ArrowRight size={14} />
+          </button>
+        ) : (
+          <button className="primary" disabled={!canDeploy(run)} onClick={() => shell.deployOperation()}>
+            {t("summary.nextMission")} <ArrowRight size={14} />
+          </button>
+        )}
       </div>
     </div>
   );

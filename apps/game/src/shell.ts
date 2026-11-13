@@ -1,4 +1,4 @@
-import { MISSION_IDS, TICK_HZ, type DifficultyId, type Frame, type MissionId, type SaveMeta, type SimSpeed } from '@vazante/shared';
+import { MISSION_IDS, TICK_HZ, type DifficultyId, type RequisitionId, type Frame, type MissionId, type SaveMeta, type SimSpeed } from '@vazante/shared';
 import type { AudioDirector } from '@vazante/audio';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from './client.ts';
@@ -8,10 +8,11 @@ import type { PlaytestRecorder } from './playtest-recorder.ts';
 import { newGameSeed, saveSettings, type Settings, type SurvivalRecord } from './settings.ts';
 import { Tutorial } from './tutorial.ts';
 import { crewResults, emptyRoster, loadRoster, namesByRid, saveRoster, settle, type ReportRow, type Roster, type Trooper } from './roster.ts';
+import { canDeploy, choose, dailyKey, dailyRun, finishMission, loadOperation, newRun, recordRun, saveOperation, type OperationStore } from './operation.ts';
 import { deleteSave, download, exportSave, getSave, importSave, listSaves, putSave } from './storage.ts';
 
 export type Screen = 'menu' | 'briefing' | 'playing' | 'paused';
-export type Panel = null | 'settings' | 'load' | 'campaign';
+export type Panel = null | 'settings' | 'load' | 'campaign' | 'operation';
 
 /** Desktop hooks exposed by the Electron preload; absent in the browser. */
 interface DesktopBridge {
@@ -43,6 +44,12 @@ export class Shell {
     return this.practice;
   }
   private names = namesByRid(this.roster);
+  /** Operation runs and bests as stored. */
+  operation: OperationStore = loadOperation();
+  /** This game is the current mission of the Operation run. */
+  inOperation = false;
+  /** The finished run beat the best score (overall, or the day's for a daily run). */
+  operationNewBest = false;
   /** The guided tutorial ran in this game: practice, so the roster is not touched. */
   private practice = false;
   /** Start the guided tutorial when the briefing closes (on until it was finished or skipped once). */
@@ -102,8 +109,17 @@ export class Shell {
     if (this.screen === 'playing') this.tutorial.update(performance.now());
   }
 
+  /** This game deploys the Operation's task force: no tutorial, the run's difficulty, its names. */
+  enterOperation(): void {
+    this.inOperation = true;
+    this.withTutorial = false;
+    this.names = namesByRid(this.operation.run!.roster);
+  }
+
   /** Difficulty of the next game; rebuilds the waiting scenario so the briefing starts on it. */
   setDifficulty(d: DifficultyId): void {
+    // An Operation keeps the difficulty it started with.
+    if (this.inOperation) return;
     this.applySettings({ ...this.settings, difficulty: d });
     this.client.setDifficulty(d);
     this.changed();
@@ -131,6 +147,7 @@ export class Shell {
     p.set('seed', String(newGameSeed(this.settings)));
     p.set('play', '1');
     p.delete('load');
+    p.delete('op');
     location.search = p.toString();
   }
 
@@ -162,10 +179,72 @@ export class Shell {
     if (this.report) return this.report;
     const m = frame.mission;
     if (!m || m.phase === 'active' || frame.crew.length === 0) return (this.report = []);
+    if (this.inOperation) return (this.report = this.settleOperation(m.phase === 'won', crewResults(frame.crew, frame.soldiers)));
     const done = settle(loadRoster(), m.id, m.phase === 'won', crewResults(frame.crew, frame.soldiers), Date.now());
     if (!this.practice) this.setRoster(done.roster);
     this.report = done.report;
     return this.report;
+  }
+
+  /** The Operation mission's result goes into the run; a finished run goes into the bests. */
+  private settleOperation(won: boolean, results: Parameters<typeof finishMission>[2]): ReportRow[] {
+    const store = loadOperation();
+    if (!store.run) return [];
+    const done = finishMission(store.run, won, results, Date.now());
+    let next: OperationStore = { ...store, run: done.run };
+    if (done.run.status !== 'active') {
+      const rec = recordRun(next, done.run, Date.now());
+      next = rec.store;
+      this.operationNewBest = rec.newBest;
+    }
+    this.setOperation(next);
+    return done.report;
+  }
+
+  private setOperation(s: OperationStore): void {
+    this.operation = s;
+    saveOperation(s);
+    this.changed();
+  }
+
+  /** A new Operation (today's daily one, or a random city), replacing any run in progress. */
+  startOperation(daily: boolean): void {
+    const now = Date.now();
+    const run = daily ? dailyRun(now) : newRun(newGameSeed(this.settings), null, this.settings.difficulty, now);
+    this.setOperation({ ...loadOperation(), run });
+    this.deployOperation();
+  }
+
+  /** Today's daily date, for the menu. */
+  get today(): string {
+    return dailyKey(Date.now());
+  }
+
+  /** Take a requisition offered after a won Operation mission. */
+  chooseRequisition(pick: RequisitionId): void {
+    const store = loadOperation();
+    if (store.run) this.setOperation({ ...store, run: choose(store.run, pick) });
+  }
+
+  /** Open the run's next mission on its city. */
+  deployOperation(): void {
+    const run = this.operation.run;
+    if (!canDeploy(run)) return;
+    const p = new URLSearchParams(location.search);
+    p.set('scenario', run.missions[run.index]);
+    p.set('seed', String(run.seed));
+    p.set('op', String(run.index));
+    p.set('play', '1');
+    p.delete('load');
+    location.search = p.toString();
+  }
+
+  /** Give up the run: it ends with the score it has and counts for the bests. */
+  abandonOperation(): void {
+    const store = loadOperation();
+    if (!store.run || store.run.status !== 'active') return;
+    const run = { ...store.run, status: 'lost' as const, offers: [] };
+    this.setOperation({ ...recordRun(store, run, Date.now()).store, run });
   }
 
   /** Start the campaign roster over: every soldier and the memorial are cleared. */
@@ -181,7 +260,7 @@ export class Shell {
   }
 
   completeMission(id: MissionId): void {
-    if (this.settings.completed.includes(id)) return;
+    if (this.inOperation || this.settings.completed.includes(id)) return;
     this.applySettings({ ...this.settings, completed: [...this.settings.completed, id] });
   }
 
@@ -318,6 +397,7 @@ export class Shell {
     const p = new URLSearchParams(location.search);
     p.set('seed', String(seed >>> 0));
     p.delete('load');
+    p.delete('op');
     if (play) p.set('play', '1');
     else p.delete('play');
     location.search = p.toString();
@@ -329,6 +409,7 @@ export class Shell {
     const p = new URLSearchParams(location.search);
     if (p.has('scenario')) {
       p.delete('scenario');
+      p.delete('op');
       p.delete('load');
       p.delete('play');
       location.search = p.toString();

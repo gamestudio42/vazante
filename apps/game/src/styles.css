@@ -1038,6 +1038,9 @@ button {
   position: static;
   min-width: 440px;
   padding: 22px 28px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   border-top: 3px solid var(--danger);
 }
 .summary .card.won {
@@ -1955,6 +1958,124 @@ input[type='checkbox'] {
 @media (max-width: 600px) {
   .troop-report ul,
   .roster ul {
+    grid-template-columns: 1fr;
+  }
+}
+/* Operation */
+.op-start {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+.op-start > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  text-align: left;
+}
+.op-score {
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--accent);
+}
+.operation {
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+.op-run .row {
+  gap: 8px;
+  margin-top: 10px;
+}
+.op-missions .mission-row {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 6px 10px;
+}
+.op-missions .mission-row.now {
+  outline: 1px solid var(--accent);
+}
+.op-missions .mission-row.lost {
+  color: var(--danger);
+}
+.op-missions .mission-row:not(.won):not(.lost):not(.now) .mission-n {
+  color: var(--dim);
+}
+.op-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.op-brief {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 12px;
+  font-size: 12px;
+}
+.op-track {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.op-track li {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  border: 1px solid var(--dim);
+  color: var(--dim);
+}
+.op-track li.done {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.op-track li.lost {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.op-best {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+}
+.op-line {
+  flex-wrap: wrap;
+}
+.op-track li.now {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.requisitions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+.requisitions .troop-head {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.requisition {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  text-align: left;
+  font-size: 12px;
+}
+.requisition b {
+  font-size: 14px;
+}
+@media (max-width: 600px) {
+  .requisitions {
     grid-template-columns: 1fr;
   }
 }
