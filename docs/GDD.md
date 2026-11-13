@@ -226,7 +226,8 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | Briefing | scenario, seed, difficulty (initial zombies and Choir will), content warning, toggle for triage execution |
 | Top bar | game clock and day/night, speed, soldiers, civilians saved, ammo and fuel summed across bases, fleet magazines |
 | District list (left) | name, state color, pressure, civilians left; click centers |
-| Alert feed (right) | Choir warnings with countdown, convoy ambushed, out of ammo, district fell; click jumps |
+| Alert feed (right) | Choir warnings with countdown, convoy ambushed, out of ammo, district fell; soldiers by name; click jumps |
+| Radio (top centre) | short lines from the squads and command: contact, arrival, reloads, bites and losses by name, Gritador sighted, horde inbound; fades after 8 s of game time; click jumps |
 | Selection panel (bottom) | icon, health, ammo, fuel, current order, stance and formation buttons; grid for multi-select |
 | Fire support menu (B) | assets with magazine, cooldown, delay, range; out-of-range disabled with reason |
 | Build menu (G) | structures with cost and time; green/red ghost; base only |
@@ -234,6 +235,7 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | Convoy planner | origin, destination, vehicles, cargo, priority, escort, risk policy, suggested route with risky sectors highlighted |
 | Quarantine triage | arrivals, suspects, isolate / release / execute (if enabled); pauses the game |
 | Minimap | districts, units, view rectangle; hidden in map view |
+| Special infected | a diamond on the ground under each one on screen, by kind: yellow runner, purple brute, red Gritador, green Inchado (legend in the help panel) |
 | Direct-control HUD | crosshair, ammo, health, "TAB to exit"; hides the rest |
 | Summary | result, civilians saved, casualties, zombies killed, what embarked |
 | Settings | volume, language, internal resolution scale, agent cap, key bindings |

@@ -60,6 +60,8 @@ export const PALETTE = {
   bile: 0xa9b84a,
   screamerSkin: 0xd3cab8,
   scream: 0xff5a3c,
+  /** Ground marks under special infected, by kind (Common has none): Corredor, Brutamontes, Gritador, Inchado. */
+  threat: [0, 0xf2d14a, 0xc06bff, 0xff5a3c, 0xa9b84a] as readonly number[],
   path: 0xd8f0c8,
   directRing: 0xff5a3c,
   hesco: 0xb59a6a,

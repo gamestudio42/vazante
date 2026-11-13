@@ -2079,3 +2079,58 @@ input[type='checkbox'] {
     grid-template-columns: 1fr;
   }
 }
+/* Radio chatter: subtitles under the top bar, between the left column and the alerts. */
+.radio {
+  position: absolute;
+  top: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 680px));
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+}
+.radio-line {
+  display: flex;
+  gap: 8px;
+  max-width: 100%;
+  padding: 3px 10px;
+  background: rgba(10, 12, 14, 0.62);
+  border-left: 2px solid var(--tone);
+  font-size: 13px;
+  line-height: 1.35;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  animation: alert-in 0.2s ease-out;
+  pointer-events: auto;
+}
+.radio-line {
+  --tone: var(--info);
+}
+.radio-line.t-good {
+  --tone: var(--ok);
+}
+.radio-line.t-bad {
+  --tone: var(--danger);
+}
+.radio-line.jump {
+  cursor: pointer;
+}
+.radio-who {
+  flex: none;
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tone);
+}
+.radio-text {
+  min-width: 0;
+}
+.help-marks {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}

@@ -88,6 +88,7 @@ import { objectiveTarget } from "./objective.ts";
 import { soldierLabel } from "./soldier.ts";
 import { living, type ReportRow } from "../roster.ts";
 import { canDeploy, scoreOf } from "../operation.ts";
+import type { RadioLine } from "../radio.ts";
 
 interface Props {
   client: GameClient;
@@ -187,6 +188,7 @@ export function App({ client, input, view, shell }: Props) {
           </div>
         )}
         <EventBanner alerts={state.alerts} />
+        <RadioFeed lines={state.radio} frame={f} onJump={(x, y) => view.rig.centerOn(x, y)} />
         {!input.inDirect && (
           <Alerts
             alerts={state.alerts}
@@ -211,6 +213,7 @@ export function App({ client, input, view, shell }: Props) {
           <div className="help panel">
             <PanelHead icon={Radio}>{t("help.title")}</PanelHead>
             <pre>{t("help.body")}</pre>
+            <p className="help-marks">{t("help.marks")}</p>
           </div>
         )}
         {!ended && <TutorialCard shell={shell} />}
@@ -253,6 +256,7 @@ function useHudState(client: GameClient) {
         s.vehicle !== shown.vehicle ||
         s.structure !== shown.structure ||
         s.alerts !== shown.alerts ||
+        s.radio !== shown.radio ||
         s.map !== shown.map ||
         s.limited !== shown.limited ||
         s.frame?.speed !== shown.frame.speed ||
@@ -950,6 +954,39 @@ function Alerts({
             <Icon size={14} />
             <span className="alert-text">{alertText(a)}</span>
             <span className="alert-time">{fmt(a.tick)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Radio lines stay on screen this long in game time. */
+const RADIO_SHOW_S = 8;
+
+/** The squads talking: who said it, and what, under the top bar like subtitles. */
+function RadioFeed({ lines, frame, onJump }: { lines: RadioLine[]; frame: Frame; onJump: (x: number, y: number) => void }) {
+  const shown = lines.filter((l) => frame.tick - l.tick < RADIO_SHOW_S * TICK_HZ);
+  if (shown.length === 0) return null;
+  return (
+    <div className="radio" aria-live="polite">
+      {shown.map((l) => {
+        const squad = l.squad === null ? null : frame.squads.find((q) => q.id === l.squad);
+        const name = l.soldier === null ? null : nameSoldier(l.soldier);
+        // A soldier speaks for themselves unless the line is about them (bitten, killed, back on their feet).
+        const aboutThem = l.topic === "died" || l.topic === "bitten" || l.topic === "cured";
+        const who = [squad ? squad.name : t("radio.command"), !aboutThem && name ? name : null].filter(Boolean).join(" · ");
+        const text = t(`radio.${l.topic}.${l.variant}`).replace("{n}", name ?? t("radio.someone"));
+        const age = (frame.tick - l.tick) / (RADIO_SHOW_S * TICK_HZ);
+        return (
+          <div
+            key={l.id}
+            className={`radio-line t-${l.tone} ${l.x !== undefined ? "jump" : ""}`}
+            style={{ opacity: Math.min(1, 1.6 - age * 1.6) }}
+            onClick={() => l.x !== undefined && onJump(l.x, l.y!)}
+          >
+            <span className="radio-who">{who}</span>
+            <span className="radio-text">{text}</span>
           </div>
         );
       })}
@@ -1776,8 +1813,11 @@ function alertText(a: GameClient["state"]["alerts"][number]): string {
   switch (a.type) {
     case "soldier_died":
     case "soldier_turned":
+    case "soldier_panicked":
     case "soldier_bitten": {
-      const name = a.source !== undefined ? nameSoldier(a.source) : null;
+      // A bite's source is the zombie; the soldier is its target.
+      const id = a.type === "soldier_bitten" ? a.target : a.source;
+      const name = id !== undefined ? nameSoldier(id) : null;
       return name ? `${base}: ${name}` : base;
     }
     case "structure_built":

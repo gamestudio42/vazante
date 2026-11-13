@@ -139,3 +139,20 @@ review and the existing render performance gate.
   recruits are still random; they do not change the game.
 - **Known gaps.** Leaving a mission before its end and redeploying replays it; a save loaded from
   the menu plays as an ordinary game. Scores are local; a shared leaderboard needs a server.
+
+## D19. Radio chatter is client text built from simulation events (2026-11-13)
+
+- **Why.** The 2026-11-13 review found the squads had no voice and the alerts repeated the same
+  line ("Contact! Squad engaging" three times) without saying which squad or who. Losing a named
+  soldier should be heard, not only counted.
+- **Text, not voice.** There are no recorded voice lines and synthesized speech would differ by
+  browser and language, so the radio is subtitles; the squelch the audio director already plays on
+  these events is the sound. Recorded barks can replace the text later without changing the rules.
+- **Client only.** `apps/game/src/radio.ts` reads the frame's events; the simulation is untouched.
+  The wording is picked from the tick and the source (no `Math.random`), each topic has a cooldown
+  per speaker, and routine chatter keeps a 1.5 s gap while bites, deaths and panic always get through.
+- **Alerts.** Contact and arrival moved from the alert feed to the radio; everything that needs
+  action stays an alert. Bite alerts now name the bitten soldier (the event's target; its source is
+  the zombie), and the fallen keep their names in the alerts until the game ends.
+- **Readability.** Special infected get a ground diamond by kind in the renderer only. A diamond, so
+  it never reads as a soldier's round selection ring.

@@ -163,6 +163,8 @@ Cosmetic values only; these do not change visibility, combat, clocks or the worl
 - Vignette: 0.18 in tactical/direct, 0.08 in strategic view.
 - Sky reaches its zenith colour at world-space ray elevation 0.65.
 - Facade detail fades between projected footprints of 0.25 and 0.75 pattern periods per pixel.
+- Special infected are marked by a ground diamond scaled with the unit size: runner `#f2d14a`,
+  brute `#c06bff`, Gritador `#ff5a3c` (the scream colour), Inchado `#a9b84a` (the bile colour).
 - Lighting colours remain in the renderer's `palette.ts`: daytime zenith `#657e91`, horizon/fog
   `#aaa99b`, ground bounce `#655b4e`; night horizon/fog `#2b3446`.
 
