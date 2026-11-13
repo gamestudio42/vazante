@@ -1,5 +1,7 @@
 import {
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type CSSProperties,
@@ -137,6 +139,25 @@ export function App({ client, input, view, shell }: Props) {
     return () => clearInterval(id);
   }, [view]);
 
+  // The left column ends above whatever part of the bottom row sits under it (the selection panel
+  // grows to two rows on narrow windows), so the two never overlap: the column scrolls instead.
+  const hud = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = hud.current;
+    const left = el?.querySelector<HTMLElement>(".leftcol");
+    const bottom = el?.querySelector<HTMLElement>(".bottomcol");
+    if (!el || !left || !bottom) return;
+    const scale = el.getBoundingClientRect().width / el.offsetWidth || 1;
+    const edge = left.getBoundingClientRect().right;
+    let under = 0;
+    for (const c of bottom.children) {
+      const r = c.getBoundingClientRect();
+      if (r.left < edge && r.height > under) under = r.height;
+    }
+    const v = `${Math.ceil(under / scale)}px`;
+    if (el.style.getPropertyValue("--under-left") !== v) el.style.setProperty("--under-left", v);
+  });
+
   const f = state.frame;
   if (!f) return <div className="boot">{t("boot.loading")}</div>;
   nameSoldier = (id) => {
@@ -154,7 +175,7 @@ export function App({ client, input, view, shell }: Props) {
   return (
     <>
       <MapLabels client={client} view={view} />
-      <div className={shell.inOpening && shell.screen === "playing" ? "hud cinematic" : "hud"}>
+      <div ref={hud} className={shell.inOpening && shell.screen === "playing" ? "hud cinematic" : "hud"}>
         <TopBar
           frame={f}
           limited={state.limited}

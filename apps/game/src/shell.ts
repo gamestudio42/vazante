@@ -11,6 +11,9 @@ import { crewResults, emptyRoster, loadRoster, namesByRid, saveRoster, settle, t
 import { canDeploy, choose, dailyKey, dailyRun, finishMission, loadOperation, newRun, recordRun, saveOperation, type OperationStore } from './operation.ts';
 import { deleteSave, download, exportSave, getSave, importSave, listSaves, putSave } from './storage.ts';
 
+const HUD_DESIGN = { width: 1280, height: 720 } as const;
+const HUD_MIN_FIT = 0.7;
+
 export type Screen = 'menu' | 'briefing' | 'playing' | 'paused';
 export type Panel = null | 'settings' | 'load' | 'campaign' | 'operation';
 
@@ -71,6 +74,7 @@ export class Shell {
     input.onQuickSave = () => void this.save('quick');
     input.onQuickLoad = () => void this.loadSlot('quick');
     this.applySettings(settings);
+    window.addEventListener('resize', () => this.applyUiScale());
     this.syncInput();
     if (initial === 'menu') {
       const m = view.map;
@@ -470,12 +474,22 @@ export class Shell {
     this.restart(seed, false);
   }
 
+  /**
+   * The HUD is laid out for a 1280×720 window. A smaller one shrinks the whole HUD to fit, down to
+   * `HUD_MIN_FIT` (below that the text is too small to read and the panels scroll instead); the
+   * player's interface-size setting multiplies it.
+   */
+  private applyUiScale(): void {
+    const fit = Math.max(HUD_MIN_FIT, Math.min(1, window.innerWidth / HUD_DESIGN.width, window.innerHeight / HUD_DESIGN.height));
+    document.documentElement.style.setProperty('--ui', String(Math.round(this.settings.uiScale * fit * 1000) / 1000));
+  }
+
   applySettings(s: Settings): void {
     this.settings = s;
     saveSettings(s);
     setLocale(s.locale);
     document.documentElement.lang = s.locale;
-    document.documentElement.style.setProperty('--ui', String(s.uiScale));
+    this.applyUiScale();
     this.audio.setVolume(s.volume);
     this.audio.setMusicVolume(s.musicVolume);
     this.input.edgePan = s.edgePan;
