@@ -240,6 +240,7 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | Direct-control HUD | crosshair, ammo, health, "TAB to exit"; hides the rest |
 | Mission mood | each mission has its own light and grade (see `balancing.md`); defeat drains the colour, victory warms it and the camera circles the field |
 | Summary | result, civilians saved, casualties, zombies killed, what embarked |
+| Small windows | the HUD is laid out for 1280×720; a smaller window shrinks the whole HUD to fit, down to 70 %, and the left column scrolls above whatever the bottom row puts under it, so panels never overlap |
 | Settings | volume, language, internal resolution scale, agent cap, key bindings |
 
 ### Default controls (remappable through an `InputAction` layer)

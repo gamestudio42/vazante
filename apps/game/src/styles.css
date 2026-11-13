@@ -333,7 +333,8 @@ b {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: calc(100% - 230px);
+  /* Top offset, the gap and bottom margin, and what the bottom row puts under this column (set by App). */
+  max-height: calc(100% - 54px - 14px - var(--under-left, 162px));
   overflow-y: auto;
   pointer-events: auto;
   scrollbar-width: thin;
