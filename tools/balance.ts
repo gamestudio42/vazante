@@ -266,12 +266,15 @@ const missions = (
 const diffs = (
   diffArg && diffArg !== "all" ? [diffArg] : ["recruit", "veteran", "nightmare"]
 ) as DifficultyId[];
-const seeds = Array.from({ length: Number(seedsArg ?? 3) }, (_, i) => i + 1);
+// SEED0 moves the first seed; THREAT scales the wandering horde like an Operation's later missions.
+const seed0 = Number(process.env.SEED0 ?? 1);
+const threat = Number(process.env.THREAT ?? 1);
+const seeds = Array.from({ length: Number(seedsArg ?? 3) }, (_, i) => i + seed0);
 for (const id of missions)
   for (const d of diffs)
     for (const seed of seeds) {
-      const r = playMission(id, d, seed);
+      const r = playMission(id, d, seed, threat === 1 ? {} : { tweaks: { zombieScale: threat } });
       console.log(
-        `${r.mission.padEnd(9)} ${r.difficulty.padEnd(9)} seed=${r.seed} ${r.phase.padEnd(6)} ${(r.reason || "-").padEnd(24)} stage=${r.stage}${r.nights ? ` nights=${r.nights}` : ""} ${String(r.minutes).padStart(5)} min lost=${r.lost}/${r.soldiers} killed=${r.killed}`,
+        `${threat === 1 ? "" : `×${threat.toFixed(2)} `}${r.mission.padEnd(9)} ${r.difficulty.padEnd(9)} seed=${r.seed} ${r.phase.padEnd(6)} ${(r.reason || "-").padEnd(24)} stage=${r.stage}${r.nights ? ` nights=${r.nights}` : ""} ${String(r.minutes).padStart(5)} min lost=${r.lost}/${r.soldiers} killed=${r.killed}`,
       );
     }
