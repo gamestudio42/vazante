@@ -182,3 +182,31 @@ unmoved; the cause was not investigated. The v0.5 simulation gate (8,000 agents,
 Not measured: frames on the GPU. The ground marks under special infected (one instanced draw) and
 the mood grade (one multiply in the post shader) are render costs, so the desktop frame benchmark
 is the one that would show them.
+
+## 2026-11-14: frames on the panel alone
+
+`pnpm --filter @vazante/desktop bench` and `bench:city` at `ce950fb`, Marcel's laptop with only the
+built-in panel connected (144 Hz), ANGLE on Mesa Intel Graphics (RPL-P), window 1600×852, pixel
+ratio 1, 20 s per run, load average about 1. The app renders on the Intel iGPU, not on the RTX 4050.
+
+| Case | Run | FPS | p50 | p95 | Worst | Zombies | Sim tick | Hitches |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Slice | 1 | 143.7 | 6.9 ms | 7.0 ms | 13.9 ms | 317 | 0.40 ms | 0 |
+| Slice | 2 | 143.9 | 6.9 ms | 7.0 ms | 20.8 ms | 321 | 0.40 ms | 0 |
+| Porto Velário (2 km) | 1 | 137.7 | 6.9 ms | 7.0 ms | 20.8 ms | 6,139 | 4.90 ms | 0 |
+| Porto Velário (2 km) | 2 | 142.8 | 6.9 ms | 7.0 ms | 13.9 ms | 6,105 | 4.70 ms | 0 |
+| Porto Velário (2 km) | 3 | 138.2 | 6.9 ms | 7.0 ms | 20.8 ms | 6,138 | 4.85 ms | 0 |
+
+- This is the single-display run the 2026-11-05 section asked for. With one display the slice holds
+  the panel's refresh (144 Hz) and the worst frame is two or three refresh intervals, against 88 to
+  95 fps and worst frames of 49 to 56 ms on the same panel with three displays attached. The slow
+  frames of 2026-11-05 came from driving three displays on one iGPU, not from the game.
+- The v0.1 worst-frame gate (under 33 ms) passes in all five runs: no hitches, no long tasks, no
+  shader compiled while recording.
+- The city drops 1 to 6 frames per second from the refresh rate with p95 still one interval, so a
+  few frames in each run miss a vsync.
+- The render work added on 2026-11-13 (ground marks under special infected, the mood grade, the
+  outcome grade) leaves no visible cost at this resolution. There is no earlier single-display run
+  at 144 Hz to compare against, so this is a new reference and not a before/after.
+
+Not measured: a 60 Hz display, a window larger than 1600×852, and the discrete GPU.
