@@ -20,4 +20,15 @@ describe('operation tweaks', () => {
     expect(home(bad).materials).toBe(home(plain).materials);
     expect(bad.hashState()).toBe(plain.hashState());
   });
+
+  it('keep the threat for the waves and pressure groups, through a save', () => {
+    const plain = SimulationEngine.create(5, 'bridge');
+    const harder = SimulationEngine.create(5, 'bridge', { tweaks: { zombieScale: 1.48 } });
+    expect(plain.world.threat).toBeUndefined();
+    expect(harder.world.threat).toBe(1.48);
+    harder.runTicks(5);
+    const back = SimulationEngine.load(harder.save());
+    expect(back.world.threat).toBe(1.48);
+    expect(back.hashState()).toBe(harder.hashState());
+  });
 });

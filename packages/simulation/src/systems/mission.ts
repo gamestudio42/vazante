@@ -342,7 +342,7 @@ function pressure(w: World, m: Mission, zone: MissionZone, p: Pressure): void {
   const at = spawnGroup(
     w,
     streetsAround(w, x, y, PRESSURE_SPAWN_M.min, PRESSURE_SPAWN_M.max),
-    Math.round(size * DIFFICULTY[w.difficulty].waveSize),
+    Math.round(size * DIFFICULTY[w.difficulty].waveSize * (w.threat ?? 1)),
   );
   if (at) w.emit({ type: "wave_started", value: 0, x: at[0], y: at[1] });
 }
@@ -656,7 +656,7 @@ function stepWaves(
     spawnWave(
       w,
       m,
-      Math.round(waves[m.wave - 1] * DIFFICULTY[w.difficulty].waveSize),
+      Math.round(waves[m.wave - 1] * DIFFICULTY[w.difficulty].waveSize * (w.threat ?? 1)),
       zone,
     );
     if (zone !== undefined) m.nextAt = w.tick + WAVE_ZONE_TIMEOUT_S * TICK_HZ;

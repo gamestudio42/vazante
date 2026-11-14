@@ -81,7 +81,9 @@ export function buildMission(id: MissionId, seed: number, opts: ScenarioOptions 
     const off = site === home ? 3 * CELL_SIZE : 0;
     return spawnTruck(w, ((site.x0 + site.x1 + 1) / 2) * CELL_SIZE + off, ((site.y0 + site.y1 + 1) / 2) * CELL_SIZE + off, t.ammo, t.materials).id;
   });
-  scatterHorde(w, opts.zombies ?? Math.round(def.zombies * diff.cityZombies * bounded(tw?.zombieScale, 0.1, 3, 1)), bx, by, def.clearRadiusM);
+  const threat = bounded(tw?.zombieScale, 0.1, 3, 1);
+  if (threat !== 1) w.threat = threat;
+  scatterHorde(w, opts.zombies ?? Math.round(def.zombies * diff.cityZombies * threat), bx, by, def.clearRadiusM);
   startMission(w, def, trucks);
   return w;
 }

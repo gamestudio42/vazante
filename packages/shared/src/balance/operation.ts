@@ -8,7 +8,7 @@ export const OPERATION = {
   /** Missions in a run, drawn from `pool` in an order fixed by the run's seed. */
   missions: 5,
   pool: ['hospital', 'bridge', 'retake', 'supply_line', 'night_shift', 'last_train'] as readonly MissionId[],
-  /** Wandering zombies grow by this share for each mission already played (fifth: ×1.48). */
+  /** Wandering zombies, waves and pressure groups grow by this share for each mission already played (fifth: ×1.48). */
   threatPerMission: 0.12,
   /** Requisitions offered after a won mission; one is taken. */
   offers: 3,
@@ -16,7 +16,7 @@ export const OPERATION = {
     /** Added to the base stock of the next mission. */
     ammo: 800,
     materials: 150,
-    /** Share of wandering zombies removed from the next mission. */
+    /** Share of the next mission's threat removed (wandering zombies, waves and pressure groups). */
     recon: 0.2,
     /** Experience for every living soldier, at once. */
     drillXp: 25,
@@ -39,7 +39,7 @@ export const REQUISITION_IDS: readonly RequisitionId[] = ['ammo', 'materials', '
 
 /** Changes to a mission's start, set outside the simulation (Operation requisitions and threat). */
 export interface MissionTweaks {
-  /** Multiplies the wandering zombies. */
+  /** Multiplies the wandering zombies, the waves and the pressure groups. */
   zombieScale?: number;
   /** Added to the base stock. */
   ammo?: number;

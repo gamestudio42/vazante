@@ -43,6 +43,8 @@ export class World {
   directSoldier: number | null = null;
   /** Fixed at scenario start. */
   difficulty: DifficultyId = 'veteran';
+  /** Operation threat: multiplies the mission's waves and pressure groups. Unset means ×1. Fixed at scenario start. */
+  threat?: number;
   /** Fog of war: frames carry only the zombies in sight. Presentation only, never read by the rules. */
   fog = false;
   /** Districts and sites produce (survival, the city sandbox). */
