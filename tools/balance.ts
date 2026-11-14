@@ -10,7 +10,10 @@ import {
   type DifficultyId,
   type MissionId,
 } from "@vazante/shared";
-import { SimulationEngine, drivenAlive } from "@vazante/simulation";
+import { SimulationEngine, drivenAlive, type ScenarioOptions } from "@vazante/simulation";
+import type { RequisitionId, SoldierCondition } from "@vazante/shared";
+import { choose, deploy, finishMission, missionTweaks, newRun, scoreOf, seeded } from "../apps/game/src/operation.ts";
+import { living } from "../apps/game/src/roster.ts";
 
 const LIMIT_TICKS = Number(process.env.LIMIT_MIN ?? 45) * 60 * TICK_HZ;
 const THINK_TICKS = 20;
@@ -37,14 +40,17 @@ export interface RunResult {
   lost: number;
   soldiers: number;
   killed: number;
+  /** Roster soldiers and how the mission left them (only when a crew was fielded). */
+  crew: { rid: number; kills: number; condition: SoldierCondition }[];
 }
 
 export function playMission(
   id: MissionId,
   difficulty: DifficultyId,
   seed: number,
+  opts: Pick<ScenarioOptions, "crew" | "tweaks"> = {},
 ): RunResult {
-  const e = SimulationEngine.create(seed, id, { difficulty });
+  const e = SimulationEngine.create(seed, id, { difficulty, ...opts });
   const w = e.world;
   const m = w.mission!;
   const def = MISSIONS[id];
@@ -211,10 +217,49 @@ export function playMission(
     lost: soldiers - alive,
     soldiers,
     killed: w.stats.zombiesKilled,
+    crew: w.soldiers.filter((s) => s.rid).map((s) => ({ rid: s.rid!, kills: s.kills ?? 0, condition: s.condition })),
   };
 }
 
+/** What the scripted commander asks for: it never builds, so materials come last. */
+const REQUISITION_ORDER: RequisitionId[] = ["ammo", "veterans", "drill", "recon", "materials"];
+
+/**
+ * Plays whole Operations with the scripted commander: `pnpm balance operation [difficulty] [runs]`.
+ * The run's own task force carries over, the threat grows and a requisition is taken after each win.
+ */
+function playOperations(difficulty: DifficultyId, runs: number): void {
+  for (let i = 1; i <= runs; i++) {
+    const seed = 1000 + i;
+    let run = newRun(seed, null, difficulty, 0);
+    const names = seeded(seed ^ 0x5eed);
+    console.log(`operation ${i} seed=${seed} ${difficulty}: ${run.missions.join(" → ")}`);
+    while (run.status === "active") {
+      const d = deploy(run, names);
+      run = d.run;
+      const tweaks = missionTweaks(run);
+      const id = run.missions[run.index];
+      const r = playMission(id, difficulty, seed, { crew: d.crew, tweaks });
+      const ranks = living(run.roster).reduce((n, x) => n + (x.xp >= 25 ? 1 : 0), 0);
+      run = finishMission(run, r.phase === "won", r.crew, 0).run;
+      console.log(
+        `  ${String(run.log.length)}. ${id.padEnd(12)} threat ×${(tweaks.zombieScale ?? 1).toFixed(2)} ${r.phase.padEnd(6)} ${(r.reason || "-").padEnd(24)} stage=${r.stage} ${String(r.minutes).padStart(5)} min lost=${r.lost}/${r.soldiers} killed=${r.killed} ranked=${ranks}`,
+      );
+      if (run.offers.length > 0) {
+        const pick = REQUISITION_ORDER.find((q) => run.offers.includes(q))!;
+        run = choose(run, pick);
+        console.log(`     requisition: ${pick}`);
+      }
+    }
+    console.log(`  → ${run.status}, ${run.log.filter((m) => m.won).length}/${run.missions.length} won, score ${scoreOf(run)}, ${living(run.roster).length} alive, ${run.roster.fallen.length} fallen`);
+  }
+}
+
 const [only, diffArg, seedsArg] = process.argv.slice(2);
+if (only === "operation") {
+  playOperations((diffArg ?? "veteran") as DifficultyId, Number(seedsArg ?? 3));
+  process.exit(0);
+}
 const missions = (
   only && only !== "all" ? [only] : ["hospital", "bridge", "retake", "supply_line", "night_shift", "last_train"]
 ) as MissionId[];
