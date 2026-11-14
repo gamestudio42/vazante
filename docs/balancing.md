@@ -208,10 +208,10 @@ A run of five city missions on one city; each won mission offers three requisiti
 | Value | Number | Effect |
 | --- | --- | --- |
 | Missions per run | 5 of 6 | drawn from the city missions (not O Último Comboio), order by the run's seed |
-| Threat per mission | +0.12 | wandering zombies ×1.00, ×1.12, ×1.24, ×1.36, ×1.48 |
+| Threat per mission | +0.12 | wandering zombies, waves and pressure groups ×1.00, ×1.12, ×1.24, ×1.36, ×1.48 |
 | Ammunition drop | +800 | base ammunition, next mission |
 | Engineering supplies | +150 | base materials, next mission |
-| Aerial recon | −20 % | wandering zombies, next mission (after the threat) |
+| Aerial recon | −20 % | the next mission's threat: wandering zombies, waves and pressure groups |
 | Field drill | +25 xp | every living soldier, at once |
 | Seasoned replacements | 25 xp | the next mission's recruits start as privates |
 
@@ -243,6 +243,7 @@ veteran difficulty.
 | 2026-10-30 | survival day | 40 → 30 min (still from 08:00) | Diogo found 40 min too long; 20 min was too short |
 | 2026-10-30 | wall climbing | PILE_UNIT_M 0.5 → 0.25 (14 stacked zombies top a 3.5 m wall, 9 a hesco); once climbable, one zombie per wall cell per second (CLIMB_INTERVAL_S 1); base ammo alerts below 800 and at 0 | Diogo saw hordes pour over walls: 7 zombies were enough and the whole pile went over at once, while the base sat at 0 ammo without warning. Bot at veteran unchanged: night shift, last convoy, hospital 3/3, bridge 2/3, survival 4 nights |
 | 2026-10-30 | horde routing | flow field ignores zombies → each zombie beyond the first in a cell adds 10 (one cell of walking) to it, up to 80; lane lean 0.15 → 0.3 and slack 10 → 20 | Diogo saw the whole horde file through one gap in a single line; now a queue makes going round or hitting another stretch of wall look shorter. Bot at veteran: night shift, last convoy, hospital, bridge 3/3 |
+| 2026-11-14 | Operation threat | scales wandering zombies only → also every wave and pressure group; +0.12 per mission unchanged | with only the wandering horde scaled the bot won the same missions at ×1.48 as at ×1.00 and five of six whole Operations with 0 to 5 fallen; scaled waves cost it 5 to 13 of 17 on A Ponte at ×1.36 and ×1.48 |
 
 ### 2026-11-12 — architecture presentation tuning
 
@@ -324,6 +325,44 @@ New table `balance/operation.ts` (above). The threat ramp and the requisition si
 guesses and have not been through the balance bot: the bot plays single missions, and only the
 pressure of the wandering horde grows, not the waves or the pressure groups. The fifth mission at
 ×1.48 is meant to be hard with a weakened task force; playtest logs will show where runs end.
+
+### 2026-11-14 — Operation through the balance bot
+
+`pnpm balance operation veteran 6` plays whole Operations (cities 1001 to 1006) with the scripted
+commander: the run's own task force, the threat ramp and one requisition after each win (ammunition
+first, then replacements, drill, recon, materials). `SEED0` and `THREAT` do the same for one mission.
+
+What it found, in order:
+
+- **Hospital São Lucas could not be finished.** Not balance: a truck stopped for the squad standing
+  on its parking spot and never arrived, so the evacuation never began (fixed in the simulation, see
+  the commit `[FIX] convoy`). The bot had gone from 3/3 to 0/3 since the 2026-11-12 collision change.
+- **The bot stood in front of its own truck** on Linha de Suprimentos and ran out the clock. Its
+  escort now walks 20 m behind and its limit is 60 minutes (the mission takes 38 to 46).
+- **The ramp did nothing.** Scaling only the wandering horde, single missions at ×1.48 ended like
+  ×1.00 (15 of 18 won or still going in both, cities 1001 to 1003, before the hospital fix), and whole Operations
+  ended 5 of 6 won with 0 to 5 soldiers fallen in the run. The one not won was the bot standing still.
+
+The threat now multiplies every wave and pressure group as well. Same six Operations after that:
+
+| City | Result | Fallen in the run | Where it turned |
+| --- | --- | --- | --- |
+| 1001 | won 5/5 | 17 | A Ponte ×1.48: 10 of 17 lost |
+| 1002 | 4/5, bot stalled | 6 | A Ponte ×1.36: 5 of 17 lost; O Último Trem ×1.48 not finished in 60 min |
+| 1003 | 2/5, bot stalled | 7 | O Último Trem ×1.24 not finished in 60 min, nobody lost there |
+| 1004 | 2/5, bot stalled | 15 | Retomar a Ribeira ×1.12: 14 of 31 lost; Linha de Suprimentos not finished |
+| 1005 | lost 2/5 | 19 | A Ponte ×1.24: all 17 lost |
+| 1006 | won 5/5 | 17 | A Ponte ×1.48: 13 of 17 lost |
+
+Missions one and two are as before (0 to 3 lost, apart from Retomar a Ribeira on city 1004); from
+the third on the task force bleeds, and A Ponte late in a run is the mission that decides it. That
+is the shape wanted for a commander who never builds, so +0.12 per mission stays. Requisition sizes
+were not tuned: the bot always takes ammunition and never ran dry, which says little about the others.
+
+Not settled: three of the six runs ended with the bot standing still on a convoy stage (O Último
+Trem twice, Linha de Suprimentos once), not with a defeat, so the sample of real endings is three
+runs. A Ponte carries most of the difficulty; whether that is the mission or the bot holding a
+bridge badly is not known. Recruit and nightmare were not played.
 
 ### 2026-11-13 — moods after a look at every mission, by day and by night
 

@@ -10,10 +10,15 @@ import {
   type DifficultyId,
   type MissionId,
 } from "@vazante/shared";
-import { SimulationEngine, drivenAlive } from "@vazante/simulation";
+import { SimulationEngine, drivenAlive, type ScenarioOptions } from "@vazante/simulation";
+import type { RequisitionId, SoldierCondition } from "@vazante/shared";
+import { choose, deploy, finishMission, missionTweaks, newRun, scoreOf, seeded } from "../apps/game/src/operation.ts";
+import { living } from "../apps/game/src/roster.ts";
 
-const LIMIT_TICKS = Number(process.env.LIMIT_MIN ?? 45) * 60 * TICK_HZ;
+const LIMIT_TICKS = Number(process.env.LIMIT_MIN ?? 60) * 60 * TICK_HZ;
 const THINK_TICKS = 20;
+/** How far behind the truck the escort walks. */
+const ESCORT_BEHIND_M = 20;
 
 type Pt = [number, number];
 
@@ -37,14 +42,17 @@ export interface RunResult {
   lost: number;
   soldiers: number;
   killed: number;
+  /** Roster soldiers and how the mission left them (only when a crew was fielded). */
+  crew: { rid: number; kills: number; condition: SoldierCondition }[];
 }
 
 export function playMission(
   id: MissionId,
   difficulty: DifficultyId,
   seed: number,
+  opts: Pick<ScenarioOptions, "crew" | "tweaks"> = {},
 ): RunResult {
-  const e = SimulationEngine.create(seed, id, { difficulty });
+  const e = SimulationEngine.create(seed, id, { difficulty, ...opts });
   const w = e.world;
   const m = w.mission!;
   const def = MISSIONS[id];
@@ -108,6 +116,10 @@ export function playMission(
       ? `${Math.round(sx / n)},${Math.round(sy / n)} st${(st / n).toFixed(1)}`
       : "";
   };
+  const truckSpot = () => {
+    const v = w.vehicle(m.trucks[0]);
+    return v ? `truck ${v.state}@${Math.round(v.x)},${Math.round(v.y)} hp=${Math.round(v.hp)} pax=${v.passengers} evac=${m.evacuated}` : "";
+  };
   e.enqueue({ type: "set_speed", speed: 1 });
   while (w.tick < LIMIT_TICKS && m.phase === "active") {
     if (w.tick % THINK_TICKS === 0) {
@@ -125,9 +137,9 @@ export function playMission(
         target = centreOf(d);
       }
       if (st.kind === "deliver") {
-        // Escort: walk with the truck once it moves, otherwise go to where it is.
+        // Escort: follow behind the truck, never in front of it: a truck stops for infantry in its way.
         const v = w.vehicle(m.trucks[st.truck]);
-        if (v) target = [v.x, v.y];
+        if (v) target = [v.x - v.hx * ESCORT_BEHIND_M, v.y - v.hy * ESCORT_BEHIND_M];
         const siteOf = (zone: number) => w.bases.find((b) => b.name === m.zones[zone].name)!;
         const dest = st.to !== undefined ? siteOf(st.to).id : m.base;
         if (v && st.to === undefined && m.zones.length > 0 && v.cargoAmmo + v.cargoMaterials === 0 && v.passengers === 0) {
@@ -160,6 +172,7 @@ export function playMission(
           m.wave,
           drivenAlive(w),
           drivenSpot(),
+          truckSpot(),
         );
     }
     e.tick();
@@ -211,22 +224,64 @@ export function playMission(
     lost: soldiers - alive,
     soldiers,
     killed: w.stats.zombiesKilled,
+    crew: w.soldiers.filter((s) => s.rid).map((s) => ({ rid: s.rid!, kills: s.kills ?? 0, condition: s.condition })),
   };
 }
 
+/** What the scripted commander asks for: it never builds, so materials come last. */
+const REQUISITION_ORDER: RequisitionId[] = ["ammo", "veterans", "drill", "recon", "materials"];
+
+/**
+ * Plays whole Operations with the scripted commander: `pnpm balance operation [difficulty] [runs]`.
+ * The run's own task force carries over, the threat grows and a requisition is taken after each win.
+ */
+function playOperations(difficulty: DifficultyId, runs: number): void {
+  for (let i = 1; i <= runs; i++) {
+    const seed = 1000 + i;
+    let run = newRun(seed, null, difficulty, 0);
+    const names = seeded(seed ^ 0x5eed);
+    console.log(`operation ${i} seed=${seed} ${difficulty}: ${run.missions.join(" → ")}`);
+    while (run.status === "active") {
+      const d = deploy(run, names);
+      run = d.run;
+      const tweaks = missionTweaks(run);
+      const id = run.missions[run.index];
+      const r = playMission(id, difficulty, seed, { crew: d.crew, tweaks });
+      const ranks = living(run.roster).reduce((n, x) => n + (x.xp >= 25 ? 1 : 0), 0);
+      run = finishMission(run, r.phase === "won", r.crew, 0).run;
+      console.log(
+        `  ${String(run.log.length)}. ${id.padEnd(12)} threat ×${(tweaks.zombieScale ?? 1).toFixed(2)} ${r.phase.padEnd(6)} ${(r.reason || "-").padEnd(24)} stage=${r.stage} ${String(r.minutes).padStart(5)} min lost=${r.lost}/${r.soldiers} killed=${r.killed} ranked=${ranks}`,
+      );
+      if (run.offers.length > 0) {
+        const pick = REQUISITION_ORDER.find((q) => run.offers.includes(q))!;
+        run = choose(run, pick);
+        console.log(`     requisition: ${pick}`);
+      }
+    }
+    console.log(`  → ${run.status}, ${run.log.filter((m) => m.won).length}/${run.missions.length} won, score ${scoreOf(run)}, ${living(run.roster).length} alive, ${run.roster.fallen.length} fallen`);
+  }
+}
+
 const [only, diffArg, seedsArg] = process.argv.slice(2);
+if (only === "operation") {
+  playOperations((diffArg ?? "veteran") as DifficultyId, Number(seedsArg ?? 3));
+  process.exit(0);
+}
 const missions = (
   only && only !== "all" ? [only] : ["hospital", "bridge", "retake", "supply_line", "night_shift", "last_train"]
 ) as MissionId[];
 const diffs = (
   diffArg && diffArg !== "all" ? [diffArg] : ["recruit", "veteran", "nightmare"]
 ) as DifficultyId[];
-const seeds = Array.from({ length: Number(seedsArg ?? 3) }, (_, i) => i + 1);
+// SEED0 moves the first seed; THREAT scales the wandering horde like an Operation's later missions.
+const seed0 = Number(process.env.SEED0 ?? 1);
+const threat = Number(process.env.THREAT ?? 1);
+const seeds = Array.from({ length: Number(seedsArg ?? 3) }, (_, i) => i + seed0);
 for (const id of missions)
   for (const d of diffs)
     for (const seed of seeds) {
-      const r = playMission(id, d, seed);
+      const r = playMission(id, d, seed, threat === 1 ? {} : { tweaks: { zombieScale: threat } });
       console.log(
-        `${r.mission.padEnd(9)} ${r.difficulty.padEnd(9)} seed=${r.seed} ${r.phase.padEnd(6)} ${(r.reason || "-").padEnd(24)} stage=${r.stage}${r.nights ? ` nights=${r.nights}` : ""} ${String(r.minutes).padStart(5)} min lost=${r.lost}/${r.soldiers} killed=${r.killed}`,
+        `${threat === 1 ? "" : `×${threat.toFixed(2)} `}${r.mission.padEnd(9)} ${r.difficulty.padEnd(9)} seed=${r.seed} ${r.phase.padEnd(6)} ${(r.reason || "-").padEnd(24)} stage=${r.stage}${r.nights ? ` nights=${r.nights}` : ""} ${String(r.minutes).padStart(5)} min lost=${r.lost}/${r.soldiers} killed=${r.killed}`,
       );
     }

@@ -212,14 +212,18 @@ function TutorialSpotlight({ shell }: { shell: Shell }) {
     const loop = () => {
       raf = requestAnimationFrame(loop);
       const f = shell.tutorial.focus(innerWidth, innerHeight);
+      // Targets are measured in screen pixels, but the marks are drawn inside the HUD, which is
+      // scaled (interface size, small windows): convert back to the HUD's own units.
+      const hud = document.querySelector<HTMLElement>('.hud');
+      const k = hud && hud.offsetWidth > 0 ? hud.getBoundingClientRect().width / hud.offsetWidth : 1;
       const bs: Box[] = [];
       for (const sel of f.ui) {
         const el = document.querySelector(sel);
         if (!el) continue;
         const r = el.getBoundingClientRect();
-        if (r.width > 0 && r.height > 0) bs.push({ x: r.left, y: r.top, w: r.width, h: r.height });
+        if (r.width > 0 && r.height > 0) bs.push({ x: r.left / k, y: r.top / k, w: r.width / k, h: r.height / k });
       }
-      const ps = f.points.filter((p) => p.x > -40 && p.y > -40 && p.x < innerWidth + 40 && p.y < innerHeight + 40);
+      const ps = f.points.filter((p) => p.x > -40 && p.y > -40 && p.x < innerWidth + 40 && p.y < innerHeight + 40).map((p) => ({ x: p.x / k, y: p.y / k }));
       const key = JSON.stringify([bs.map((b) => [b.x, b.y, b.w, b.h].map(Math.round)), ps.map((p) => [Math.round(p.x), Math.round(p.y)])]);
       if (key === last) return;
       last = key;

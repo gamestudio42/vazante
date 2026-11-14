@@ -134,6 +134,10 @@ review and the existing render performance gate.
   the crew seats and `MissionTweaks` (zombie scale, extra base ammo and materials) when the mission
   is built; they are bounded there, change only the initial state and are not stored apart from it,
   so saves and the hash are unchanged in shape.
+- **Amended 2026-11-14.** A zombie scale other than 1 is now also kept as `World.threat` and
+  multiplies each wave and pressure group, because scaling only the wandering horde made no
+  difference to how missions ended (docs/balancing.md). It is hashed and saved only when set, so
+  games without it, and saves made before it, hash as they did.
 - **Daily seed.** The city and the draws come from the UTC date through FNV-1a and a small seeded
   generator in the client, so every player gets the same operation without a server. Names of
   recruits are still random; they do not change the game.

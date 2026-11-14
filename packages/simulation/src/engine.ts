@@ -338,6 +338,7 @@ export class SimulationEngine {
     h.bytes(w.districtControl);
     if (w.economy) for (const b of w.bases) h.str('economy').u32(b.control ?? 0);
     if (w.day) h.str('day').u32(w.day.lengthS).u32(w.day.startHour);
+    if (w.threat !== undefined) h.str('threat').f64Value(w.threat);
     if (w.mission) {
       const m = w.mission;
       h.byte(1).str(m.id).str(m.phase).u32(m.stage).u32(m.progress).u32(m.pressureAt).u32(m.wave).str(m.waveState).u32(m.nextAt).u32(m.civilians).u32(m.commandPost).u32(m.base);
