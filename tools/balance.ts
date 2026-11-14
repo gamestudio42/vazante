@@ -15,8 +15,10 @@ import type { RequisitionId, SoldierCondition } from "@vazante/shared";
 import { choose, deploy, finishMission, missionTweaks, newRun, scoreOf, seeded } from "../apps/game/src/operation.ts";
 import { living } from "../apps/game/src/roster.ts";
 
-const LIMIT_TICKS = Number(process.env.LIMIT_MIN ?? 45) * 60 * TICK_HZ;
+const LIMIT_TICKS = Number(process.env.LIMIT_MIN ?? 60) * 60 * TICK_HZ;
 const THINK_TICKS = 20;
+/** How far behind the truck the escort walks. */
+const ESCORT_BEHIND_M = 20;
 
 type Pt = [number, number];
 
@@ -135,9 +137,9 @@ export function playMission(
         target = centreOf(d);
       }
       if (st.kind === "deliver") {
-        // Escort: walk with the truck once it moves, otherwise go to where it is.
+        // Escort: follow behind the truck, never in front of it: a truck stops for infantry in its way.
         const v = w.vehicle(m.trucks[st.truck]);
-        if (v) target = [v.x, v.y];
+        if (v) target = [v.x - v.hx * ESCORT_BEHIND_M, v.y - v.hy * ESCORT_BEHIND_M];
         const siteOf = (zone: number) => w.bases.find((b) => b.name === m.zones[zone].name)!;
         const dest = st.to !== undefined ? siteOf(st.to).id : m.base;
         if (v && st.to === undefined && m.zones.length > 0 && v.cargoAmmo + v.cargoMaterials === 0 && v.passengers === 0) {
