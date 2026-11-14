@@ -50,3 +50,28 @@ for (const [w, h] of [
     expect(errors).toEqual([]);
   });
 }
+
+test('the tutorial highlight sits on its target when the HUD is reduced', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 576 });
+  await page.goto('/?seed=1');
+  await page.evaluate(() => localStorage.clear());
+  await page.goto('/?seed=1');
+  await page.getByRole('button', { name: 'Tutorial', exact: true }).click({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Começar' }).click();
+  await expect(page.locator('.tut-box').first()).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+  const gaps = await page.evaluate(() => {
+    const shell = (window as unknown as { vazante: { shell: { tutorial: { focus(w: number, h: number): { ui: string[] } } } } }).vazante.shell;
+    const targets = shell.tutorial
+      .focus(innerWidth, innerHeight)
+      .ui.map((s) => document.querySelector(s))
+      .filter((e): e is Element => e !== null)
+      .map((e) => e.getBoundingClientRect())
+      .filter((r) => r.width > 0);
+    const boxes = Array.from(document.querySelectorAll('.tut-box'), (e) => e.getBoundingClientRect());
+    // Each highlight wraps one target with a small margin: compare centres.
+    return boxes.map((b) => Math.min(...targets.map((t) => Math.hypot(b.left + b.width / 2 - (t.left + t.width / 2), b.top + b.height / 2 - (t.top + t.height / 2)))));
+  });
+  expect(gaps.length).toBeGreaterThan(0);
+  for (const g of gaps) expect(g).toBeLessThan(3);
+});
