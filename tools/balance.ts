@@ -114,6 +114,10 @@ export function playMission(
       ? `${Math.round(sx / n)},${Math.round(sy / n)} st${(st / n).toFixed(1)}`
       : "";
   };
+  const truckSpot = () => {
+    const v = w.vehicle(m.trucks[0]);
+    return v ? `truck ${v.state}@${Math.round(v.x)},${Math.round(v.y)} hp=${Math.round(v.hp)} pax=${v.passengers} evac=${m.evacuated}` : "";
+  };
   e.enqueue({ type: "set_speed", speed: 1 });
   while (w.tick < LIMIT_TICKS && m.phase === "active") {
     if (w.tick % THINK_TICKS === 0) {
@@ -166,6 +170,7 @@ export function playMission(
           m.wave,
           drivenAlive(w),
           drivenSpot(),
+          truckSpot(),
         );
     }
     e.tick();

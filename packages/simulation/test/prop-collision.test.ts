@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { Blocked, Ground, checkPlacement } from '@vazante/shared';
+import { Blocked, CELL_SIZE, Ground, checkPlacement } from '@vazante/shared';
 import { SimulationEngine, findPath, spawnTruck } from '../src/index.ts';
 import { moveSoldier, truckPenetration, truckWouldHitSoldier } from '../src/systems/vehicle-collision.ts';
 import { placementContext } from '../src/systems/construction.ts';
@@ -117,6 +117,25 @@ test('a commanded truck stops before infantry and resumes after the lane clears'
   e.world.squads.length = 0;
   e.runTicks(10);
   expect(v.x).toBeGreaterThan(stopped + 2);
+});
+
+test('a truck stopped by infantry inside its destination parks there', () => {
+  const e = SimulationEngine.create(1, 'hospital', { zombies: 0 });
+  const w = e.world;
+  const site = w.bases.find(b => b.name === 'Hospital São Lucas')!;
+  const v = w.vehicles[0];
+  const y = ((site.y0 + site.y1 + 1) / 2) * CELL_SIZE;
+  v.x = (site.x0 + 1) * CELL_SIZE; v.y = y;
+  v.hx = 1; v.hy = 0;
+  v.path = [(site.x1 + 1) * CELL_SIZE, y]; v.pathIdx = 0; v.state = 'moving'; v.dest = site.id;
+  // A soldier standing just ahead of the bumper, as a squad holding the site does.
+  const s = w.soldiers[0];
+  s.x = v.x + 4.2; s.y = y;
+  e.runTicks(3);
+  expect(w.siteAt(v.x, v.y)).toBe(site);
+  expect(v.state).toBe('idle');
+  expect(v.dest).toBe(0);
+  expect(truckPenetration(v, s.x, s.y)).toBeLessThanOrEqual(1e-6);
 });
 
 test('the empty test field remains free of generated scenery', () => {
