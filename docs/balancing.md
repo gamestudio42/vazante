@@ -393,6 +393,42 @@ much harder than one that does not. +0.12 per mission stays; A Ponte is the thin
 
 Still not done: requisition sizes, recruit and nightmare.
 
+### 2026-11-15 — why A Ponte decided the run
+
+Part of it was the bot. A Ponte gives the task force a truck with 3,000 rounds and the scripted
+commander left it at the base. It now takes a truck that no stage asks for along with its first
+squad. A Ponte alone, veteran, cities 1001 to 1006, won of six:
+
+| Threat | Truck left at the base | Truck with the squads |
+| --- | --- | --- |
+| ×1.00 | 6, with 0 to 14 lost | 6, with 0 or 1 lost |
+| ×1.24 | 5 | 5 |
+| ×1.36 | not played | 4 |
+| ×1.48 | 2 | 3 |
+
+It is all or nothing: the bridge is held with almost nobody lost or all 17 die, and they die in the
+last minute, when the pressure groups are largest (120 growing by 20 % each, times the threat: 568
+in the last group at ×1.48). The "ammunition at zero" in those runs is not a cause: the counter
+adds up the living, so it reads zero when everyone is dead.
+
+Whole Operations with the truck, same six cities:
+
+| Threat per mission | Won | Fallen per run | Lost where |
+| --- | --- | --- | --- |
+| +0.12 (kept) | 6 of 6 | 1, 1, 5, 5, 19, 20 | — |
+| +0.18 (tried, not kept) | 3 of 6 | 3, 18, 20, 20, 20, 22 | A Ponte at ×1.72, three times, always as the last mission |
+
+The rest of it is the missions. At +0.18 the other four did not notice the threat: O Último Trem
+at ×1.72 lost nobody, Turno da Noite at ×1.54 nobody, Linha de Suprimentos at ×1.72 two. Every
+soldier lost to the ramp is lost on A Ponte, whose pressure is the largest in the game and grows.
+A steeper ramp only turns "A Ponte last" into a certain defeat and leaves the other runs as easy
+as before, so the step stays at +0.12.
+
+Open, and a design choice more than a number: with this commander four of the five missions in a
+run do not get harder, so an Operation is easy unless it draws A Ponte late. Making the threat
+bite everywhere needs something those missions feel (more driven groups on their convoy and hold
+stages, less warning before waves, or a threat weight per mission), not a larger multiplier.
+
 ### 2026-11-13 — moods after a look at every mission, by day and by night
 
 Every mood was captured by day and at 23:00. All stay readable. By day `dust` and `sodium` were
