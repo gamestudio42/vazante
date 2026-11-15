@@ -120,6 +120,7 @@ export function playMission(
     const v = w.vehicle(m.trucks[0]);
     return v ? `truck ${v.state}@${Math.round(v.x)},${Math.round(v.y)} hp=${Math.round(v.hp)} pax=${v.passengers} evac=${m.evacuated}` : "";
   };
+  const truckStage = def.stages.some((st) => st.kind === "deliver" || st.kind === "evacuate");
   e.enqueue({ type: "set_speed", speed: 1 });
   while (w.tick < LIMIT_TICKS && m.phase === "active") {
     if (w.tick % THINK_TICKS === 0) {
@@ -155,6 +156,11 @@ export function playMission(
         const site = w.bases.find((b) => b.name === z.name);
         if (site) convoy(site.id);
       }
+      // A truck no stage asks for carries the mission's spare ammunition: it follows the first squad
+      // and hands rounds out wherever the task force stops.
+      const spare = w.vehicle(m.trucks[0]);
+      if (spare && spare.state !== "destroyed" && !truckStage && spare.cargoAmmo > 0 && spare.escort !== squads[0] && squads.length > 0)
+        e.enqueue({ type: "escort", vehicle: spare.id, squad: squads[0] });
       squads.forEach((q, i) => send(q, target, 12, i, squads.length));
       if (process.env.DEBUG && w.tick % Number(process.env.EVERY ?? 3000) === 0)
         console.log(
