@@ -1,6 +1,6 @@
-import { CELL_SIZE, COLLISION, SoldierCondition } from '@vazante/shared';
+import { CELL_SIZE, COLLISION, SoldierCondition, TICK_DT } from '@vazante/shared';
 import type { Vehicle } from '../entities.ts';
-import type { World } from '../world.ts';
+import { isActiveSoldier, type World } from '../world.ts';
 import { moveWithCollision } from './movement.ts';
 
 /** Penetration into the truck rectangle expanded by a soldier's collision radius. */
@@ -51,4 +51,23 @@ export function truckWouldHitSoldier(w: World, v: Vehicle, nx: number, ny: numbe
     }
   }
   return false;
+}
+
+/**
+ * Infantry in the way of a truck that wants to reach (nx, ny) steps off to the nearer side. Without
+ * this a soldier whose place is in front of the bumper and a truck that will not run him over wait
+ * for each other for ever. A soldier under direct control is the player's to move.
+ */
+export function stepAside(w: World, v: Vehicle, nx: number, ny: number): void {
+  const step = COLLISION.stepAsideSpeed * TICK_DT;
+  for (const s of w.soldiers) {
+    if (!isActiveSoldier(s) || s.direct) continue;
+    if (truckPenetration(v, s.x, s.y, nx, ny) <= 0) continue;
+    // Which side of the truck's axis the soldier is on; dead centre goes by id so it is stable.
+    const side = (s.x - v.x) * v.hy - (s.y - v.y) * v.hx;
+    const sign = Math.abs(side) > 1e-3 ? Math.sign(side) : s.id % 2 === 0 ? 1 : -1;
+    const m = moveSoldier(w, s.x, s.y, v.hy * sign * step, -v.hx * sign * step);
+    s.x = m.x;
+    s.y = m.y;
+  }
 }

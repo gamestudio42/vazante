@@ -4,6 +4,11 @@ export const COLLISION = {
   sweepStep: 0.15,
   truckLength: 7,
   truckWidth: 2.5,
+  /**
+   * Metres per second at which infantry gets out of the way of a truck that is waiting for it.
+   * Faster than any squad walks, so a soldier whose formation place is on the lane still clears it.
+   */
+  stepAsideSpeed: 6,
   siteClearance: 8,
   maxTents: 8,
   carSpacingM: 24,

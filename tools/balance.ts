@@ -237,7 +237,7 @@ const REQUISITION_ORDER: RequisitionId[] = ["ammo", "veterans", "drill", "recon"
  */
 function playOperations(difficulty: DifficultyId, runs: number): void {
   for (let i = 1; i <= runs; i++) {
-    const seed = 1000 + i;
+    const seed = Number(process.env.SEED0 ?? 1001) + i - 1;
     let run = newRun(seed, null, difficulty, 0);
     const names = seeded(seed ^ 0x5eed);
     console.log(`operation ${i} seed=${seed} ${difficulty}: ${run.missions.join(" → ")}`);
