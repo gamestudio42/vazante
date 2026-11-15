@@ -1,4 +1,4 @@
-import { truckWouldHitSoldier } from './vehicle-collision.ts';
+import { stepAside, truckWouldHitSoldier } from './vehicle-collision.ts';
 import {
   BASE_AMMO_LOW,
   CELL_SIZE,
@@ -466,6 +466,7 @@ export function stepVehicles(w: World): void {
       const nx = d > 1e-6 ? v.x + dx / d * travel : tx;
       const ny = d > 1e-6 ? v.y + dy / d * travel : ty;
       if (truckWouldHitSoldier(w, v, nx, ny, oldHx, oldHy)) {
+        stepAside(w, v, nx, ny);
         v.hx = oldHx;
         v.hy = oldHy;
         // Infantry standing on the parking spot: a truck already inside its destination parks

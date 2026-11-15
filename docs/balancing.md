@@ -244,6 +244,7 @@ veteran difficulty.
 | 2026-10-30 | wall climbing | PILE_UNIT_M 0.5 → 0.25 (14 stacked zombies top a 3.5 m wall, 9 a hesco); once climbable, one zombie per wall cell per second (CLIMB_INTERVAL_S 1); base ammo alerts below 800 and at 0 | Diogo saw hordes pour over walls: 7 zombies were enough and the whole pile went over at once, while the base sat at 0 ammo without warning. Bot at veteran unchanged: night shift, last convoy, hospital 3/3, bridge 2/3, survival 4 nights |
 | 2026-10-30 | horde routing | flow field ignores zombies → each zombie beyond the first in a cell adds 10 (one cell of walking) to it, up to 80; lane lean 0.15 → 0.3 and slack 10 → 20 | Diogo saw the whole horde file through one gap in a single line; now a queue makes going round or hitting another stretch of wall look shorter. Bot at veteran: night shift, last convoy, hospital, bridge 3/3 |
 | 2026-11-14 | Operation threat | scales wandering zombies only → also every wave and pressure group; +0.12 per mission unchanged | with only the wandering horde scaled the bot won the same missions at ×1.48 as at ×1.00 and five of six whole Operations with 0 to 5 fallen; scaled waves cost it 5 to 13 of 17 on A Ponte at ×1.36 and ×1.48 |
+| 2026-11-15 | truck and infantry | infantry never moves for a truck → steps aside at 6 m/s when a truck waits for it; a truck stopped inside its destination parks there (2026-11-14) | a soldier placed in front of the bumper and the truck waited for each other for ever; three of six bot Operations stood still on a convoy stage, and all six now reach a real ending |
 
 ### 2026-11-12 — architecture presentation tuning
 
@@ -363,6 +364,34 @@ Not settled: three of the six runs ended with the bot standing still on a convoy
 Trem twice, Linha de Suprimentos once), not with a defeat, so the sample of real endings is three
 runs. A Ponte carries most of the difficulty; whether that is the mission or the bot holding a
 bridge badly is not known. Recruit and nightmare were not played.
+
+### 2026-11-15 — infantry steps aside for a waiting truck
+
+The three runs above that did not finish were one defect, and not the bot's alone: a soldier whose
+place in the formation was in front of the bumper waited for the truck to leave, and the truck
+waited for the soldier. New control in `balance/collision.ts`: `stepAsideSpeed` 6 m/s, the speed at
+which infantry in the way of a waiting truck moves off to the nearer side. It is above every squad's
+walking speed on purpose, so a soldier ordered to hold that spot still clears the lane. A soldier
+under direct control is left to the player, and one who is down does not move: he still blocks.
+
+The same six Operations (veteran, cities 1001 to 1006), now all played to a real ending:
+
+| City | Result | Fallen in the run | Where it turned |
+| --- | --- | --- | --- |
+| 1001 | won 5/5 | 17 | A Ponte ×1.48: 10 of 17 lost |
+| 1002 | won 5/5 | 10 | A Ponte ×1.36: 5 of 17 lost; O Último Trem ×1.48: 4 of 27 |
+| 1003 | won 5/5 | 23 | A Ponte ×1.48: 11 of 17 lost |
+| 1004 | won 5/5 | 31 | Retomar a Ribeira ×1.12: 14 of 31 lost; Turno da Noite ×1.36: 16 of 21 |
+| 1005 | lost 2/5 | 19 | A Ponte ×1.24: all 17 lost |
+| 1006 | lost 4/5 | 26 | A Ponte ×1.48: all 17 lost |
+
+Four of six won, each at a cost of 10 to 31 soldiers, and both defeats are A Ponte. Hospital São
+Lucas, O Último Trem and Linha de Suprimentos never cost more than 5 at any threat. So the ramp
+does its work, but one mission decides the run: an Operation that draws A Ponte early or last is
+much harder than one that does not. +0.12 per mission stays; A Ponte is the thing to look at next
+(the bot holds the bridge in the open and never builds, so part of this is the bot).
+
+Still not done: requisition sizes, recruit and nightmare.
 
 ### 2026-11-13 — moods after a look at every mission, by day and by night
 

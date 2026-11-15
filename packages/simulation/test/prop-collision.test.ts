@@ -138,6 +138,21 @@ test('a truck stopped by infantry inside its destination parks there', () => {
   expect(truckPenetration(v, s.x, s.y)).toBeLessThanOrEqual(1e-6);
 });
 
+test('infantry holding a place in front of a waiting truck steps aside and lets it through', () => {
+  const e = fieldEngine();
+  const q = addSquad(e, 'guard', 144, 128);
+  // The whole squad stands on the lane and is ordered to stay there.
+  for (const s of soldiersOf(e, q.id)) { s.x = 140 + (s.id % 3); s.y = 128; }
+  const v = spawnTruck(e.world, 128, 128, 0, 0);
+  v.hx = 1; v.hy = 0;
+  v.path = [170, 128]; v.pathIdx = 0; v.state = 'moving';
+  for (let i = 0; i < 200; i++) {
+    e.tick();
+    for (const s of e.world.soldiers) expect(truckPenetration(v, s.x, s.y)).toBeLessThanOrEqual(1e-6);
+  }
+  expect(v.x).toBeGreaterThan(160);
+});
+
 test('the empty test field remains free of generated scenery', () => {
   const e = fieldEngine();
   expect(e.world.props).toEqual([]);
