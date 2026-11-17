@@ -10,6 +10,14 @@ export const OPERATION = {
   pool: ['hospital', 'bridge', 'retake', 'supply_line', 'night_shift', 'last_train'] as readonly MissionId[],
   /** Wandering zombies, waves and pressure groups grow by this share for each mission already played (fifth: ×1.48). */
   threatPerMission: 0.12,
+  /**
+   * Hunting groups: while the threat is above ×1, stages with no pressure of their own (reaching or
+   * securing a place, a convoy, retaking a district) send a group of driven zombies at the task
+   * force, or at the truck of a convoy, every `everyS` seconds. A group is `perThreat` zombies for
+   * each whole ×1 of threat above ×1 (×1.12: 12 % of it), times the difficulty's wave size. Nobody is
+   * hunted closer than `awayM` to the base: a group there would go for the command post instead.
+   */
+  hunt: { everyS: 60, perThreat: 100, awayM: 350 },
   /** Requisitions offered after a won mission; one is taken. */
   offers: 3,
   requisitions: {
