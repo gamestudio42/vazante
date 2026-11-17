@@ -209,6 +209,7 @@ A run of five city missions on one city; each won mission offers three requisiti
 | --- | --- | --- |
 | Missions per run | 5 of 6 | drawn from the city missions (not O Último Comboio), order by the run's seed |
 | Threat per mission | +0.12 | wandering zombies, waves and pressure groups ×1.00, ×1.12, ×1.24, ×1.36, ×1.48 |
+| Hunting groups | 100 per ×1 above ×1, every 60 s | stages with no pressure of their own (reach, secure, convoy, retake) send driven zombies at the task force or the convoy truck once it is 350 m from the base: 12 at ×1.12, 48 at ×1.48 |
 | Ammunition drop | +800 | base ammunition, next mission |
 | Engineering supplies | +150 | base materials, next mission |
 | Aerial recon | −20 % | the next mission's threat: wandering zombies, waves and pressure groups |
@@ -245,6 +246,7 @@ veteran difficulty.
 | 2026-10-30 | horde routing | flow field ignores zombies → each zombie beyond the first in a cell adds 10 (one cell of walking) to it, up to 80; lane lean 0.15 → 0.3 and slack 10 → 20 | Diogo saw the whole horde file through one gap in a single line; now a queue makes going round or hitting another stretch of wall look shorter. Bot at veteran: night shift, last convoy, hospital, bridge 3/3 |
 | 2026-11-14 | Operation threat | scales wandering zombies only → also every wave and pressure group; +0.12 per mission unchanged | with only the wandering horde scaled the bot won the same missions at ×1.48 as at ×1.00 and five of six whole Operations with 0 to 5 fallen; scaled waves cost it 5 to 13 of 17 on A Ponte at ×1.36 and ×1.48 |
 | 2026-11-15 | truck and infantry | infantry never moves for a truck → steps aside at 6 m/s when a truck waits for it; a truck stopped inside its destination parks there (2026-11-14) | a soldier placed in front of the bumper and the truck waited for each other for ever; three of six bot Operations stood still on a convoy stage, and all six now reach a real ending |
+| 2026-11-16 | Operation hunting groups | none → 100 driven zombies per ×1 of threat above ×1 every 60 s on reach, secure, convoy and retake stages, started beyond the task force and never within 350 m of the base | only A Ponte felt the threat: the other four missions lost almost nobody even at ×1.72; now Linha de Suprimentos costs 1 to 8 and O Último Trem 0 to 3 late in a run |
 
 ### 2026-11-12 — architecture presentation tuning
 
@@ -428,6 +430,31 @@ Open, and a design choice more than a number: with this commander four of the fi
 run do not get harder, so an Operation is easy unless it draws A Ponte late. Making the threat
 bite everywhere needs something those missions feel (more driven groups on their convoy and hold
 stages, less warning before waves, or a threat weight per mission), not a larger multiplier.
+
+### 2026-11-16 — hunting groups
+
+New row in the Operation table: while the threat is above ×1, a stage with no pressure or waves of
+its own sends a group of driven zombies at the task force (at the truck during a convoy) every
+60 s. How big, where they start and when they stop mattered more than how many:
+
+- They start on streets 120 to 220 m from their quarry and **farther from the base than it is**.
+  Driven zombies go for the nearest soldier, truck or command post; groups started between the
+  task force and the base went for the truck parked there or the undefended command post instead.
+  In the first tries that lost Linha de Suprimentos four times in six (command post down in the
+  first six minutes) and O Último Trem twice (the evacuation truck wrecked at the base, all 27 dead).
+- Nobody is hunted closer than 350 m to the base, for the same reason.
+- Left-over hunters stop being driven when the stage ends, like pressure groups.
+
+Same six Operations, veteran, cities 1001 to 1006, with the truck brought along:
+
+| | Won | Fallen per run |
+| --- | --- | --- |
+| No hunting (2026-11-15) | 6 of 6 | 1, 1, 5, 5, 19, 20 |
+| Hunting groups | 5 of 6 | 4, 6, 8, 16, 16, 19 |
+
+The defeat is A Ponte at ×1.48 as the last mission. Linha de Suprimentos now costs 1 to 8 soldiers
+and O Último Trem 0 to 3; both cost 0 to 2 before. It is a first step: the other missions now feel
+the threat a little, A Ponte is still where runs are lost. Group size was not tuned beyond 100.
 
 ### 2026-11-13 — moods after a look at every mission, by day and by night
 

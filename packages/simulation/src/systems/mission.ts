@@ -6,6 +6,7 @@ import {
   DISTRICT,
   Ground,
   MISSIONS,
+  OPERATION,
   PRESSURE_SPAWN_M,
   SLICE,
   STRUCTURES,
@@ -347,6 +348,65 @@ function pressure(w: World, m: Mission, zone: MissionZone, p: Pressure): void {
   if (at) w.emit({ type: "wave_started", value: 0, x: at[0], y: at[1] });
 }
 
+/** Stages an Operation's threat hunts the task force in: the ones with no pressure or waves of their own. */
+function hunted(st: MissionDef["stages"][number]): boolean {
+  return st.kind === "reach" || st.kind === "secure" || st.kind === "deliver" || st.kind === "retake";
+}
+
+/**
+ * Operation threat above ×1: a group of driven zombies comes at the task force (at the truck,
+ * during a convoy) every OPERATION.hunt.everyS seconds. Without it only the missions with waves or
+ * pressure of their own got harder along a run.
+ */
+function hunt(w: World, m: Mission, st: MissionDef["stages"][number]): void {
+  const over = (w.threat ?? 1) - 1;
+  if (over <= 0 || !hunted(st)) return;
+  const every = OPERATION.hunt.everyS * TICK_HZ;
+  if (m.pressureAt === 0) {
+    m.pressureAt = w.tick + every;
+    return;
+  }
+  if (w.tick < m.pressureAt) return;
+  m.pressureAt = w.tick + every;
+  const count = Math.round(OPERATION.hunt.perThreat * over * DIFFICULTY[w.difficulty].waveSize);
+  if (count <= 0) return;
+  let x = 0;
+  let y = 0;
+  const truck = st.kind === "deliver" ? w.vehicle(m.trucks[st.truck]) : undefined;
+  if (truck && truck.state !== "destroyed") {
+    x = truck.x;
+    y = truck.y;
+  } else {
+    let n = 0;
+    for (const s of w.soldiers) {
+      if (!isActiveSoldier(s)) continue;
+      x += s.x;
+      y += s.y;
+      n++;
+    }
+    if (n === 0) return;
+    x /= n;
+    y /= n;
+  }
+  // Driven zombies walk to whatever is nearest: soldiers, a truck or the command post. A group that
+  // starts between its quarry and the base goes for the truck parked there or the command post
+  // instead, so it starts on the far side (farther from the base than its quarry is), and a task
+  // force still near the base is not hunted at all.
+  const home = w.baseById(m.base);
+  const hx = home ? ((home.x0 + home.x1 + 1) / 2) * CELL_SIZE : x;
+  const hy = home ? ((home.y0 + home.y1 + 1) / 2) * CELL_SIZE : y;
+  const away = OPERATION.hunt.awayM;
+  if ((x - hx) * (x - hx) + (y - hy) * (y - hy) < away * away) return;
+  const g = w.grid;
+  const cells = streetsAround(w, x, y, PRESSURE_SPAWN_M.min, PRESSURE_SPAWN_M.max).filter((c) => {
+    const cx = g.cellCenterX(c);
+    const cy = g.cellCenterY(c);
+    return !home || (cx - hx) * (cx - hx) + (cy - hy) * (cy - hy) > (x - hx) * (x - hx) + (y - hy) * (y - hy);
+  });
+  const at = spawnGroup(w, cells, count);
+  if (at) w.emit({ type: "wave_started", value: 0, x: at[0], y: at[1] });
+}
+
 /** Any active soldier inside the zone (grown by ZONE_PAD_M). */
 export function zoneHeld(w: World, z: MissionZone): boolean {
   const x0 = z.x0 * CELL_SIZE - ZONE_PAD_M;
@@ -387,7 +447,7 @@ function advance(w: World, m: Mission): void {
   w.emit({ type: "objective_done", value: m.stage });
   const done = MISSIONS[m.id].stages[m.stage];
   // Pressure groups left over become ordinary infected, so a later waves stage does not wait on them.
-  if ((done.kind === "hold" || done.kind === "evacuate") && done.pressure)
+  if (((done.kind === "hold" || done.kind === "evacuate") && done.pressure) || ((w.threat ?? 1) > 1 && hunted(done)))
     w.zombies.driven.fill(0);
   m.stage++;
   if (m.stage >= MISSIONS[m.id].stages.length) {
@@ -454,6 +514,7 @@ export function stepMission(w: World): void {
   }
 
   const st = def.stages[m.stage];
+  hunt(w, m, st);
   switch (st.kind) {
     case "deliver": {
       const id = m.trucks[st.truck];

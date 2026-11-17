@@ -138,6 +138,9 @@ review and the existing render performance gate.
   multiplies each wave and pressure group, because scaling only the wandering horde made no
   difference to how missions ended (docs/balancing.md). It is hashed and saved only when set, so
   games without it, and saves made before it, hash as they did.
+- **Amended 2026-11-16.** The same threat also sends hunting groups (`OPERATION.hunt`) on stages
+  with no pressure of their own. They use the mission's existing `pressureAt` and `wave` fields, so
+  the save layout does not change.
 - **Daily seed.** The city and the draws come from the UTC date through FNV-1a and a small seeded
   generator in the client, so every player gets the same operation without a server. Names of
   recruits are still random; they do not change the game.
