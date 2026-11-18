@@ -17,7 +17,7 @@ export const OPERATION = {
    * each whole ×1 of threat above ×1 (×1.12: 12 % of it), times the difficulty's wave size. Nobody is
    * hunted closer than `awayM` to the base: a group there would go for the command post instead.
    */
-  hunt: { everyS: 60, perThreat: 100, awayM: 350 },
+  hunt: { everyS: 60, perThreat: 125, awayM: 350 },
   /** Requisitions offered after a won mission; one is taken. */
   offers: 3,
   requisitions: {
