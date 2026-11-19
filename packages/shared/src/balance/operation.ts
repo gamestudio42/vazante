@@ -1,3 +1,4 @@
+import type { DifficultyId } from './difficulty.ts';
 import type { MissionId } from './missions.ts';
 
 /**
@@ -8,8 +9,12 @@ export const OPERATION = {
   /** Missions in a run, drawn from `pool` in an order fixed by the run's seed. */
   missions: 5,
   pool: ['hospital', 'bridge', 'retake', 'supply_line', 'night_shift', 'last_train'] as readonly MissionId[],
-  /** Wandering zombies, waves and pressure groups grow by this share for each mission already played (fifth: ×1.48). */
-  threatPerMission: 0.12,
+  /**
+   * Wandering zombies, waves, pressure and hunting groups grow by this share for each mission
+   * already played, by difficulty (veteran fifth mission: ×1.48). Nightmare already loses its first
+   * missions at ×1, recruit wins everything with almost nobody lost: see docs/balancing.md.
+   */
+  threatPerMission: { recruit: 0.2, veteran: 0.12, nightmare: 0.06 } as Readonly<Record<DifficultyId, number>>,
   /**
    * Hunting groups: while the threat is above ×1, stages with no pressure of their own (reaching or
    * securing a place, a convoy, retaking a district) send a group of driven zombies at the task

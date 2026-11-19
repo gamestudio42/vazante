@@ -208,7 +208,7 @@ A run of five city missions on one city; each won mission offers three requisiti
 | Value | Number | Effect |
 | --- | --- | --- |
 | Missions per run | 5 of 6 | drawn from the city missions (not O Último Comboio), order by the run's seed |
-| Threat per mission | +0.12 | wandering zombies, waves and pressure groups ×1.00, ×1.12, ×1.24, ×1.36, ×1.48 |
+| Threat per mission | recruit +0.20, veteran +0.12, nightmare +0.06 | wandering zombies, waves, pressure and hunting groups; fifth mission ×1.80, ×1.48, ×1.24. The daily operation is veteran |
 | Hunting groups | 125 per ×1 above ×1, every 60 s | stages with no pressure of their own (reach, secure, convoy, retake) send driven zombies at the task force or the convoy truck once it is 350 m from the base: 15 at ×1.12, 60 at ×1.48 |
 | Ammunition drop | +800 | base ammunition, next mission |
 | Engineering supplies | +150 | base materials, next mission |
@@ -248,6 +248,7 @@ veteran difficulty.
 | 2026-11-15 | truck and infantry | infantry never moves for a truck → steps aside at 6 m/s when a truck waits for it; a truck stopped inside its destination parks there (2026-11-14) | a soldier placed in front of the bumper and the truck waited for each other for ever; three of six bot Operations stood still on a convoy stage, and all six now reach a real ending |
 | 2026-11-16 | Operation hunting groups | none → 100 driven zombies per ×1 of threat above ×1 every 60 s on reach, secure, convoy and retake stages, started beyond the task force and never within 350 m of the base | only A Ponte felt the threat: the other four missions lost almost nobody even at ×1.72; now Linha de Suprimentos costs 1 to 8 and O Último Trem 0 to 3 late in a run |
 | 2026-11-18 | A Ponte pressure, hunting groups | A Ponte pressure grow 0.2 → 0.1 per group; hunting groups 100 → 125 per ×1 of threat | A Ponte was all or nothing (the last groups outran what 17 soldiers can kill: 568 at once at ×1.48) and decided every lost Operation; smoothed, the threat is spread: six bot Operations lost 5 to 25 soldiers on four different missions. Campaign A Ponte at ×1: still 6/6, 0 lost |
+| 2026-11-19 | Operation threat by difficulty | +0.12 for every difficulty → recruit +0.20, veteran +0.12, nightmare +0.06 | with one step recruit won six Operations of six losing 1 to 3 soldiers each and nightmare won none, three of them gone in the first two missions; now recruit 6/6 losing 1 to 12, nightmare 2/6 |
 
 ### 2026-11-12 — architecture presentation tuning
 
@@ -486,6 +487,28 @@ At 125 the soldiers a run costs come from four missions (Linha de Suprimentos 2 
 to 13, Turno da Noite 15 once, O Último Trem 0 to 5), and no single mission decides it. Hunting is
 steep: 150 lost runs on Linha de Suprimentos, the longest mission (about 45 minutes, so about 40
 groups), which is the first thing to cap if playtests show it as the new wall.
+
+### 2026-11-19 — difficulty and requisitions
+
+Six Operations each, cities 1001 to 1006. `REQS=a,b,c` makes the bot take requisitions in another
+order (default: ammunition, replacements, drill, recon, materials).
+
+| Run | Won | Fallen per run |
+| --- | --- | --- |
+| Recruit, +0.12 per mission | 6 of 6 | 1, 2, 2, 2, 2, 3 |
+| Recruit, +0.20 (kept) | 6 of 6 | 1, 4, 4, 8, 8, 12 |
+| Veteran, ammunition first (reference) | 5 of 6 | 5, 5, 11, 17, 19, 25 |
+| Veteran, recon and drill first | 5 of 6 | 0, 5, 6, 9, 17, 19 |
+| Veteran, materials first, ammunition last | 4 of 6 | 6, 6, 6, 9, 19, 28 |
+| Nightmare, +0.12 per mission | 0 of 6 | 22 to 33, four with nobody left |
+| Nightmare, +0.06 (kept) | 2 of 6 | 14 to 33 |
+
+- **Difficulty.** One step for all made recruit trivial and nightmare hopeless, so the step is per
+  difficulty. Nightmare stays very hard for this commander: two runs die on Hospital São Lucas as
+  the first mission, at ×1, where no ramp acts. That is campaign nightmare, not the Operation.
+- **Requisitions.** They matter little to a commander that never builds: leaving ammunition for
+  last costs one run in six, recon and drill instead of ammunition change nothing. Sizes are
+  unchanged; materials are worth nothing to this bot by construction, so it cannot judge them.
 
 ### 2026-11-13 — moods after a look at every mission, by day and by night
 

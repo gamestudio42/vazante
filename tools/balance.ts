@@ -235,7 +235,10 @@ export function playMission(
 }
 
 /** What the scripted commander asks for: it never builds, so materials come last. */
-const REQUISITION_ORDER: RequisitionId[] = ["ammo", "veterans", "drill", "recon", "materials"];
+// REQS="drill,recon,..." tries another order, to see what each requisition is worth.
+const REQUISITION_ORDER: RequisitionId[] = process.env.REQS
+  ? (process.env.REQS.split(",") as RequisitionId[])
+  : ["ammo", "veterans", "drill", "recon", "materials"];
 
 /**
  * Plays whole Operations with the scripted commander: `pnpm balance operation [difficulty] [runs]`.

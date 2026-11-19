@@ -32,6 +32,14 @@ describe('operation', () => {
     expect(seedFor('x')).toBeLessThanOrEqual(999_999);
   });
 
+  it('grows the threat faster on recruit and slower on nightmare', () => {
+    const at = (d: 'recruit' | 'veteran' | 'nightmare') => missionTweaks({ ...newRun(7, null, d, 0), index: 4 }).zombieScale!;
+    expect(at('recruit')).toBeCloseTo(1 + 4 * OPERATION.threatPerMission.recruit);
+    expect(at('nightmare')).toBeCloseTo(1 + 4 * OPERATION.threatPerMission.nightmare);
+    expect(at('recruit')).toBeGreaterThan(at('veteran'));
+    expect(at('veteran')).toBeGreaterThan(at('nightmare'));
+  });
+
   it('keeps the task force between missions and grows the threat', () => {
     let run = newRun(7, null, 'veteran', 0);
     expect(missionTweaks(run).zombieScale).toBe(1);
@@ -42,7 +50,8 @@ describe('operation', () => {
     expect(canDeploy(run)).toBe(false);
     run = choose(run, run.offers[0]);
     expect(canDeploy(run)).toBe(true);
-    expect(missionTweaks(run).zombieScale).toBeCloseTo(run.next.recon ? (1 + OPERATION.threatPerMission) * (1 - OPERATION.requisitions.recon) : 1 + OPERATION.threatPerMission);
+    const step = OPERATION.threatPerMission.veteran;
+    expect(missionTweaks(run).zombieScale).toBeCloseTo(run.next.recon ? (1 + step) * (1 - OPERATION.requisitions.recon) : 1 + step);
     // Survivors of the first mission are still on the roster with its experience.
     const rids = new Set(living(run.roster).map((x) => x.rid));
     for (const s of first.crew.flat()) expect(rids.has(s.rid)).toBe(true);
