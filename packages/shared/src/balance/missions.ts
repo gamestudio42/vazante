@@ -198,7 +198,7 @@ export const MISSIONS: Readonly<Record<MissionId, MissionDef>> = {
         kind: "hold",
         zone: 0,
         seconds: 300,
-        pressure: { everyS: 25, size: 120, grow: 0.2 },
+        pressure: { everyS: 25, size: 120, grow: 0.1 },
       },
     ],
   },

@@ -209,7 +209,7 @@ A run of five city missions on one city; each won mission offers three requisiti
 | --- | --- | --- |
 | Missions per run | 5 of 6 | drawn from the city missions (not O Último Comboio), order by the run's seed |
 | Threat per mission | +0.12 | wandering zombies, waves and pressure groups ×1.00, ×1.12, ×1.24, ×1.36, ×1.48 |
-| Hunting groups | 100 per ×1 above ×1, every 60 s | stages with no pressure of their own (reach, secure, convoy, retake) send driven zombies at the task force or the convoy truck once it is 350 m from the base: 12 at ×1.12, 48 at ×1.48 |
+| Hunting groups | 125 per ×1 above ×1, every 60 s | stages with no pressure of their own (reach, secure, convoy, retake) send driven zombies at the task force or the convoy truck once it is 350 m from the base: 15 at ×1.12, 60 at ×1.48 |
 | Ammunition drop | +800 | base ammunition, next mission |
 | Engineering supplies | +150 | base materials, next mission |
 | Aerial recon | −20 % | the next mission's threat: wandering zombies, waves and pressure groups |
@@ -247,6 +247,7 @@ veteran difficulty.
 | 2026-11-14 | Operation threat | scales wandering zombies only → also every wave and pressure group; +0.12 per mission unchanged | with only the wandering horde scaled the bot won the same missions at ×1.48 as at ×1.00 and five of six whole Operations with 0 to 5 fallen; scaled waves cost it 5 to 13 of 17 on A Ponte at ×1.36 and ×1.48 |
 | 2026-11-15 | truck and infantry | infantry never moves for a truck → steps aside at 6 m/s when a truck waits for it; a truck stopped inside its destination parks there (2026-11-14) | a soldier placed in front of the bumper and the truck waited for each other for ever; three of six bot Operations stood still on a convoy stage, and all six now reach a real ending |
 | 2026-11-16 | Operation hunting groups | none → 100 driven zombies per ×1 of threat above ×1 every 60 s on reach, secure, convoy and retake stages, started beyond the task force and never within 350 m of the base | only A Ponte felt the threat: the other four missions lost almost nobody even at ×1.72; now Linha de Suprimentos costs 1 to 8 and O Último Trem 0 to 3 late in a run |
+| 2026-11-18 | A Ponte pressure, hunting groups | A Ponte pressure grow 0.2 → 0.1 per group; hunting groups 100 → 125 per ×1 of threat | A Ponte was all or nothing (the last groups outran what 17 soldiers can kill: 568 at once at ×1.48) and decided every lost Operation; smoothed, the threat is spread: six bot Operations lost 5 to 25 soldiers on four different missions. Campaign A Ponte at ×1: still 6/6, 0 lost |
 
 ### 2026-11-12 — architecture presentation tuning
 
@@ -455,6 +456,36 @@ Same six Operations, veteran, cities 1001 to 1006, with the truck brought along:
 The defeat is A Ponte at ×1.48 as the last mission. Linha de Suprimentos now costs 1 to 8 soldiers
 and O Último Trem 0 to 3; both cost 0 to 2 before. It is a first step: the other missions now feel
 the threat a little, A Ponte is still where runs are lost. Group size was not tuned beyond 100.
+
+### 2026-11-18 — A Ponte smoothed, hunting groups 125
+
+A trace of A Ponte lost at ×1.48 (city 1003) shows why it was all or nothing: driven zombies on
+their way to the bridge went 391, 1,428, 2,468 at three, five and six minutes while the 17 soldiers
+killed 534 in all. The hold is a race against the last, largest groups (120 growing 20 % each), not
+a fight; the threat only made them arrive before the 300 s ran out.
+
+A Ponte's pressure now grows 10 % per group. Alone, veteran, cities 1001 to 1006, won of six:
+
+| Threat | Grow 0.2 | Grow 0.1 |
+| --- | --- | --- |
+| ×1.00 | 6, with 0 or 1 lost | 6, none lost |
+| ×1.24 | 5 | 5 |
+| ×1.48 | 3 | 5, with 0 to 14 lost |
+
+City 1003 loses it at every threat above ×1 with either number: that bridge's layout, not the
+growth. Smoothing it alone would make Operations easy again, so the hunting groups went up.
+Six Operations, veteran, the same cities:
+
+| Hunting groups | Won | Fallen per run | Lost on |
+| --- | --- | --- | --- |
+| 100, A Ponte grow 0.2 | 5 of 6 | 4, 6, 8, 16, 16, 19 | A Ponte ×1.48 |
+| 150, grow 0.1 (tried) | 1 of 6 | 3 to 26 | Linha de Suprimentos four times, Turno da Noite once |
+| 125, grow 0.1 (kept) | 5 of 6 | 5, 5, 11, 17, 19, 25 | Linha de Suprimentos ×1.48 |
+
+At 125 the soldiers a run costs come from four missions (Linha de Suprimentos 2 to 7, A Ponte 0
+to 13, Turno da Noite 15 once, O Último Trem 0 to 5), and no single mission decides it. Hunting is
+steep: 150 lost runs on Linha de Suprimentos, the longest mission (about 45 minutes, so about 40
+groups), which is the first thing to cap if playtests show it as the new wall.
 
 ### 2026-11-13 — moods after a look at every mission, by day and by night
 
