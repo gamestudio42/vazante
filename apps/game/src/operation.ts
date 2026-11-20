@@ -142,7 +142,7 @@ export function canDeploy(run: OperationRun | null): run is OperationRun {
 
 /** Threat for the current mission and the requisitions taken for it. */
 export function missionTweaks(run: OperationRun): MissionTweaks {
-  const threat = 1 + run.index * OPERATION.threatPerMission;
+  const threat = 1 + run.index * OPERATION.threatPerMission[run.difficulty];
   return {
     zombieScale: threat * (run.next.recon ? 1 - OPERATION.requisitions.recon : 1),
     ammo: run.next.ammo,
