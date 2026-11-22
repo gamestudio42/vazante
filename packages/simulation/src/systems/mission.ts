@@ -19,7 +19,7 @@ import {
   type SurvivalRules,
   type ZoneRef,
 } from "@vazante/shared";
-import type { Base, Mission, MissionZone } from "../entities.ts";
+import type { Base, Mission, MissionZone, Vehicle } from "../entities.ts";
 import { siteHeld } from "./economy.ts";
 import { FLOW_UNREACHABLE } from "../navigation.ts";
 import { rollZombieKind } from "../spawn.ts";
@@ -361,6 +361,7 @@ function hunted(st: MissionDef["stages"][number]): boolean {
 function hunt(w: World, m: Mission, st: MissionDef["stages"][number]): void {
   const over = (w.threat ?? 1) - 1;
   if (over <= 0 || !hunted(st)) return;
+  if (w.tick % TICK_HZ === 0) loseHunters(w, st.kind === "deliver" ? w.vehicle(m.trucks[st.truck]) : undefined);
   const every = OPERATION.hunt.everyS * TICK_HZ;
   if (m.pressureAt === 0) {
     m.pressureAt = w.tick + every;
@@ -369,7 +370,7 @@ function hunt(w: World, m: Mission, st: MissionDef["stages"][number]): void {
   if (w.tick < m.pressureAt) return;
   m.pressureAt = w.tick + every;
   const count = Math.round(OPERATION.hunt.perThreat * over * DIFFICULTY[w.difficulty].waveSize);
-  if (count <= 0) return;
+  if (count <= 0 || drivenAlive(w) >= count * OPERATION.hunt.maxAlive) return;
   let x = 0;
   let y = 0;
   const truck = st.kind === "deliver" ? w.vehicle(m.trucks[st.truck]) : undefined;
@@ -405,6 +406,32 @@ function hunt(w: World, m: Mission, st: MissionDef["stages"][number]): void {
   });
   const at = spawnGroup(w, cells, count);
   if (at) w.emit({ type: "wave_started", value: 0, x: at[0], y: at[1] });
+}
+
+/**
+ * Driven zombies never give up the chase, and most walk slower than a marching squad: left behind,
+ * a hunter would turn to whatever is now nearest, often the command post nobody defends. One
+ * farther than OPERATION.hunt.loseM from every soldier (and from the convoy's truck) leaves the
+ * map. Turned into an ordinary zombie it stayed on the route and the next group came sooner.
+ */
+function loseHunters(w: World, truck: Vehicle | undefined): void {
+  const z = w.zombies;
+  const lose = OPERATION.hunt.loseM * OPERATION.hunt.loseM;
+  const near = (x: number, y: number, px: number, py: number) => (x - px) * (x - px) + (y - py) * (y - py) <= lose;
+  for (let s = 0; s < z.highWater; s++) {
+    if (!z.isAlive(s) || z.driven[s] === 0) continue;
+    const x = z.x[s];
+    const y = z.y[s];
+    if (truck && truck.state !== "destroyed" && near(x, y, truck.x, truck.y)) continue;
+    let kept = false;
+    for (const q of w.soldiers) {
+      if (isActiveSoldier(q) && near(x, y, q.x, q.y)) {
+        kept = true;
+        break;
+      }
+    }
+    if (!kept) z.kill(s);
+  }
 }
 
 /** Any active soldier inside the zone (grown by ZONE_PAD_M). */

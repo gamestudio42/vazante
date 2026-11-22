@@ -21,8 +21,11 @@ export const OPERATION = {
    * force, or at the truck of a convoy, every `everyS` seconds. A group is `perThreat` zombies for
    * each whole ×1 of threat above ×1 (×1.12: 12 % of it), times the difficulty's wave size. Nobody is
    * hunted closer than `awayM` to the base: a group there would go for the command post instead.
+   * No new group comes while `maxAlive` groups' worth of driven zombies are still alive: on a long
+   * mission (supply line) they piled up faster than the squads could shoot them. A hunter left
+   * farther than `loseM` from every soldier leaves the map instead of turning on the command post.
    */
-  hunt: { everyS: 60, perThreat: 125, awayM: 350 },
+  hunt: { everyS: 60, perThreat: 125, awayM: 350, maxAlive: 2, loseM: 300 },
   /** Requisitions offered after a won mission; one is taken. */
   offers: 3,
   requisitions: {

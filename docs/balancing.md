@@ -209,7 +209,7 @@ A run of five city missions on one city; each won mission offers three requisiti
 | --- | --- | --- |
 | Missions per run | 5 of 6 | drawn from the city missions (not O Último Comboio), order by the run's seed |
 | Threat per mission | recruit +0.20, veteran +0.12, nightmare +0.06 | wandering zombies, waves, pressure and hunting groups; fifth mission ×1.80, ×1.48, ×1.24. The daily operation is veteran |
-| Hunting groups | 125 per ×1 above ×1, every 60 s | stages with no pressure of their own (reach, secure, convoy, retake) send driven zombies at the task force or the convoy truck once it is 350 m from the base: 15 at ×1.12, 60 at ×1.48 |
+| Hunting groups | 125 per ×1 above ×1, every 60 s | stages with no pressure of their own (reach, secure, convoy, retake) send driven zombies at the task force or the convoy truck once it is 350 m from the base: 15 at ×1.12, 60 at ×1.48. None while two groups are still alive; a hunter 300 m from every soldier and the truck leaves the map |
 | Ammunition drop | +800 | base ammunition, next mission |
 | Engineering supplies | +150 | base materials, next mission |
 | Aerial recon | −20 % | the next mission's threat: wandering zombies, waves and pressure groups |
@@ -249,6 +249,7 @@ veteran difficulty.
 | 2026-11-16 | Operation hunting groups | none → 100 driven zombies per ×1 of threat above ×1 every 60 s on reach, secure, convoy and retake stages, started beyond the task force and never within 350 m of the base | only A Ponte felt the threat: the other four missions lost almost nobody even at ×1.72; now Linha de Suprimentos costs 1 to 8 and O Último Trem 0 to 3 late in a run |
 | 2026-11-18 | A Ponte pressure, hunting groups | A Ponte pressure grow 0.2 → 0.1 per group; hunting groups 100 → 125 per ×1 of threat | A Ponte was all or nothing (the last groups outran what 17 soldiers can kill: 568 at once at ×1.48) and decided every lost Operation; smoothed, the threat is spread: six bot Operations lost 5 to 25 soldiers on four different missions. Campaign A Ponte at ×1: still 6/6, 0 lost |
 | 2026-11-19 | Operation threat by difficulty | +0.12 for every difficulty → recruit +0.20, veteran +0.12, nightmare +0.06 | with one step recruit won six Operations of six losing 1 to 3 soldiers each and nightmare won none, three of them gone in the first two missions; now recruit 6/6 losing 1 to 12, nightmare 2/6 |
+| 2026-11-22 | hunting groups on long missions | no limit → no new group while two are alive; a hunter left 300 m behind every soldier and the truck leaves the map | Linha de Suprimentos (about 45 minutes) piled up 290 hunters at once at ×1.48 and lost 6 of 6; at ×1.24, 3 of 6 lost the command post to slow hunters the squads had outrun. Now ×1.24 wins 6/6, ×1.48 2/6, and veteran Operations lose 5 to 19 soldiers instead of 5 to 25 |
 
 ### 2026-11-12 — architecture presentation tuning
 
@@ -509,6 +510,30 @@ order (default: ammunition, replacements, drill, recon, materials).
 - **Requisitions.** They matter little to a commander that never builds: leaving ammunition for
   last costs one run in six, recon and drill instead of ammunition change nothing. Sizes are
   unchanged; materials are worth nothing to this bot by construction, so it cannot judge them.
+
+### 2026-11-22 — hunting groups on Linha de Suprimentos
+
+Linha de Suprimentos is the longest mission (about 45 minutes, four hunted stages), and the bot
+lost it whenever it came late in a run. Alone at a fixed threat, cities 1 to 6:
+
+| Threat | No limit | Cap only | Cap, lost hunters ordinary | Cap, lost hunters leave (kept) |
+| --- | --- | --- | --- | --- |
+| ×1.00 | 6 of 6 (0 to 6 lost) | | | |
+| ×1.24 | 3 of 6 | 4 of 6 | 5 of 6, one stuck at 60 min | 6 of 6 |
+| ×1.48 | 0 of 6 | 2 of 6 | 0 of 6 | 2 of 6 |
+
+- **Pile-up.** A group came every minute whether or not the last one was dead: on the convoy at
+  ×1.48 the driven zombies went from 60 to 290 while the squads ran out of ammunition. No new group
+  comes while two groups' worth are alive.
+- **Command post.** The ×1.24 losses were the command post, 1.8 km behind the squads, eaten by ten
+  hunters. Driven zombies never give up, most walk at 1 to 1.4 m/s against about 3 m/s for a
+  marching squad, and once left behind the nearest human thing is the post. A hunter 300 m from
+  every soldier (and from the convoy truck) now leaves the map. Turned into an ordinary zombie
+  instead, it stopped counting against the cap and stayed on the route: worse at ×1.48.
+
+Six veteran Operations, cities 1001 to 1006: 5 of 6 won as before, fallen 5, 6, 7, 6, 19, 11
+(before: 5, 5, 11, 17, 19, 25). Linha de Suprimentos at ×1.24 and ×1.36 costs 1 to 6. The lost
+run is the same one: 1005 ends on Linha de Suprimentos at ×1.48.
 
 ### 2026-11-13 — moods after a look at every mission, by day and by night
 
