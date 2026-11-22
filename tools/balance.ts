@@ -118,7 +118,21 @@ export function playMission(
   };
   const truckSpot = () => {
     const v = w.vehicle(m.trucks[0]);
-    return v ? `truck ${v.state}@${Math.round(v.x)},${Math.round(v.y)} hp=${Math.round(v.hp)} pax=${v.passengers} evac=${m.evacuated}` : "";
+    const t = v ? `truck ${v.state}@${Math.round(v.x)},${Math.round(v.y)} hp=${Math.round(v.hp)} pax=${v.passengers} evac=${m.evacuated}` : "";
+    const cp = m.commandPost ? w.structure(m.commandPost) : undefined;
+    if (!cp) return t;
+    // Zombies within 100 m of the command post, and how many of them are driven.
+    const z = w.zombies;
+    const cx = w.grid.cellCenterX(cp.cell);
+    const cy = w.grid.cellCenterY(cp.cell);
+    let near = 0;
+    let drv = 0;
+    for (let s = 0; s < z.highWater; s++) {
+      if (!z.isAlive(s) || (z.x[s] - cx) ** 2 + (z.y[s] - cy) ** 2 > 100 * 100) continue;
+      near++;
+      if (z.driven[s]) drv++;
+    }
+    return `${t} cp=${Math.round(cp.hp)} near=${near}/${drv}`;
   };
   const truckStage = def.stages.some((st) => st.kind === "deliver" || st.kind === "evacuate");
   e.enqueue({ type: "set_speed", speed: 1 });
