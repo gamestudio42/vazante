@@ -517,4 +517,37 @@ export const de: Record<Key, string> = {
     "Ribeira, der Stadtteil am Fluss neben der Basis, ist seit Wochen überrannt. Ihn zurückzuerobern verschafft dem Hafen Luft, und der Chor wird ihn nicht kampflos aufgeben.\n\nVier Trupps, die bisher stärkste Truppe. Ein Munitionslastwagen wartet am Bahnhof; hol ihn, wenn den Trupps die Kugeln ausgehen. Sichere nacheinander den Markt, den Platz und den Kai: Halte jeden eine Minute lang, während die Infizierten aus den umliegenden Straßen strömen.\n\nSobald der Kai dir gehört, antwortet der Chor mit seinem größten Angriff: drei Wellen gegen den Kai.",
   "brief.retake.tips":
     "Die Uhr läuft nur mit Soldaten im markierten Bereich · lass die Pioniere an jedem Punkt Barrikaden errichten · befestige den Kai vor den Wellen",
+  "tut.camera.touch":
+    "Zieh mit einem Finger, um die Kamera zu bewegen. Ziehe zum Zoomen auseinander. Drehe mit zwei Fingern oder den **Drehen-Tasten**. Die **Minikarte** in der Ecke springt überall hin.",
+  "tut.select.touch": "Tippe einen Soldaten an, oder die **Karte Alfa** links.",
+  "tut.move.touch":
+    "**Tippe auf den Boden**, um den gewählten Trupp zu bewegen. Er geht von selbst um Gebäude herum.",
+  "tut.build.touch":
+    "Nimm die **Bau-Leiste**, wähle ein Teil und tippe **in der Basis**, um es zu setzen. Tippe dasselbe Teil noch einmal, um abzubrechen. Trupps, die in der Basis warten, bauen es.",
+  "tut.truck.touch":
+    "Tippe den **Lastwagen** im Fahrzeug-Panel an und dann **die Basis**. Der Motor lockt die Infizierten, also eskortiere ihn.",
+  "tut.direct.touch":
+    "Mit einem gewählten Trupp tippe **Steuerung übernehmen**. Ziehen zielt, der **Stick** bewegt, **Feuern** schießt. **Verlassen** geht zurück zur Karte.",
+  "tut.end.touch":
+    "Folge den **Zielen** oben links: bring den Lastwagen heim, bau Mauern und MG-Nester und halte die drei Wellen. Die **Hilfe-Taste** zeigt die Steuerung.",
+  "sel.none.touch":
+    "Tippe einen Trupp an, um ihn zu wählen. Tippe auf den Boden, um zu bewegen. Schalte Route ein und tippe, um einen Punkt anzuhängen.",
+  "tip.route.touch":
+    "Routenmodus: jeder Tipp auf den Boden hängt einen Punkt an, den der Trupp der Reihe nach abläuft.",
+  "help.body.touch":
+    "Kamera: ein Finger ziehen · Zoom: ziehen oder die Tasten · Drehen: zwei Finger oder die Drehen-Tasten\nWählen: tippen · Bewegen: Boden tippen · Route: Route, dann tippen · Haltung und Formation: die Tasten unten\nPause und Tempo: die Tasten oben · Kontrolle übernehmen: die Taste am Trupp · Verlassen, Stick und Feuern beim Zielen",
+  "build.hint.touch": "In der Basis tippen zum Setzen · dasselbe Teil noch einmal zum Abbrechen",
+  "convoy.hint.touch":
+    "Tippe eine Basis oder ein Depot zum Liefern, die Straße zum Hinfahren oder einen Trupp zum Folgen. Infizierte folgen dem Motor.",
+  "minimap.hint.touch": "Stadtüberblick: tippen oder ziehen, um die Kamera zu bewegen",
+  "cam.zoomIn": "Heranzoomen",
+  "cam.zoomOut": "Wegzoomen",
+  "cam.rotateLeft": "Nach links drehen",
+  "cam.rotateRight": "Nach rechts drehen",
+  "cam.help": "Steuerung",
+  "direct.exit.touch": "Ziehen zum Zielen · der Stick bewegt · Feuern schießt · Verlassen kehrt zur Karte zurück",
+  "direct.fire": "Feuern",
+  "direct.leave": "Verlassen",
+  "direct.reload": "Nachladen",
+  "direct.stick": "Bewegen",
 };

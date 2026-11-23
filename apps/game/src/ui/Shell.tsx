@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Calendar, Check, ChevronRight, CircleCheck, Dices, Flag, Lock, Map as MapIcon, Download, FolderOpen, GraduationCap, LogOut, Moon, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { DIFFICULTY_IDS, MISSION_IDS, OPERATION, TICK_HZ, type MissionId, type RequisitionId, type SaveMeta } from '@vazante/shared';
-import { LOCALES, LOCALE_NAMES, t, type Locale } from '../i18n.ts';
+import { LOCALES, LOCALE_NAMES, t, tInput, type Locale } from '../i18n.ts';
+import { COARSE_POINTER, useMediaQuery } from './media.ts';
 import type { Settings } from '../settings.ts';
 import type { Shell } from '../shell.ts';
 import { rankForXp } from '@vazante/shared';
@@ -251,6 +252,7 @@ function TutorialSpotlight({ shell }: { shell: Shell }) {
 export function TutorialCard({ shell }: { shell: Shell }) {
   const tut = shell.tutorial;
   useSyncExternalStore(tut.subscribe, () => tut.version);
+  const coarse = useMediaQuery(COARSE_POINTER);
   if (!tut.active || shell.screen !== 'playing') return null;
   const last = tut.step === tut.total - 1;
   return (
@@ -270,7 +272,7 @@ export function TutorialCard({ shell }: { shell: Shell }) {
         {tut.completed && <Check size={16} />}
         {t(`tut.${tut.id}.h`)}
       </h3>
-      <p>{emphasise(t(`tut.${tut.id}`))}</p>
+      <p>{emphasise(tInput(`tut.${tut.id}`, coarse))}</p>
       <div className="row end">
         {tut.manual ? (
           <button className="primary" onClick={() => tut.next()}>

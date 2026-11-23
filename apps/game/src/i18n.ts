@@ -477,6 +477,29 @@ const en = {
   'brief.retake.tag': 'Secure three points in Ribeira, then survive the final assault.',
   'brief.retake.body': 'Ribeira, the riverside district next to the base, has been overrun for weeks. Taking it back gives the waterfront room to breathe, and the Choir will not let it go quietly.\n\nFour squads, the strongest force yet. An ammunition truck waits at the railway station; bring it in when the squads run low. Secure the market, the square and the quay in turn: hold each one for a minute while the infected pour in from the surrounding streets.\n\nOnce the quay is yours, the Choir answers with its largest assault: three waves against the quay.',
   'brief.retake.tips': 'The hold clock only runs while soldiers stand in the marked area · have the engineers raise barricades at each point · fortify the quay before the waves',
+  'tut.camera.touch': 'Drag with one finger to move the camera. Pinch to zoom. Twist two fingers, or use the **rotate buttons**, to turn. The **minimap** in the corner jumps anywhere.',
+  'tut.select.touch': 'Tap a soldier, or tap the **Alfa card** on the left.',
+  'tut.move.touch': '**Tap the ground** to move the selected squad. It walks around buildings on its own.',
+  'tut.build.touch': 'Use the **build bar**, pick a piece and tap **inside the base** to place it. Tap that piece again to cancel. Squads idle in the base build it.',
+  'tut.truck.touch': 'Tap the **cargo truck** in the Vehicles panel, then **tap the base**. Its engine draws the infected, so escort it.',
+  'tut.direct.touch': 'With a squad selected, tap **Take control**. Drag to aim, the **stick** moves, **Fire** shoots. **Leave** goes back to the map.',
+  'tut.end.touch': 'Follow the **objectives** at the top left: bring the truck home, build walls and machine gun nests, and hold through the three waves. The **help button** shows the controls.',
+  'sel.none.touch': 'Tap a squad to select it. Tap the ground to move. Turn on Route, then tap, to add a route point.',
+  'tip.route.touch': 'Route mode: each tap on the ground adds a point the squad walks through, in order.',
+  'help.body.touch': 'Pan: one-finger drag · Zoom: pinch or the zoom buttons · Rotate: two-finger twist or the rotate buttons\nSelect: tap · Move: tap the ground · Route: Route, then tap · Stances and formation: the buttons below\nPause and speed: the top buttons · Take control: the button on the squad · Leave, stick and Fire while you aim',
+  'build.hint.touch': 'Tap inside the base to place · tap the same piece to cancel',
+  'convoy.hint.touch': 'Tap a base or depot to deliver, the road to drive there, or a squad to follow it. Zombies chase the engine noise.',
+  'minimap.hint.touch': 'City overview: tap or drag to move the camera',
+  'cam.zoomIn': 'Zoom in',
+  'cam.zoomOut': 'Zoom out',
+  'cam.rotateLeft': 'Rotate left',
+  'cam.rotateRight': 'Rotate right',
+  'cam.help': 'Controls',
+  'direct.exit.touch': 'Drag to aim · stick moves · Fire shoots · Leave returns to the map',
+  'direct.fire': 'Fire',
+  'direct.leave': 'Leave',
+  'direct.reload': 'Reload',
+  'direct.stick': 'Move',
 } as const;
 
 export type Key = keyof typeof en;
@@ -956,6 +979,29 @@ const ptBR: Record<Key, string> = {
   'brief.retake.tag': 'Garanta três pontos da Ribeira e sobreviva ao assalto final.',
   'brief.retake.body': 'A Ribeira, o distrito à beira do rio ao lado da base, está tomada há semanas. Retomá-la dá fôlego ao cais, e o Coro não vai entregá-la em silêncio.\n\nQuatro esquadrões, a maior força até agora. Um caminhão de munição espera na estação ferroviária; traga-o quando os esquadrões ficarem sem balas. Garanta o mercado, a praça e o cais, um de cada vez: segure cada ponto por um minuto enquanto os infectados chegam pelas ruas em volta.\n\nQuando o cais for seu, o Coro responde com o maior assalto até agora: três ondas contra o cais.',
   'brief.retake.tips': 'O relógio só corre com soldados dentro da área marcada · use os engenheiros para barricadas em cada ponto · fortifique o cais antes das ondas',
+  'tut.camera.touch': 'Arraste com um dedo para mover a câmera. Pinça para aproximar. Gire com dois dedos ou use os **botões de girar**. O **minimapa** no canto leva a qualquer ponto.',
+  'tut.select.touch': 'Toque em um soldado ou na **carta Alfa** à esquerda.',
+  'tut.move.touch': '**Toque no chão** para mover o esquadrão selecionado. Ele contorna os prédios sozinho.',
+  'tut.build.touch': 'Use a **barra de construção**, escolha uma peça e toque **dentro da base** para marcá-la. Toque de novo nessa peça para cancelar. Esquadrões parados na base constroem.',
+  'tut.truck.touch': 'Toque no **caminhão de carga** no painel Veículos e depois **toque na base**. O motor atrai os infectados, então escolte o caminhão.',
+  'tut.direct.touch': 'Com um esquadrão selecionado, toque em **Assumir controle**. Arraste para mirar, o **manche** anda, **Atirar** dispara. **Sair** volta ao mapa.',
+  'tut.end.touch': 'Siga os **objetivos** no alto à esquerda: traga o caminhão, construa muros e ninhos de metralhadora e resista às três ondas. O **botão de ajuda** mostra os controles.',
+  'sel.none.touch': 'Toque num esquadrão para selecionar. Toque no chão para mover. Ligue Rota e toque para somar um ponto.',
+  'tip.route.touch': 'Modo rota: cada toque no chão soma um ponto por onde o esquadrão passa, na ordem.',
+  'help.body.touch': 'Mover câmera: arraste um dedo · Zoom: pinça ou os botões · Girar: dois dedos ou os botões de girar\nSelecionar: toque · Mover: toque no chão · Rota: Rota e depois toque · Postura e formação: os botões abaixo\nPausa e velocidade: os botões do alto · Assumir controle: o botão do esquadrão · Sair, manche e Atirar enquanto mira',
+  'build.hint.touch': 'Toque dentro da base para marcar · toque de novo na peça para cancelar',
+  'convoy.hint.touch': 'Toque numa base ou depósito para entregar, na rua para ir até lá, ou num esquadrão para acompanhá-lo. Os infectados seguem o barulho do motor.',
+  'minimap.hint.touch': 'Visão da cidade: toque ou arraste para mover a câmera',
+  'cam.zoomIn': 'Aproximar',
+  'cam.zoomOut': 'Afastar',
+  'cam.rotateLeft': 'Girar à esquerda',
+  'cam.rotateRight': 'Girar à direita',
+  'cam.help': 'Controles',
+  'direct.exit.touch': 'Arraste para mirar · o manche anda · Atirar dispara · Sair volta ao mapa',
+  'direct.fire': 'Atirar',
+  'direct.leave': 'Sair',
+  'direct.reload': 'Recarregar',
+  'direct.stick': 'Mover',
 };
 
 const dictionaries = { 'pt-BR': ptBR, en, es, fr, de } as const;
@@ -991,4 +1037,12 @@ export function getLocale(): Locale {
 export function t(key: Key | string): string {
   const d = dictionaries[locale] as Record<string, string>;
   return d[key] ?? (en as Record<string, string>)[key] ?? key;
+}
+
+/** A coarse pointer reads `key.touch` when that string exists. A fine pointer keeps `key`. */
+export function tInput(key: string, coarse: boolean): string {
+  if (!coarse) return t(key);
+  const alt = `${key}.touch`;
+  const value = t(alt);
+  return value === alt ? t(key) : value;
 }

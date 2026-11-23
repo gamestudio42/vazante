@@ -92,6 +92,12 @@ export class CameraRig {
     this.targetSpan = clamp(this.targetSpan * f, MIN_SPAN, this.maxSpan);
   }
 
+  /** Multiply the target span. A factor below 1 zooms in (pinch apart). */
+  zoomScale(factor: number): void {
+    if (!(factor > 0) || !Number.isFinite(factor)) return;
+    this.targetSpan = clamp(this.targetSpan * factor, MIN_SPAN, this.maxSpan);
+  }
+
   /** Toggle between the operations map (whole city) and the tactical view at the previous spot. */
   toggleMap(): void {
     if (this.targetSpan >= STRATEGIC_SPAN) {
@@ -108,6 +114,12 @@ export class CameraRig {
 
   rotate(steps: number): void {
     this.targetYaw += (steps * Math.PI) / 4;
+  }
+
+  /** Add radians to the target yaw (two-finger twist). */
+  rotateBy(radians: number): void {
+    if (!Number.isFinite(radians) || radians === 0) return;
+    this.targetYaw += radians;
   }
 
   /** Pan in screen directions (metres scaled by the current span). */

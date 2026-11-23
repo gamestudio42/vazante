@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
+import { Map as MapIcon } from 'lucide-react';
 import { FOG, type Frame, Ground, siteZone, SOLDIER_STRIDE, SoldierField, ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
 import type { GameRenderer } from '@vazante/view3d';
 import type { GameClient } from '../client.ts';
-import { t } from '../i18n.ts';
+import { tInput } from '../i18n.ts';
+import { COARSE_POINTER, useMediaQuery } from './media.ts';
 import { objectiveTarget } from './objective.ts';
 
 const SIZE = 192;
@@ -23,8 +25,23 @@ const GROUND_RGB: Record<number, [number, number, number]> = {
  * Overview of the whole city: terrain, districts, sites, the horde, squads, the truck and the
  * camera footprint. Click or drag to move the camera.
  */
-export function Minimap({ client, view, direct = false }: { client: GameClient; view: GameRenderer; direct?: boolean }) {
+export function Minimap({
+  client,
+  view,
+  direct = false,
+  fold = false,
+  open = true,
+  onToggle,
+}: {
+  client: GameClient;
+  view: GameRenderer;
+  direct?: boolean;
+  fold?: boolean;
+  open?: boolean;
+  onToggle?: () => void;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const coarse = useMediaQuery(COARSE_POINTER);
 
   useEffect(() => {
     const map = view.map;
@@ -263,8 +280,17 @@ export function Minimap({ client, view, direct = false }: { client: GameClient; 
     };
   }, [client, view]);
 
+  const folded = fold && !direct;
   return (
-    <div className={`minimap panel ${direct ? 'direct-map' : ''}`} title={direct ? undefined : t('minimap.hint')}>
+    <div
+      className={`minimap panel ${direct ? 'direct-map' : ''} ${folded ? (open ? 'fold-open' : 'fold-shut') : ''}`}
+      title={direct ? undefined : tInput('minimap.hint', coarse)}
+    >
+      {folded && (
+        <button type="button" className="fold-toggle" aria-expanded={open} aria-label={tInput('minimap.hint', true)} onClick={onToggle}>
+          <MapIcon size={18} />
+        </button>
+      )}
       <canvas ref={canvas} width={SIZE} height={SIZE} />
     </div>
   );

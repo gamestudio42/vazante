@@ -240,7 +240,7 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | Direct-control HUD | crosshair, ammo, health, "TAB to exit"; hides the rest |
 | Mission mood | each mission has its own light and grade (see `balancing.md`); defeat drains the colour, victory warms it and the camera circles the field |
 | Summary | result, civilians saved, casualties, zombies killed, what embarked |
-| Small windows | the HUD is laid out for 1280×720; a smaller window shrinks the whole HUD to fit, down to 70 %, and the left column scrolls above whatever the bottom row puts under it, so panels never overlap |
+| Small windows | the HUD is laid out for 1280×720; a smaller window shrinks the whole HUD to fit, down to 70 %, and the left column scrolls above whatever the bottom row puts under it, so panels never overlap. On a coarse pointer in portrait, objectives, squads, vehicles and the minimap collapse to 44 px buttons so the map stays visible; the tutorial step that names a panel opens it |
 | Settings | volume, language, internal resolution scale, agent cap, key bindings |
 
 ### Default controls (remappable through an `InputAction` layer)
@@ -262,6 +262,20 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | Direct control | TAB |
 | Map toggle | M |
 | Latest alert | Home |
+
+On a coarse pointer the same verbs use touch. A fine pointer keeps the mouse and keyboard above.
+
+| Action | Touch |
+| --- | --- |
+| Move camera | one-finger drag |
+| Zoom | pinch, or the zoom buttons |
+| Rotate | two-finger twist, or the rotate buttons |
+| Select | tap a soldier, vehicle, structure, or its card |
+| Move | tap the ground with a squad or truck selected |
+| Route | Route, then tap the ground |
+| Direct control | drag to aim, on-screen stick to move, Fire, Leave |
+
+Touch targets that the tutorial, the clock and the main menu ask for are at least 44 px. The tutorial and the order strip name these gestures instead of the mouse when the primary pointer is coarse.
 
 Gamepad and Steam Deck are out of the MVP, but all input goes through `InputAction`.
 

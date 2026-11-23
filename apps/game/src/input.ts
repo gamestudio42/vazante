@@ -12,6 +12,12 @@ import {
 import { BuildTool } from "./build.ts";
 import type { GameRenderer } from "@vazante/view3d";
 import type { GameClient } from "./client.ts";
+import {
+  idleGesture,
+  stepGesture,
+  type Gesture,
+  type TouchPoint,
+} from "./touch-gestures.ts";
 
 export interface BoxRect {
   x0: number;
@@ -63,6 +69,11 @@ export class InputController {
   onQuickLoad: () => void = () => {};
   /** False while a menu covers the game: only Esc gets through. */
   enabled = true;
+  /** On-screen stick. Stays at zero for mouse and keyboard, so those paths are unchanged. */
+  private touchForward = 0;
+  private touchStrafe = 0;
+  private touchFire = false;
+  private gesture: Gesture = idleGesture();
   /** Pan when the mouse touches the screen edge. */
   edgePan = false;
   private mouseInside = false;
@@ -78,11 +89,21 @@ export class InputController {
     canvas.addEventListener("mousedown", this.onMouseDown);
     window.addEventListener("mousemove", this.onMouseMove);
     window.addEventListener("mouseup", this.onMouseUp);
+    canvas.addEventListener("touchstart", this.onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", this.onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", this.onTouchEnd, { passive: false });
+    canvas.addEventListener("touchcancel", this.onTouchEnd, { passive: false });
     canvas.addEventListener("wheel", this.onWheel, { passive: false });
     canvas.addEventListener("dblclick", this.onDblClick);
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
-    window.addEventListener("blur", () => this.keys.clear());
+    window.addEventListener("blur", () => {
+      this.keys.clear();
+      this.gesture = idleGesture();
+      this.touchForward = 0;
+      this.touchStrafe = 0;
+      this.touchFire = false;
+    });
     document.addEventListener("mouseleave", () => (this.mouseInside = false));
     document.addEventListener("mouseenter", () => (this.mouseInside = true));
     client.onFrame((f) => {
@@ -693,6 +714,9 @@ export class InputController {
   private leaveDirectLocal(): void {
     this.directId = null;
     this.fire = false;
+    this.touchFire = false;
+    this.touchForward = 0;
+    this.touchStrafe = 0;
     this.view.rig.direct = null;
     if (document.pointerLockElement === this.canvas) document.exitPointerLock();
     this.changed();
@@ -707,10 +731,20 @@ export class InputController {
     if (this.keys.has("KeyS")) f -= 1;
     if (this.keys.has("KeyD")) s += 1;
     if (this.keys.has("KeyA")) s -= 1;
+    f += this.touchForward;
+    s += this.touchStrafe;
+    if (this.touchForward !== 0 || this.touchStrafe !== 0) {
+      const mag = Math.hypot(f, s);
+      if (mag > 1) {
+        f /= mag;
+        s /= mag;
+      }
+    }
     // Right of forward on the simulation plane (y points south).
     const mx = fx * f - fy * s;
     const my = fy * f + fx * s;
-    const key = `${mx.toFixed(2)},${my.toFixed(2)},${fx.toFixed(3)},${fy.toFixed(3)},${this.fire},${this.reload}`;
+    const firing = this.fire || this.touchFire;
+    const key = `${mx.toFixed(2)},${my.toFixed(2)},${fx.toFixed(3)},${fy.toFixed(3)},${firing},${this.reload}`;
     if (key !== this.lastDirectKey || nowMs - this.lastDirectSend > 250) {
       if (nowMs - this.lastDirectSend >= DIRECT_SEND_MS || this.reload) {
         this.client.send({
@@ -718,7 +752,7 @@ export class InputController {
           soldier: this.directId!,
           move: { x: mx, y: my },
           aim: { x: fx, y: fy },
-          fire: this.fire,
+          fire: firing,
           reload: this.reload,
         });
         this.lastDirectKey = key;
@@ -742,5 +776,138 @@ export class InputController {
       }
     }
     return null;
+  }
+
+  // ----- Touch (mouse and keyboard handlers above are unchanged) -----
+
+  setTouchMove(forward: number, strafe: number): void {
+    this.touchForward = forward;
+    this.touchStrafe = strafe;
+  }
+
+  setTouchFire(on: boolean): void {
+    this.touchFire = on;
+  }
+
+  touchReload(): void {
+    if (this.directId !== null) this.reload = true;
+  }
+
+  /** Quarter-turns and wheel notches, for the on-screen camera buttons. */
+  nudgeCamera(yawSteps: number, zoomNotches: number): void {
+    if (this.directId !== null || !this.enabled) return;
+    if (yawSteps) this.view.rig.rotate(yawSteps);
+    if (zoomNotches) this.view.rig.zoom(zoomNotches);
+  }
+
+  toggleHelp(): void {
+    this.helpVisible = !this.helpVisible;
+    this.changed();
+  }
+
+  private onTouchStart = (e: TouchEvent): void => {
+    e.preventDefault();
+    this.applyTouches(e.touches);
+  };
+
+  private onTouchMove = (e: TouchEvent): void => {
+    e.preventDefault();
+    this.applyTouches(e.touches);
+  };
+
+  private onTouchEnd = (e: TouchEvent): void => {
+    e.preventDefault();
+    this.applyTouches(e.touches);
+  };
+
+  private applyTouches(list: TouchList): void {
+    if (!this.enabled) {
+      this.gesture = idleGesture();
+      return;
+    }
+    const points: TouchPoint[] = [];
+    for (let i = 0; i < list.length; i++) {
+      const t = list.item(i);
+      if (t) points.push({ id: t.identifier, x: t.clientX, y: t.clientY });
+    }
+    if (points.length > 0) {
+      const r = this.canvas.getBoundingClientRect();
+      this.mouse = { x: points[0].x - r.left, y: points[0].y - r.top };
+      this.mouseInside = true;
+      if (this.build.active && this.directId === null) this.refreshGhost();
+    }
+    const next = stepGesture(this.gesture, points, this.directId !== null);
+    this.gesture = next.state;
+    for (const action of next.actions) {
+      if (action.type === "pan") this.panPixels(action.dx, action.dy);
+      else if (action.type === "pinch") {
+        this.view.rig.zoomScale(action.scale);
+        this.view.rig.rotateBy(action.rotate);
+      } else if (action.type === "look") {
+        this.directYaw += action.dx * MOUSE_SENSITIVITY;
+      } else this.onTouchTap(action.x, action.y);
+    }
+  }
+
+  /** Same mapping as a middle-button drag: the ground follows the finger. */
+  private panPixels(dx: number, dy: number): void {
+    const mpp = this.view.rig.metresPerPixel(this.size().h);
+    this.view.rig.pan(-dx * mpp, -dy * mpp);
+  }
+
+  /** Tap a unit to select it. Tap the ground to order the selection, queued while Route is on. */
+  private onTouchTap(clientX: number, clientY: number): void {
+    if (this.directId !== null) return;
+    const r = this.canvas.getBoundingClientRect();
+    const x = clientX - r.left;
+    const y = clientY - r.top;
+    this.mouse = { x, y };
+    if (this.build.active) {
+      this.placeBuild(x, y);
+      return;
+    }
+    const { w, h } = this.size();
+    const id = this.view.pickSquad(x, y, w, h);
+    if (id !== null) {
+      this.select([id]);
+      this.changed();
+      return;
+    }
+    const vehicle = this.view.pickVehicle(x, y, w, h);
+    if (vehicle !== null) {
+      this.selectVehicle(vehicle);
+      return;
+    }
+    const st = this.structureUnderCursor();
+    if (st && st.kind !== "command_post") {
+      this.selectStructure(st.id);
+      return;
+    }
+    if (this.client.state.selected.length > 0 || this.client.state.vehicle !== null) {
+      this.orderMove(x, y, undefined, this.routeMode);
+    }
+  }
+
+  /** One cell, the touch equivalent of a left click in build mode. */
+  private placeBuild(x: number, y: number): void {
+    const p = this.groundAt(x, y);
+    if (!p) return;
+    this.build.press(p.x, p.y);
+    this.build.hover(p.x, p.y, this.client.state.frame);
+    const cells = this.build.release();
+    const kind = this.build.kind!;
+    for (const c of cells) {
+      this.client.send({
+        type: "build",
+        kind,
+        at: {
+          x: (c.cx + 0.5) * this.view.map.cellSize,
+          y: (c.cy + 0.5) * this.view.map.cellSize,
+        },
+      });
+    }
+    this.feedback(cells.length ? "order" : "deny");
+    if (cells.length) this.setBuild(null);
+    else this.refreshGhost();
   }
 }
