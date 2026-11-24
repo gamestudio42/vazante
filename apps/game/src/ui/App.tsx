@@ -53,6 +53,10 @@ import {
   ShieldHalf,
   Wrench,
   Zap,
+  Plus,
+  Minus,
+  RotateCw,
+  CircleHelp,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -81,7 +85,8 @@ import {
 import type { GameRenderer } from "@vazante/view3d";
 import type { GameClient } from "../client.ts";
 import type { InputController } from "../input.ts";
-import { t } from "../i18n.ts";
+import { t, tInput } from "../i18n.ts";
+import { COARSE_POINTER, PORTRAIT, useMediaQuery } from "./media.ts";
 import type { Shell } from "../shell.ts";
 import { OperationTrack, RequisitionChoice, ShellOverlay, TutorialCard } from "./Shell.tsx";
 import { Minimap } from "./Minimap.tsx";
@@ -128,11 +133,30 @@ const POLICY_ICON: Record<RiskPolicy, LucideIcon> = {
 };
 const SPEEDS: SimSpeed[] = [0, 1, 2, 4];
 
+type FoldId = "mission" | "squads" | "vehicles" | "districts" | "minimap";
+
+/** The tutorial step that points at a panel keeps that panel open. */
+function forcedOpen(selectors: readonly string[]): Partial<Record<FoldId, boolean>> {
+  const open: Partial<Record<FoldId, boolean>> = {};
+  for (const sel of selectors) {
+    if (sel.includes(".minimap")) open.minimap = true;
+    if (sel.includes(".mission")) open.mission = true;
+    if (sel.includes(".squad.vehicle")) open.vehicles = true;
+    if (sel.includes(".squads")) open.squads = true;
+  }
+  return open;
+}
+
 export function App({ client, input, view, shell }: Props) {
   const state = useHudState(client);
   useSyncExternalStore(shell.subscribe, () => shell.version);
   const [, force] = useState(0);
   useEffect(() => input.subscribe(() => force((n) => n + 1)), [input]);
+  const coarse = useMediaQuery(COARSE_POINTER);
+  const portrait = useMediaQuery(PORTRAIT);
+  const tut = shell.tutorial;
+  useSyncExternalStore(tut.subscribe, () => tut.version);
+  const [opened, setOpened] = useState<Partial<Record<FoldId, boolean>>>({});
   const [band, setBand] = useState(view.rig.band);
   useEffect(() => {
     const id = setInterval(() => setBand(view.rig.band), 200);
@@ -168,6 +192,13 @@ export function App({ client, input, view, shell }: Props) {
 
   const selected = f.squads.filter((q) => state.selected.includes(q.id));
   const seed = state.map?.seed ?? 1;
+  const foldPanels = coarse && portrait && !input.inDirect;
+  const forced = foldPanels && tut.active ? forcedOpen(tut.focus(1, 1).ui) : {};
+  const foldOpen = (id: FoldId) => Boolean(forced[id]) || opened[id] === true;
+  const toggleFold = (id: FoldId) => {
+    if (forced[id]) return;
+    setOpened((s) => ({ ...s, [id]: !s[id] }));
+  };
   if (shell.screen === "menu")
     return <ShellOverlay shell={shell} seed={seed} />;
   const ended =
@@ -175,7 +206,10 @@ export function App({ client, input, view, shell }: Props) {
   return (
     <>
       <MapLabels client={client} view={view} />
-      <div ref={hud} className={shell.inOpening && shell.screen === "playing" ? "hud cinematic" : "hud"}>
+      <div
+        ref={hud}
+        className={`hud${shell.inOpening && shell.screen === "playing" ? " cinematic" : ""}${foldPanels ? " touch-portrait" : ""}${foldPanels && foldOpen("minimap") ? " mini-open" : ""}`}
+      >
         <TopBar
           frame={f}
           limited={state.limited}
@@ -187,6 +221,9 @@ export function App({ client, input, view, shell }: Props) {
             {f.mission && (
               <MissionPanel
                 frame={f}
+                fold={foldPanels}
+                open={foldOpen("mission")}
+                onToggle={() => toggleFold("mission")}
                 onLocate={() => {
                   const tg = state.map && objectiveTarget(f, state.map);
                   if (tg) view.rig.centerOn(tg.x, tg.y);
@@ -195,17 +232,30 @@ export function App({ client, input, view, shell }: Props) {
             )}
             <SquadList
               frame={f}
+              fold={foldPanels}
+              open={foldOpen("squads")}
+              onToggle={() => toggleFold("squads")}
               selected={state.selected}
               onSelect={(id) => input.select([id])}
               onCenter={(q) => view.rig.centerOn(q.anchorX, q.anchorY)}
             />
             <VehicleList
               frame={f}
+              fold={foldPanels}
+              open={foldOpen("vehicles")}
+              onToggle={() => toggleFold("vehicles")}
               selected={state.vehicle}
               onSelect={(id) => input.selectVehicle(id)}
               onCenter={(x, y) => view.rig.centerOn(x, y)}
             />
-            {!f.economy && <DistrictList frame={f} />}
+            {!f.economy && (
+              <DistrictList
+                frame={f}
+                fold={foldPanels}
+                open={foldOpen("districts")}
+                onToggle={() => toggleFold("districts")}
+              />
+            )}
           </div>
         )}
         {shell.titleCard && f.mission && shell.screen === "playing" && !ended && <TitleCard frame={f} />}
@@ -230,11 +280,20 @@ export function App({ client, input, view, shell }: Props) {
           </div>
         )}
         {input.inDirect && <DirectHud frame={f} />}
-        <Minimap client={client} view={view} direct={input.inDirect} />
+        {input.inDirect && coarse && <DirectTouch input={input} />}
+        {!input.inDirect && coarse && <CameraDock input={input} />}
+        <Minimap
+          client={client}
+          view={view}
+          direct={input.inDirect}
+          fold={foldPanels}
+          open={foldOpen("minimap")}
+          onToggle={() => toggleFold("minimap")}
+        />
         {input.helpVisible && !input.inDirect && (
           <div className="help panel">
             <PanelHead icon={Radio}>{t("help.title")}</PanelHead>
-            <pre>{t("help.body")}</pre>
+            <pre>{tInput("help.body", coarse)}</pre>
             <p className="help-marks">{t("help.marks")}</p>
           </div>
         )}
@@ -480,17 +539,52 @@ function DayClock({ tick, day }: { tick: number; day?: Frame["day"] }) {
 
 // ----- Left column -----
 
+function FoldFrame({
+  className,
+  fold,
+  open,
+  label,
+  icon: Icon,
+  onToggle,
+  children,
+}: {
+  className: string;
+  fold: boolean;
+  open: boolean;
+  label: string;
+  icon: LucideIcon;
+  onToggle?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`${className}${fold ? (open ? " fold-open" : " fold-shut") : ""}`}>
+      {fold && (
+        <button type="button" className="fold-toggle" aria-expanded={open} aria-label={label} onClick={onToggle}>
+          <Icon size={18} />
+        </button>
+      )}
+      <div className="fold-body">{children}</div>
+    </div>
+  );
+}
+
 function MissionPanel({
   frame,
   onLocate,
+  fold = false,
+  open = false,
+  onToggle,
 }: {
   frame: Frame;
   onLocate: () => void;
+  fold?: boolean;
+  open?: boolean;
+  onToggle?: () => void;
 }) {
   const m = frame.mission!;
   const hp = m.commandPostMaxHp > 0 ? m.commandPostHp / m.commandPostMaxHp : 0;
   return (
-    <div className="mission panel">
+    <FoldFrame className="mission panel" fold={fold} open={open} label={t("mission.title")} icon={Flag} onToggle={onToggle}>
       <PanelHead icon={Flag}>{t("mission.title")}</PanelHead>
       {m.objectives.map((o, i) => (
         <Objective
@@ -536,7 +630,7 @@ function MissionPanel({
           <Meter value={hp} kind="post" />
         </>
       )}
-    </div>
+    </FoldFrame>
   );
 }
 
@@ -726,14 +820,20 @@ function SquadList({
   selected,
   onSelect,
   onCenter,
+  fold = false,
+  open = false,
+  onToggle,
 }: {
   frame: Frame;
   selected: number[];
   onSelect: (id: number) => void;
   onCenter: (q: SquadView) => void;
+  fold?: boolean;
+  open?: boolean;
+  onToggle?: () => void;
 }) {
   return (
-    <div className="squads panel">
+    <FoldFrame className="squads panel" fold={fold} open={open} label={t("squads.title")} icon={Users} onToggle={onToggle}>
       <PanelHead icon={Users}>{t("squads.title")}</PanelHead>
       {frame.squads.map((q) => {
         const s = squadStats(frame, q);
@@ -842,7 +942,7 @@ function SquadList({
           </div>
         );
       })}
-    </div>
+    </FoldFrame>
   );
 }
 
@@ -851,15 +951,21 @@ function VehicleList({
   selected,
   onSelect,
   onCenter,
+  fold = false,
+  open = false,
+  onToggle,
 }: {
   frame: Frame;
   selected: number | null;
   onSelect: (id: number) => void;
   onCenter: (x: number, y: number) => void;
+  fold?: boolean;
+  open?: boolean;
+  onToggle?: () => void;
 }) {
   if (frame.vehicles.length === 0) return null;
   return (
-    <div className="squads panel">
+    <FoldFrame className="squads panel" fold={fold} open={open} label={t("vehicles.title")} icon={Truck} onToggle={onToggle}>
       <PanelHead icon={Truck}>{t("vehicles.title")}</PanelHead>
       {frame.vehicles.map((v) => (
         <div
@@ -890,14 +996,24 @@ function VehicleList({
           </div>
         </div>
       ))}
-    </div>
+    </FoldFrame>
   );
 }
 
-function DistrictList({ frame }: { frame: Frame }) {
+function DistrictList({
+  frame,
+  fold = false,
+  open = false,
+  onToggle,
+}: {
+  frame: Frame;
+  fold?: boolean;
+  open?: boolean;
+  onToggle?: () => void;
+}) {
   if (frame.districts.length < 2) return null;
   return (
-    <div className="squads panel districts">
+    <FoldFrame className="squads panel districts" fold={fold} open={open} label={t("districts.title")} icon={MapIcon} onToggle={onToggle}>
       <PanelHead icon={MapIcon}>{t("districts.title")}</PanelHead>
       {frame.districts.map((d) => (
         <div key={d.id} className="district">
@@ -914,7 +1030,7 @@ function DistrictList({ frame }: { frame: Frame }) {
           </div>
         </div>
       ))}
-    </div>
+    </FoldFrame>
   );
 }
 
@@ -1103,11 +1219,12 @@ function SelectionPanel({
   frame: Frame;
   input: InputController;
 }) {
+  const coarse = useMediaQuery(COARSE_POINTER);
   if (squads.length === 0)
     return (
       <div className="selection panel empty">
         <MousePointerHint />
-        <span className="muted">{t("sel.none")}</span>
+        <span className="muted">{tInput("sel.none", coarse)}</span>
       </div>
     );
   const q = squads[0];
@@ -1153,7 +1270,7 @@ function SelectionPanel({
         </button>
         <button
           className={`cmd ${input.routeMode ? "on" : ""}`}
-          title={t("tip.route")}
+          title={tInput("tip.route", coarse)}
           onClick={() => input.toggleRouteMode()}
         >
           <Key k="R" />
@@ -1249,6 +1366,7 @@ function BuildPanel({
 }) {
   const base = frame.bases[0];
   const tool = input.build;
+  const coarse = useMediaQuery(COARSE_POINTER);
   return (
     <div className="build panel">
       <PanelHead
@@ -1300,7 +1418,7 @@ function BuildPanel({
         {tool.active
           ? tool.reason
             ? t(`reason.${tool.reason}`)
-            : t("build.hint")
+            : tInput("build.hint", coarse)
           : t("build.edit")}
       </div>
       {frame.economy && <Recruit frame={frame} input={input} />}
@@ -1373,8 +1491,9 @@ function VehiclePanel({
   id: number;
   input: InputController;
 }) {
+  const coarse = useMediaQuery(COARSE_POINTER);
   const v = frame.vehicles.find((x) => x.id === id);
-  if (!v) return <div className="selection panel muted">{t("sel.none")}</div>;
+  if (!v) return <div className="selection panel muted">{tInput("sel.none", coarse)}</div>;
   const cs = 4;
   const here = frame.bases.find(
     (b) =>
@@ -1493,7 +1612,7 @@ function VehiclePanel({
           <div className="cmd-row">
             <button
               className={`pill ${input.routeMode ? "on" : ""}`}
-              title={t("tip.route")}
+              title={tInput("tip.route", coarse)}
               onClick={() => input.toggleRouteMode()}
             >
               <Route size={12} />
@@ -1514,7 +1633,7 @@ function VehiclePanel({
               </button>
             ))}
           </div>
-          <div className="hint muted">{t("convoy.hint")}</div>
+          <div className="hint muted">{tInput("convoy.hint", coarse)}</div>
         </>
       )}
     </div>
@@ -1531,8 +1650,9 @@ function StructurePanel({
   id: number;
   input: InputController;
 }) {
+  const coarse = useMediaQuery(COARSE_POINTER);
   const st = frame.structures.find((x) => x.id === id);
-  if (!st) return <div className="selection panel muted">{t("sel.none")}</div>;
+  if (!st) return <div className="selection panel muted">{tInput("sel.none", coarse)}</div>;
   const Icon = st.kind === "command_post" ? Flag : STRUCTURE_ICON[st.kind];
   const damaged = st.built && st.hp < st.maxHp;
   const engineers = frame.squads.some((q) => q.kind === "engineers" && q.alive > 0);
@@ -1602,6 +1722,7 @@ function StructurePanel({
 // ----- Direct control -----
 
 function DirectHud({ frame }: { frame: Frame }) {
+  const coarse = useMediaQuery(COARSE_POINTER);
   const id = frame.directSoldier;
   let hp = 0;
   let mag = 0;
@@ -1636,7 +1757,7 @@ function DirectHud({ frame }: { frame: Frame }) {
           <Meter value={hp / 100} kind="hp" />
         </div>
         <div className="direct-hint muted">
-          {document.pointerLockElement ? t("direct.exit") : t("direct.lock")}
+          {coarse ? tInput("direct.exit", true) : document.pointerLockElement ? t("direct.exit") : t("direct.lock")}
         </div>
         <div className="direct-ammo panel">
           <span
@@ -1649,6 +1770,84 @@ function DirectHud({ frame }: { frame: Frame }) {
         </div>
       </div>
     </>
+  );
+}
+
+function CameraDock({ input }: { input: InputController }) {
+  return (
+    <div className="cam-dock" role="group" aria-label={t("cam.help")}>
+      <button type="button" aria-label={t("cam.zoomIn")} title={t("cam.zoomIn")} onClick={() => input.nudgeCamera(0, -1)}>
+        <Plus size={18} />
+      </button>
+      <button type="button" aria-label={t("cam.zoomOut")} title={t("cam.zoomOut")} onClick={() => input.nudgeCamera(0, 1)}>
+        <Minus size={18} />
+      </button>
+      <button type="button" aria-label={t("cam.rotateLeft")} title={t("cam.rotateLeft")} onClick={() => input.nudgeCamera(-1, 0)}>
+        <RotateCcw size={18} />
+      </button>
+      <button type="button" aria-label={t("cam.rotateRight")} title={t("cam.rotateRight")} onClick={() => input.nudgeCamera(1, 0)}>
+        <RotateCw size={18} />
+      </button>
+      <button type="button" aria-label={t("cam.help")} title={t("cam.help")} onClick={() => input.toggleHelp()}>
+        <CircleHelp size={18} />
+      </button>
+    </div>
+  );
+}
+
+function DirectTouch({ input }: { input: InputController }) {
+  return (
+    <div className="direct-touch">
+      <TouchStick onChange={(forward, strafe) => input.setTouchMove(forward, strafe)} />
+      <div className="direct-actions">
+        <button type="button" onClick={() => input.touchReload()}>{t("direct.reload")}</button>
+        <button
+          type="button"
+          className="fire"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.currentTarget.setPointerCapture(e.pointerId);
+            input.setTouchFire(true);
+          }}
+          onPointerUp={() => input.setTouchFire(false)}
+          onPointerCancel={() => input.setTouchFire(false)}
+        >
+          {t("direct.fire")}
+        </button>
+        <button type="button" onClick={() => input.toggleDirect()}>{t("direct.leave")}</button>
+      </div>
+    </div>
+  );
+}
+
+function TouchStick({ onChange }: { onChange: (forward: number, strafe: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const point = (clientX: number, clientY: number) => {
+    const r = ref.current!.getBoundingClientRect();
+    let x = (clientX - (r.left + r.width / 2)) / (r.width / 2);
+    let y = -((clientY - (r.top + r.height / 2)) / (r.height / 2));
+    const mag = Math.hypot(x, y);
+    if (mag > 1) {
+      x /= mag;
+      y /= mag;
+    }
+    onChange(y, x);
+  };
+  return (
+    <div
+      ref={ref}
+      className="stick"
+      aria-label={t("direct.stick")}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        point(e.clientX, e.clientY);
+      }}
+      onPointerMove={(e) => {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) point(e.clientX, e.clientY);
+      }}
+      onPointerUp={() => onChange(0, 0)}
+      onPointerCancel={() => onChange(0, 0)}
+    />
   );
 }
 

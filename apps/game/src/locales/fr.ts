@@ -519,4 +519,37 @@ export const fr: Record<Key, string> = {
     "Ribeira, le quartier au bord du fleuve à côté de la base, est envahi depuis des semaines. Le reprendre donne de l’air au port, et le Chœur ne le lâchera pas sans combattre.\n\nQuatre escouades, la plus grande force jusqu’ici. Un camion de munitions attend à la gare ; faites-le venir quand les escouades manquent de balles. Sécurisez tour à tour le marché, la place et le quai : tenez chacun pendant une minute pendant que les infectés affluent par les rues voisines.\n\nUne fois le quai à vous, le Chœur répond par son plus grand assaut : trois vagues contre le quai.",
   "brief.retake.tips":
     "Le chrono n’avance qu’avec des soldats dans la zone marquée · faites monter des barricades par le génie à chaque point · fortifiez le quai avant les vagues",
+  "tut.camera.touch":
+    "Glissez un doigt pour déplacer la caméra. Pincez pour zoomer. Tournez avec deux doigts, ou les **boutons de rotation**. La **minicarte** dans le coin saute n’importe où.",
+  "tut.select.touch": "Touchez un soldat, ou la **carte Alfa** à gauche.",
+  "tut.move.touch":
+    "**Touchez le sol** pour déplacer l’escouade sélectionnée. Elle contourne les bâtiments toute seule.",
+  "tut.build.touch":
+    "Utilisez la **barre de construction**, choisissez une pièce et touchez **dans la base** pour la poser. Touchez encore cette pièce pour annuler. Les escouades inactives dans la base la construisent.",
+  "tut.truck.touch":
+    "Touchez le **camion de fret** dans le panneau Véhicules, puis **touchez la base**. Son moteur attire les infectés, escortez-le.",
+  "tut.direct.touch":
+    "Avec une escouade sélectionnée, touchez **Prendre le contrôle**. Glissez pour viser, le **manche** déplace, **Tirer** fait feu. **Quitter** revient à la carte.",
+  "tut.end.touch":
+    "Suivez les **objectifs** en haut à gauche : ramenez le camion, construisez murs et nids de mitrailleuse et tenez les trois vagues. Le **bouton d’aide** montre les commandes.",
+  "sel.none.touch":
+    "Touchez une escouade pour la sélectionner. Touchez le sol pour la déplacer. Activez Itinéraire, puis touchez, pour ajouter un point.",
+  "tip.route.touch":
+    "Mode itinéraire : chaque toucher au sol ajoute un point par lequel l’escouade passe, dans l’ordre.",
+  "help.body.touch":
+    "Caméra : glisser un doigt · Zoom : pincer ou les boutons · Rotation : deux doigts ou les boutons\nSélection : toucher · Déplacer : toucher le sol · Itinéraire : Itinéraire, puis toucher · Posture et formation : les boutons\nPause et vitesse : les boutons du haut · Prendre le contrôle : le bouton de l’escouade · Quitter, manche et Tirer pour viser",
+  "build.hint.touch": "Touchez dans la base pour poser · touchez la même pièce pour annuler",
+  "convoy.hint.touch":
+    "Touchez une base ou un dépôt pour livrer, la rue pour y aller, ou une escouade pour la suivre. Les infectés suivent le bruit du moteur.",
+  "minimap.hint.touch": "Vue de la ville : touchez ou glissez pour déplacer la caméra",
+  "cam.zoomIn": "Zoomer",
+  "cam.zoomOut": "Dézoomer",
+  "cam.rotateLeft": "Tourner à gauche",
+  "cam.rotateRight": "Tourner à droite",
+  "cam.help": "Commandes",
+  "direct.exit.touch": "Glissez pour viser · le manche déplace · Tirer fait feu · Quitter revient à la carte",
+  "direct.fire": "Tirer",
+  "direct.leave": "Quitter",
+  "direct.reload": "Recharger",
+  "direct.stick": "Déplacer",
 };

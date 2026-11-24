@@ -178,3 +178,18 @@ review and the existing render performance gate.
   points at things on screen) and under `prefers-reduced-motion`. The simulation runs during it:
   missions give the player minutes before first contact, and pausing would make the clock lie.
 - **Small screens.** The briefing card now scrolls; at 800×450 its start button was off screen.
+
+## D21. Touch is another way to look and order the same world (2026-11-23)
+
+- **Why.** On a phone or tablet the tutorial asked for WASD, the middle button, the wheel and
+  right-click, and the portrait panels covered the map. A coarse pointer could not play.
+- **Presentation only.** One-finger drag pans, a pinch zooms, a two-finger twist rotates, and the
+  on-screen buttons do the same quarter-turns and wheel notches as Q/E and the mouse wheel. A tap
+  selects; a tap on the ground orders the selection, queued while Route is on. Direct control gets
+  a stick, a fire button and Leave. None of this is a command the mouse did not already send, and
+  the simulation still does not know which pointer produced it.
+- **Fine pointer unchanged.** Mouse and keyboard handlers are the ones already shipped. Touch
+  wording, the 44 px targets and the collapsing portrait panels apply only under `pointer: coarse`.
+- **Hypothesis.** A player on a coarse pointer can look around, order a squad and still see the
+  street in portrait. Revert the gesture if a tap that was meant as an order pans instead, or if
+  the desktop right-click and box-select tests start to fail.

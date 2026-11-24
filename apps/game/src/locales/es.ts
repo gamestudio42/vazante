@@ -516,4 +516,37 @@ export const es: Record<Key, string> = {
     "Ribeira, el distrito junto al río al lado de la base, lleva semanas tomada. Recuperarla da un respiro al puerto, y el Coro no la soltará sin pelear.\n\nCuatro escuadras, la fuerza más grande hasta ahora. Un camión de munición espera en la estación de tren; tráelo cuando las escuadras anden cortas de balas. Asegura el mercado, la plaza y el muelle por turnos: mantén cada uno durante un minuto mientras los infectados llegan por las calles de alrededor.\n\nEn cuanto el muelle sea tuyo, el Coro responderá con su mayor asalto: tres oleadas contra el muelle.",
   "brief.retake.tips":
     "El reloj solo corre con soldados dentro de la zona marcada · usa a los ingenieros para levantar barricadas en cada punto · fortifica el muelle antes de las oleadas",
+  "tut.camera.touch":
+    "Arrastra con un dedo para mover la cámara. Pellizca para hacer zoom. Gira con dos dedos o usa los **botones de giro**. El **minimapa** de la esquina te lleva a cualquier sitio.",
+  "tut.select.touch": "Toca un soldado o la **tarjeta de Alfa** a la izquierda.",
+  "tut.move.touch":
+    "**Toca el suelo** para mover la escuadra seleccionada. Rodea los edificios por sí sola.",
+  "tut.build.touch":
+    "Usa la **barra de construcción**, elige una pieza y toca **dentro de la base** para colocarla. Toca esa pieza otra vez para cancelar. Las escuadras inactivas en la base la construyen.",
+  "tut.truck.touch":
+    "Toca el **camión de carga** en el panel Vehículos y luego **toca la base**. Su motor atrae a los infectados, así que escóltalo.",
+  "tut.direct.touch":
+    "Con una escuadra seleccionada, toca **Tomar el control**. Arrastra para apuntar, la **palanca** mueve y **Disparar** dispara. **Salir** vuelve al mapa.",
+  "tut.end.touch":
+    "Sigue los **objetivos** arriba a la izquierda: trae el camión a casa, levanta muros y nidos de ametralladora y resiste las tres oleadas. El **botón de ayuda** muestra los controles.",
+  "sel.none.touch":
+    "Toca una escuadra para seleccionarla. Toca el suelo para mover. Activa Ruta y toca para añadir un punto.",
+  "tip.route.touch":
+    "Modo ruta: cada toque en el suelo añade un punto por el que pasa la escuadra, en orden.",
+  "help.body.touch":
+    "Cámara: arrastra un dedo · Zoom: pellizco o los botones · Girar: dos dedos o los botones de giro\nSeleccionar: toque · Mover: toca el suelo · Ruta: Ruta y luego toca · Postura y formación: los botones de abajo\nPausa y velocidad: los botones de arriba · Tomar el control: el botón de la escuadra · Salir, palanca y Disparar mientras apuntas",
+  "build.hint.touch": "Toca dentro de la base para colocar · toca la misma pieza para cancelar",
+  "convoy.hint.touch":
+    "Toca una base o depósito para entregar, la calle para ir hasta allí, o una escuadra para seguirla. Los infectados persiguen el ruido del motor.",
+  "minimap.hint.touch": "Vista de la ciudad: toca o arrastra para mover la cámara",
+  "cam.zoomIn": "Acercar",
+  "cam.zoomOut": "Alejar",
+  "cam.rotateLeft": "Girar a la izquierda",
+  "cam.rotateRight": "Girar a la derecha",
+  "cam.help": "Controles",
+  "direct.exit.touch": "Arrastra para apuntar · la palanca mueve · Disparar dispara · Salir vuelve al mapa",
+  "direct.fire": "Disparar",
+  "direct.leave": "Salir",
+  "direct.reload": "Recargar",
+  "direct.stick": "Mover",
 };
