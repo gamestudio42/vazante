@@ -63,6 +63,7 @@ import {
   clockHours,
   daylight,
   RISK_POLICIES,
+  PRESENTATION,
   SOLDIER_STRIDE,
   SoldierCondition,
   SoldierField,
@@ -279,7 +280,7 @@ export function App({ client, input, view, shell }: Props) {
             )}
           </div>
         )}
-        {input.inDirect && <DirectHud frame={f} />}
+        {input.inDirect && <DirectHud frame={f} view={view} />}
         {input.inDirect && coarse && <DirectTouch input={input} />}
         {!input.inDirect && coarse && <CameraDock input={input} />}
         <Minimap
@@ -1721,7 +1722,31 @@ function StructurePanel({
 
 // ----- Direct control -----
 
-function DirectHud({ frame }: { frame: Frame }) {
+function DirectHud({ frame, view }: { frame: Frame; view: GameRenderer }) {
+  const aimMarker = useRef<HTMLDivElement>(null);
+  const [hitUntil, setHitUntil] = useState(-1);
+  const aim = frame.directAim;
+  useEffect(() => {
+    if (frame.events.some(e => e.type === 'shot' && e.source === frame.directSoldier && (e.value ?? 0) > 0)) setHitUntil(frame.tick + PRESENTATION.directCamera.hitFeedbackTicks);
+  }, [frame]);
+  useEffect(() => {
+    let request = 0;
+    const update = () => {
+      const el = aimMarker.current, parent = el?.parentElement;
+      const latest = view.latest?.directAim;
+      if (el && parent && latest) {
+        const p = view.worldToScreen(latest.x, latest.y, parent.clientWidth, parent.clientHeight, 1.3);
+        const visible = p.front && p.x >= 0 && p.y >= 0 && p.x <= parent.clientWidth && p.y <= parent.clientHeight;
+        el.style.display = visible && (latest.target !== null || latest.blocked) ? 'block' : 'none';
+        el.style.left = `${p.x}px`; el.style.top = `${p.y}px`;
+      }
+      request = requestAnimationFrame(update);
+    };
+    update();
+    return () => cancelAnimationFrame(request);
+  }, [view]);
+  const hit = frame.tick <= hitUntil;
+  const aimState = aim?.reloading ? 'reloading' : hit ? 'hit' : aim?.target !== null && aim?.target !== undefined ? 'target' : aim?.blocked ? 'blocked' : 'clear';
   const coarse = useMediaQuery(COARSE_POINTER);
   const id = frame.directSoldier;
   let hp = 0;
@@ -1738,9 +1763,9 @@ function DirectHud({ frame }: { frame: Frame }) {
   const name = id !== null ? nameSoldier(id) : null;
   return (
     <>
-      <div className="crosshair" aria-hidden="true">
+      <div className={`crosshair ${aimState}`} aria-hidden="true">
         <svg width="44" height="44" viewBox="0 0 44 44">
-          <g stroke="#fff" strokeWidth="2" strokeLinecap="round">
+          <g stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="22" y1="4" x2="22" y2="15" />
             <line x1="22" y1="29" x2="22" y2="40" />
             <line x1="4" y1="22" x2="15" y2="22" />
@@ -1749,6 +1774,8 @@ function DirectHud({ frame }: { frame: Frame }) {
           <circle cx="22" cy="22" r="1.6" fill="#ffb347" />
         </svg>
       </div>
+      <div ref={aimMarker} className={`direct-aim-marker ${aim?.blocked ? 'blocked' : 'target'}`} aria-hidden="true" />
+      <div className={`direct-aim-status ${aimState}`}>{t(`direct.aim.${aimState}`)}</div>
       <div className="direct">
         {name && <span className="direct-name">{name}</span>}
         <div className="direct-hp panel">

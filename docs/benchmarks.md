@@ -210,3 +210,14 @@ ratio 1, 20 s per run, load average about 1. The app renders on the Intel iGPU, 
   at 144 Hz to compare against, so this is a new reference and not a before/after.
 
 Not measured: a 60 Hz display, a window larger than 1600×852, and the discrete GPU.
+
+### 2026-11-25 — direct-control feedback
+
+Local CPU: Intel Core i7-13620H, Node 22.23.5, `pnpm bench`, 1,200 ticks per case,
+sequential runs without the browser suite competing for CPU. Mean tick before → after:
+200: 0.26 → 0.24 ms; 200 + attack: 0.30 → 0.28 ms; 1,000: 0.46 → 0.47 ms;
+4,000: 1.31 → 1.38 ms; 8,000: 2.75 → 2.69 ms; city 8,000: 4.08 → 4.37 ms.
+No case regressed above 10%. The new separate `direct aim + frame (8,000)` case measures
+complete read-only snapshots without hashing, including targeting telemetry: mean 0.27 ms,
+p95 0.31 ms, worst 0.6 ms. This is not an isolated targeting cost or a GPU measurement;
+the dense-horde render gate remains separate.

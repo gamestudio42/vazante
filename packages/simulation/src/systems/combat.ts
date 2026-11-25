@@ -199,6 +199,14 @@ function stepDirectFire(w: World, s: Soldier, wpn: WeaponStats): void {
   }
 }
 
+/** Read-only preview: calls the same target selection and obstruction ray as a shot. */
+export function directAimPreview(w: World, s: Soldier) {
+  const range = WEAPONS[s.weapon].range;
+  const target = aimTarget(w, s, range);
+  const [x, y, blocked] = target >= 0 ? [w.zombies.x[target], w.zombies.y[target], false] as const : rayEnd(w, s.x, s.y, s.fx, s.fy, range);
+  return { x, y, target: target >= 0 ? target : null, blocked, reloading: s.reloadT > 0 };
+}
+
 /** The first visible zombie inside the aim corridor. */
 function aimTarget(w: World, s: Soldier, range: number): number {
   const ax = s.fx;
@@ -279,13 +287,13 @@ function shoot(w: World, s: Soldier, wpn: WeaponStats, slot: number, bonus: numb
   w.emit({ type: 'shot', source: s.id, x: s.x, y: s.y, x2: zx, y2: zy, value: hits, reason: s.weapon });
 }
 
-function rayEnd(w: World, x: number, y: number, dx: number, dy: number, range: number): [number, number] {
+function rayEnd(w: World, x: number, y: number, dx: number, dy: number, range: number): [number, number, boolean] {
   const step = CELL_SIZE * 0.5;
   for (let t = step; t < range; t += step) {
     const c = w.grid.cellAt(x + dx * t, y + dy * t);
-    if (c < 0 || w.grid.blocksSight(c)) return [x + dx * t, y + dy * t];
+    if (c < 0 || w.grid.blocksSight(c)) return [x + dx * t, y + dy * t, true];
   }
-  return [x + dx * range, y + dy * range];
+  return [x + dx * range, y + dy * range, false];
 }
 
 function clamp01(v: number): number {

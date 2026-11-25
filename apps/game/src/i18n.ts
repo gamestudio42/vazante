@@ -245,6 +245,11 @@ const en = {
   'unit.ammo': 'ammo',
   'direct.exit': 'TAB to exit · R reload · click to fire',
   'direct.lock': 'Click to aim with the mouse',
+  'direct.aim.clear': 'Assisted aim',
+  'direct.aim.target': 'Target in firing lane',
+  'direct.aim.blocked': 'Shot obstructed',
+  'direct.aim.reloading': 'Reloading',
+  'direct.aim.hit': 'Hit',
   'help.title': 'Controls',
   'help.toggle': 'H: help',
   'help.body':
@@ -747,6 +752,11 @@ const ptBR: Record<Key, string> = {
   'unit.ammo': 'munição',
   'direct.exit': 'TAB para sair · R recarregar · clique para atirar',
   'direct.lock': 'Clique para mirar com o mouse',
+  'direct.aim.clear': 'Mira assistida',
+  'direct.aim.target': 'Alvo na linha de tiro',
+  'direct.aim.blocked': 'Tiro obstruído',
+  'direct.aim.reloading': 'Recarregando',
+  'direct.aim.hit': 'Acertou',
   'help.title': 'Controles',
   'help.toggle': 'H: ajuda',
   'help.body':

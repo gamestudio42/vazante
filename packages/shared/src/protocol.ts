@@ -233,6 +233,8 @@ export interface Frame {
   mission: MissionView | null;
   districts: DistrictView[];
   directSoldier: number | null;
+  /** Worker-owned preview of the existing assisted shot; not a precision hit point. */
+  directAim?: { x: number; y: number; target: number | null; blocked: boolean; reloading: boolean };
   difficulty: DifficultyId;
   /** Fog of war on: `zombies` holds only the ones the player's people can see. */
   fog: boolean;

@@ -1,5 +1,6 @@
 import {
   FORMATIONS,
+  PRESENTATION,
   SOLDIER_STRIDE,
   STRUCTURE_KINDS,
   SoldierField,
@@ -42,6 +43,7 @@ export class InputController {
   private panning: { x: number; y: number } | null = null;
   private mouse = { x: 0, y: 0 };
   private directYaw = 0;
+  private directPitch = 0;
   private directId: number | null = null;
   /** The simulation has acknowledged the current direct control (frames lag one or two ticks behind). */
   private directConfirmed = false;
@@ -98,12 +100,18 @@ export class InputController {
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
     window.addEventListener("blur", () => {
-      this.keys.clear();
+      this.stopDirectInput();
       this.gesture = idleGesture();
       this.touchForward = 0;
       this.touchStrafe = 0;
       this.touchFire = false;
     });
+    document.addEventListener("pointerlockchange", () => {
+      if (document.pointerLockElement !== this.canvas) this.stopDirectInput();
+      this.changed();
+    });
+    document.addEventListener("pointerlockerror", () => { this.stopDirectInput(); this.changed(); });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) this.stopDirectInput(); });
     document.addEventListener("mouseleave", () => (this.mouseInside = false));
     document.addEventListener("mouseenter", () => (this.mouseInside = true));
     client.onFrame((f) => {
@@ -175,8 +183,11 @@ export class InputController {
     const x = e.clientX - r.left;
     const y = e.clientY - r.top;
     if (this.directId !== null) {
-      if (document.pointerLockElement !== this.canvas)
-        this.canvas.requestPointerLock();
+      if (!this.enabled) return;
+      if (document.pointerLockElement !== this.canvas) {
+        this.capturePointer();
+        return; // Capturing the mouse is never also a shot.
+      }
       if (e.button === 0) this.fire = true;
       return;
     }
@@ -201,8 +212,10 @@ export class InputController {
     this.mouse = { x: e.clientX - r.left, y: e.clientY - r.top };
     this.mouseInside = true;
     if (this.directId !== null) {
-      if (document.pointerLockElement === this.canvas)
+      if (document.pointerLockElement === this.canvas && this.enabled) {
         this.directYaw += e.movementX * MOUSE_SENSITIVITY;
+        this.directPitch = Math.max(PRESENTATION.directCamera.minPitch, Math.min(PRESENTATION.directCamera.maxPitch, this.directPitch + e.movementY * MOUSE_SENSITIVITY));
+      }
       return;
     }
     if (this.panning) {
@@ -523,6 +536,7 @@ export class InputController {
       if (e.code === "Escape") this.onEscape();
       return;
     }
+    if (this.directId !== null && document.pointerLockElement !== this.canvas && e.code !== "Tab" && e.code !== "Escape") return;
     this.keys.add(e.code);
     const rig = this.view.rig;
     switch (e.code) {
@@ -698,17 +712,32 @@ export class InputController {
       if (q.members.includes(id) && cond <= 1) {
         this.directId = id;
         this.directConfirmed = false;
+        this.directPitch = 0;
         this.directYaw = Math.atan2(
           f.soldiers[o + SoldierField.FacingY],
           f.soldiers[o + SoldierField.FacingX],
         );
         this.client.send({ type: "set_direct_control", soldier: id });
         this.feedback("toggle");
-        this.canvas.requestPointerLock?.();
+        this.capturePointer();
         this.changed();
         return;
       }
     }
+  }
+
+  private capturePointer(): void {
+    try { this.canvas.requestPointerLock?.()?.catch(() => { this.stopDirectInput(); this.changed(); }); }
+    catch { this.stopDirectInput(); this.changed(); }
+  }
+
+  private stopDirectInput(): void {
+    this.keys.clear();
+    this.fire = this.touchFire = this.reload = false;
+    this.touchForward = this.touchStrafe = 0;
+    this.lastDirectKey = "";
+    if (this.directId !== null) this.client.send({ type: "direct_input", soldier: this.directId,
+      move: { x: 0, y: 0 }, aim: { x: Math.cos(this.directYaw), y: Math.sin(this.directYaw) }, fire: false, reload: false });
   }
 
   private leaveDirectLocal(): void {
@@ -723,6 +752,10 @@ export class InputController {
   }
 
   private updateDirect(nowMs: number): void {
+    if (!this.enabled) {
+      if (this.lastDirectKey !== "" || this.keys.size || this.fire || this.touchFire || this.touchForward || this.touchStrafe || this.reload) this.stopDirectInput();
+      return;
+    }
     const fx = Math.cos(this.directYaw);
     const fy = Math.sin(this.directYaw);
     let f = 0;
@@ -762,7 +795,7 @@ export class InputController {
     }
   }
 
-  private directCameraTarget(): { x: number; y: number; yaw: number } | null {
+  private directCameraTarget(): { x: number; y: number; yaw: number; pitch: number } | null {
     const f = this.view.latest;
     if (!f || this.directId === null) return null;
     for (let i = 0; i < f.soldiers.length / SOLDIER_STRIDE; i++) {
@@ -772,7 +805,7 @@ export class InputController {
           i,
           this.view.alpha(performance.now()),
         );
-        return { x, y, yaw: this.directYaw };
+        return { x, y, yaw: this.directYaw, pitch: this.directPitch };
       }
     }
     return null;

@@ -247,6 +247,11 @@ export const fr: Record<Key, string> = {
   "unit.ammo": "munitions",
   "direct.exit": "TAB pour quitter · R recharger · clic pour tirer",
   "direct.lock": "Cliquez pour viser à la souris",
+  "direct.aim.clear": "Visée assistée",
+  "direct.aim.target": "Cible en ligne de tir",
+  "direct.aim.blocked": "Tir obstrué",
+  "direct.aim.reloading": "Rechargement",
+  "direct.aim.hit": "Touché",
   "help.title": "Commandes",
   "help.toggle": "H : aide",
   "help.body":

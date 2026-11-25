@@ -541,3 +541,12 @@ Every mood was captured by day and at 23:00. All stay readable. By day `dust` an
 nearly the same picture, so `dust` went yellower and less saturated (×0.94 → ×0.88) and `sodium`
 moved to teal light and shadow. At night the moods converge on the night palette and differ little;
 that was left as it is.
+
+### 2026-11-25 — direct-control presentation
+
+Direct camera distance/height changes from 12/8 m to 7/4 m, with a 0.65 m shoulder offset.
+Mouse pitch is limited to -0.15..0.45 radians; it changes camera look only. The target height
+remains 1.5 m and look-ahead 10 m. Hit confirmation lasts three simulation ticks. Values live
+in `PRESENTATION.directCamera`. Camera obstacle bounds now include props, completed structures
+(including open gate posts), and trucks. Weapon ranges, the 1 m aim corridor, accuracy, ammo,
+movement and simulation visibility are unchanged.

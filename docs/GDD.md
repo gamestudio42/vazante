@@ -44,7 +44,7 @@ The camera is continuous; the "mode" is a height band, plus direct control as a 
 | Strategic (operations map) | above 1,200 m | districts colored by state, unit icons, convoy routes, horde heatmap (only where seen), Choir markers | multi-select, move/attack/hold/withdraw, plan convoys, fire support |
 | Transition | 300 to 1,200 m | buildings in low LOD fade in, icons shrink, tilt 90° to 55° | same as strategic |
 | Tactical (battle) | 40 to 300 m | full 3D pixel-art scene, individual zombies, tactical HUD, ranges | box select, formations, stances, construction |
-| Direct | third person, 12 m behind and 8 m above | crosshair, ammo, health, "TAB to exit" | WASD + mouse for soldier, vehicle or helicopter |
+| Direct | third person, 7 m behind and 4 m above | crosshair, ammo, health, "TAB to exit" | WASD + mouse for soldier, vehicle or helicopter |
 
 Rules:
 
@@ -102,7 +102,7 @@ Pipeline per shot: target acquisition → line of sight → range and ammo check
 
 ### 4.6 Direct control [FACT: TAB]
 
-- Soldier: WASD move, mouse aim, left button fires with the 4.2 rules plus +0.2 accuracy. R reloads from the soldier's own inventory.
+- Soldier: WASD move, horizontal mouse aim, bounded vertical camera look; a fixed facing cross and a projected assisted-target marker. Left button fires with the 4.2 rules plus +0.2 accuracy. R reloads from the soldier's own inventory.
 - Vehicle: WASD drives, mouse aims the turret. Helicopter: WASD horizontal, Q/E altitude.
 - Entering and leaving direct control must not change the simulation hash beyond the commands issued.
 
