@@ -58,6 +58,16 @@ const cases: [string, number, number, ('last_convoy' | 'city_war')?][] = [
   ['Porto Velário 8,000 (2 km)', 8000, 300, 'city_war'],
 ];
 const results = cases.map(([n, z, a, s]) => run(n, z, a, s));
+// Direct aim is read-only frame work, so measure it separately from simulation ticks.
+const direct = SimulationEngine.create(7, 'last_convoy', { zombies: 8000 });
+direct.enqueue({ type: 'set_direct_control', soldier: direct.world.soldiers[0].id });
+direct.runTicks(20);
+for (let i = 0; i < 50; i++) direct.frame(false);
+const frameTimes: number[] = [];
+for (let i = 0; i < ticks; i++) { const start = performance.now(); direct.frame(false); frameTimes.push(performance.now() - start); }
+frameTimes.sort((a, b) => a - b);
+results.push({ name: 'direct aim + frame (8,000)', zombies: direct.world.zombies.alive, ticks, mean: frameTimes.reduce((a,b) => a+b,0)/ticks,
+  p95: frameTimes[Math.floor(ticks * 0.95)], worst: frameTimes[ticks-1], systems: {}, hash: hex32(direct.hashState()) });
 if (json) console.log(JSON.stringify({ cpu: cpus()[0]?.model, node: process.version, ticks, results }, null, 2));
 else {
   console.log(`cpu: ${cpus()[0]?.model} · node ${process.version} · ${ticks} ticks per case`);

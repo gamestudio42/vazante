@@ -21,7 +21,7 @@ import {
 import { applyCommand } from './commands.ts';
 import { markVisible } from './fog.ts';
 import { SCENARIO_IDS, createScenario, type ScenarioId, type ScenarioOptions } from './scenarios/index.ts';
-import { stepCombat } from './systems/combat.ts';
+import { stepCombat, directAimPreview } from './systems/combat.ts';
 import { stepInfected } from './systems/infected.ts';
 import { buildTicks, stepConstruction, stepEmplacements } from './systems/construction.ts';
 import { stepFlow } from './systems/flow.ts';
@@ -289,6 +289,8 @@ export class SimulationEngine {
         soldiers: counts.soldiers[d.id],
       };
     });
+    const direct = w.directSoldier === null ? undefined : w.soldier(w.directSoldier);
+    const directAim = direct ? directAimPreview(w, direct) : undefined;
     const events = w.events;
     w.events = [];
     return {
@@ -304,6 +306,7 @@ export class SimulationEngine {
       mission,
       districts,
       directSoldier: w.directSoldier,
+      directAim,
       fog: w.fog,
       economy: w.economy,
       day: w.day,

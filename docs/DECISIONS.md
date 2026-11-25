@@ -193,3 +193,13 @@ review and the existing render performance gate.
 - **Hypothesis.** A player on a coarse pointer can look around, order a squad and still see the
   street in portrait. Revert the gesture if a tap that was meant as an order pans instead, or if
   the desktop right-click and box-select tests start to fail.
+
+## 2026-11-25 — fixed direct-control reticle with authoritative assisted target
+
+Keep the existing planar assisted fire model. A centered cross indicates facing, while a separate
+projected marker identifies the worker's selected target or blocking endpoint. The worker preview
+calls the same target selection and obstruction routines used by firing; React has no targeting rules.
+A marker means a candidate shot, not a guaranteed hit. Only shot-result events confirm hits.
+Vertical mouse motion changes bounded camera pitch, never headshot/elevation mechanics. Clicking to
+recapture the pointer is not a shot. Focus loss, hidden tabs and pointer release send a neutral input
+immediately. This preserves the single authoritative world and finite ammunition pillars.

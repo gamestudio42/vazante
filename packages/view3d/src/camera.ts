@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PRESENTATION, type BuildingRect } from '@vazante/shared';
+import { PRESENTATION, STRUCTURES, COLLISION, type StaticProp, type StructureView, type VehicleView, type BuildingRect } from '@vazante/shared';
 
 export type ViewBand = 'tactical' | 'transition' | 'strategic';
 
@@ -28,8 +28,42 @@ export class CameraRig {
   targetYaw = Math.PI / 4;
   /** Height of the internal render target in pixels; the ortho camera snaps to its texel grid. */
   pixelsHigh = 270;
-  direct: { x: number; y: number; yaw: number } | null = null;
+  direct: { x: number; y: number; yaw: number; pitch?: number } | null = null;
   private obstacles: THREE.Box3[] = [];
+  private props: THREE.Box3[] = [];
+  private structures: THREE.Box3[] = [];
+  private vehicles: THREE.Box3[] = [];
+  private structureKey = "";
+
+  private obstacle(x: number, z: number, width: number, depth: number, height: number): THREE.Box3 {
+    const m = PRESENTATION.directCamera.clearance;
+    return new THREE.Box3(new THREE.Vector3(x - width / 2 - m, -m, z - depth / 2 - m), new THREE.Vector3(x + width / 2 + m, height + m, z + depth / 2 + m));
+  }
+
+  setProps(props: readonly StaticProp[]): void {
+    this.props = props.map(p => {
+      const c = Math.abs(Math.cos(p.yaw)), s = Math.abs(Math.sin(p.yaw));
+      return this.obstacle(p.x, p.y, c * p.length + s * p.width, s * p.length + c * p.width, PRESENTATION.directPropHeights[p.kind]);
+    });
+  }
+
+  setDynamicObstacles(structures: readonly StructureView[], vehicles: readonly VehicleView[], cs: number): void {
+    const key = structures.filter(s => s.built).map(s => `${s.id}:${s.kind}:${s.cx}:${s.cy}:${s.open}`).join('|');
+    if (key !== this.structureKey) {
+      this.structureKey = key;
+      this.structures = [];
+      for (const s of structures) if (s.built) {
+        const x = (s.cx + 0.5) * cs, z = (s.cy + 0.5) * cs;
+        if (s.kind === 'gate' && s.open) {
+          for (const side of [-1, 1]) this.structures.push(this.obstacle(x + side * (cs - 0.8) / 2, z, 0.6, cs - 0.2, STRUCTURES.gate.height));
+        } else this.structures.push(this.obstacle(x, z, cs, cs, STRUCTURES[s.kind].height));
+      }
+    }
+    this.vehicles = vehicles.map(v => {
+      const c = Math.abs(v.hx), s = Math.abs(v.hy);
+      return this.obstacle(v.x, v.y, c * COLLISION.truckLength + s * COLLISION.truckWidth, s * COLLISION.truckLength + c * COLLISION.truckWidth, 3.2);
+    });
+  }
   private directDistance = 1;
   /** Hide only the controlled model when the camera enters its personal space. */
   hideControlledSoldier = false;
@@ -169,12 +203,13 @@ export class CameraRig {
       const fx = Math.cos(yaw);
       const fy = Math.sin(yaw);
       const tuning = PRESENTATION.directCamera;
+      const pitch = Math.max(tuning.minPitch, Math.min(tuning.maxPitch, this.direct.pitch ?? 0));
       const origin = new THREE.Vector3(x, tuning.targetHeight, y);
-      const offset = new THREE.Vector3(-fx * tuning.distance + sh.x, tuning.height - tuning.targetHeight + sh.y, -fy * tuning.distance);
+      const offset = new THREE.Vector3(-fx * tuning.distance - fy * tuning.shoulder + sh.x, tuning.height - tuning.targetHeight + sh.y, -fy * tuning.distance + fx * tuning.shoulder);
       const length = offset.length();
       this.cameraRay.set(origin, offset.clone().normalize());
       let allowed = 1;
-      for (const box of this.obstacles) {
+      for (const collection of [this.obstacles, this.props, this.structures, this.vehicles]) for (const box of collection) {
         if (box.containsPoint(origin)) { allowed = 0; break; }
         if (this.cameraRay.intersectBox(box, this.cameraHit)) allowed = Math.min(allowed, origin.distanceTo(this.cameraHit) / length);
       }
@@ -184,7 +219,7 @@ export class CameraRig {
       const separation = this.persp.position.distanceTo(origin);
       this.hideControlledSoldier = separation < (this.hideControlledSoldier ? tuning.showSoldierAboveM : tuning.hideSoldierBelowM);
       this.persp.up.set(0, 1, 0);
-      this.persp.lookAt(x + fx * 10 + sh.x, 1.5 + sh.y, y + fy * 10);
+      this.persp.lookAt(x + fx * tuning.lookAhead + sh.x, tuning.targetHeight - Math.tan(pitch) * tuning.lookAhead + sh.y, y + fy * tuning.lookAhead);
       this.persp.updateMatrixWorld();
       return;
     }

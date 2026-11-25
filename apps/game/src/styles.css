@@ -981,7 +981,7 @@ button {
 .crosshair {
   position: absolute;
   left: 50%;
-  top: 45%;
+  top: 50%;
   transform: translate(-50%, -50%);
   line-height: 0;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
@@ -2446,3 +2446,12 @@ button.primary:disabled svg {
     justify-content: center;
   }
 }
+
+/* The fixed cross is directional; the projected marker is the worker's assisted target. */
+.direct-aim-marker { position: absolute; width: 24px; height: 24px; border: 2px solid currentColor; border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
+.direct-aim-status { position: absolute; left: 50%; top: calc(50% + 30px); transform: translateX(-50%); background: #182020dc; padding: 3px 7px; font-size: 12px; pointer-events: none; }
+.crosshair { color: white; }
+.crosshair.target, .direct-aim-marker.target, .direct-aim-status.target { color: #b6d89a; }
+.crosshair.blocked, .direct-aim-marker.blocked, .direct-aim-status.blocked { color: #f0b03f; }
+.crosshair.hit, .direct-aim-status.hit { color: #ffb347; }
+.direct-aim-marker.blocked { border-radius: 0; transform: translate(-50%, -50%) rotate(45deg); }

@@ -230,6 +230,7 @@ export class GameRenderer {
     const hM = map.height * map.cellSize;
     this.rig = new CameraRig(wM, hM);
     this.rig.setBuildings(map.buildings, map.cellSize);
+    this.rig.setProps(map.props ?? []);
 
     this.hemi = new THREE.HemisphereLight(PALETTE.skyLight, PALETTE.groundLight, 1.6);
     this.scene.add(this.hemi);
@@ -353,6 +354,7 @@ export class GameRenderer {
       this.zSeenTick[slot] = f.tick;
     }
     this.structures.update(f.structures);
+    this.rig.setDynamicObstacles(f.structures, f.vehicles, this.map.cellSize);
     this.vehicles.push(f.vehicles);
     const zone = f.mission?.zones.find((x) => x.active);
     const cs = this.map.cellSize;

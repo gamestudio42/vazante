@@ -259,3 +259,14 @@ field gear attaches to the source torso bone before baking, so walking, firing a
 the same animation texture pipeline and single crowd draw. Infected options do not enable gear.
 No per-tick simulation system or balance value changes. Tests check prop bounds and deterministic
 geometry, rigid attachment following, and tactical/direct WebGL rendering with a stable worker hash.
+
+### Direct-control targeting feedback
+
+`Frame.directAim` is read-only worker telemetry using the existing combat target selector and ray.
+It is not serialized or hashed and consumes no RNG. The HUD projects its point using the current
+camera, marks target/obstruction and shows reload and shot-result feedback. Camera pitch is local.
+Camera clearance uses buildings, rotated prop bounds, completed structures and vehicle bounds;
+structure bounds rebuild on placement/state changes. Pointer capture failures stay recoverable and
+neutral input is sent on focus/pointer loss. Tests cover frame/hash invariance, preview/shot agreement,
+obstructions, pitch limits, capture-only clicks, blur and TAB exit. The benchmark reports direct-frame
+cost separately from simulation tick cost.

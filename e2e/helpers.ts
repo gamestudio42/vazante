@@ -38,6 +38,10 @@ export function stateHash(page: Page): Promise<number> {
 
 /** Fresh browser storage, Portuguese UI, main menu → briefing → playing. */
 export async function startGame(page: Page, seed = 1): Promise<void> {
+  // Gameplay fixtures must not depend on external analytics or its COEP headers.
+  await page.route('**/gc.zgo.at/count.js', route => route.fulfill({
+    contentType: 'application/javascript', body: '', headers: { 'Cross-Origin-Resource-Policy': 'cross-origin' },
+  }));
   await page.goto(`/?seed=${seed}`);
   await page.evaluate(() => {
     localStorage.clear();

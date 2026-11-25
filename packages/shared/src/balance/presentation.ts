@@ -1,6 +1,7 @@
 /** Cosmetic tuning only: none of these values may affect simulation or visibility. */
 export const PRESENTATION = {
-  directCamera: { clearance: 0.6, distance: 12, height: 8, targetHeight: 1.5, returnSeconds: 0.3, hideSoldierBelowM: 2.5, showSoldierAboveM: 3 },
+  directCamera: { clearance: 0.6, distance: 7, height: 4, minPitch: -0.15, maxPitch: 0.45, lookAhead: 10, shoulder: 0.65, hitFeedbackTicks: 3, targetHeight: 1.5, returnSeconds: 0.3, hideSoldierBelowM: 2.5, showSoldierAboveM: 3 },
+  directPropHeights: { Tent: 2.7, Tank: 3.5, Container_Long: 2.8, Debris_BrokenCar: 2, Barrier_Large: 2, SackTrench: 1.5 },
   post: {
     saturation: 1.04,
     surfaceDither: 0.22,
