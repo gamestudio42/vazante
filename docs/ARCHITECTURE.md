@@ -271,6 +271,15 @@ neutral input is sent on focus/pointer loss. Tests cover frame/hash invariance, 
 obstructions, pitch limits, capture-only clicks, blur and TAB exit. The benchmark reports direct-frame
 cost separately from simulation tick cost.
 
+Direct mouse sensitivity and vertical inversion are local preferences in `Settings`, normalized on
+load and application before reaching `InputController`. `DIRECT_LOOK` centralizes the original
+radians-per-pixel response, multiplier bounds and defaults. The multiplier affects both mouse axes;
+inversion affects pitch only. Existing pitch limits and pointer-lock checks remain in force. Touch
+look retains its previous response. Changing preferences sends no simulation commands; normal
+horizontal aiming still reaches the worker through the existing direct-input command. Unit tests
+cover storage compatibility and malformed preferences; browser tests cover actual input response,
+reset/persistence, small-screen settings access and paused-world hash invariance.
+
 ### Guided tutorial and contextual HUD (M8 polish)
 
 The mission panel stays outside the scrolling unit list; it shows the active objective by default

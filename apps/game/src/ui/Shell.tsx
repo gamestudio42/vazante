@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Calendar, Check, ChevronRight, CircleCheck, Dices, Flag, Lock, Map as MapIcon, Download, FolderOpen, GraduationCap, LogOut, Moon, Play, Plus, RefreshCw, Save, Settings as Gear, Skull, Shield, Trash2, Undo2, Upload, X } from 'lucide-react';
-import { DIFFICULTY_IDS, MISSION_IDS, OPERATION, TICK_HZ, type MissionId, type RequisitionId, type SaveMeta } from '@vazante/shared';
+import { DIFFICULTY_IDS, DIRECT_LOOK, MISSION_IDS, OPERATION, TICK_HZ, type MissionId, type RequisitionId, type SaveMeta } from '@vazante/shared';
 import { LOCALES, LOCALE_NAMES, t, tInput, type Locale } from '../i18n.ts';
 import { COARSE_POINTER, useMediaQuery } from './media.ts';
 import type { Settings } from '../settings.ts';
@@ -639,6 +639,26 @@ function SettingsPanel({ shell }: { shell: Shell }) {
           <input type="checkbox" checked={s.edgePan} onChange={(e) => set({ edgePan: e.target.checked })} />
           <span className="muted">{s.edgePan ? t('settings.on') : t('settings.off')}</span>
         </label>
+        <fieldset className="look-settings">
+          <legend>{t('settings.directMouse')}</legend>
+          <p id="direct-mouse-hint" className="muted">{t('settings.directMouseHint')}</p>
+          <label>
+            <span>{t('settings.mouseSensitivity')}</span>
+            <input type="range" min={DIRECT_LOOK.minSensitivity} max={DIRECT_LOOK.maxSensitivity}
+              step={DIRECT_LOOK.sensitivityStep} value={s.mouseSensitivity}
+              aria-describedby="direct-mouse-hint" aria-valuetext={`${Math.round(s.mouseSensitivity * 100)}%`}
+              onChange={(e) => set({ mouseSensitivity: Number(e.target.value) })} />
+            <span className="muted">{Math.round(s.mouseSensitivity * 100)}%</span>
+          </label>
+          <label>
+            <span>{t('settings.invertMouseY')}</span>
+            <input type="checkbox" checked={s.invertMouseY} onChange={(e) => set({ invertMouseY: e.target.checked })} />
+            <span className="muted">{s.invertMouseY ? t('settings.on') : t('settings.off')}</span>
+          </label>
+          <button onClick={() => set({ mouseSensitivity: DIRECT_LOOK.defaultSensitivity, invertMouseY: DIRECT_LOOK.defaultInvertY })}>
+            <RefreshCw size={14} />{t('settings.resetMouse')}
+          </button>
+        </fieldset>
         {shell.playtest && <PlaytestRow shell={shell} />}
         <div className="row end">
           <button className="primary" onClick={() => shell.openPanel(null)}>

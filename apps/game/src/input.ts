@@ -1,5 +1,6 @@
 import {
   FORMATIONS,
+  DIRECT_LOOK,
   PRESENTATION,
   SOLDIER_STRIDE,
   STRUCTURE_KINDS,
@@ -30,7 +31,6 @@ export interface BoxRect {
 /** A right-drag shorter than this (pixels) is a plain click. */
 const FACE_DRAG_PX = 14;
 const PAN_SPEED_PX = 600; // CSS pixels per second
-const MOUSE_SENSITIVITY = 0.0025;
 const DIRECT_SEND_MS = 50;
 
 /**
@@ -81,6 +81,8 @@ export class InputController {
   private gesture: Gesture = idleGesture();
   /** Pan when the mouse touches the screen edge. */
   edgePan = false;
+  mouseSensitivity: number = DIRECT_LOOK.defaultSensitivity;
+  invertMouseY: boolean = DIRECT_LOOK.defaultInvertY;
   private mouseInside = false;
   private listeners = new Set<() => void>();
 
@@ -216,8 +218,10 @@ export class InputController {
     this.mouseInside = true;
     if (this.directId !== null) {
       if (document.pointerLockElement === this.canvas && this.enabled) {
-        this.directYaw += e.movementX * MOUSE_SENSITIVITY;
-        this.directPitch = Math.max(PRESENTATION.directCamera.minPitch, Math.min(PRESENTATION.directCamera.maxPitch, this.directPitch + e.movementY * MOUSE_SENSITIVITY));
+        const sensitivity = DIRECT_LOOK.radiansPerPixel * this.mouseSensitivity;
+        this.directYaw += e.movementX * sensitivity;
+        const pitchDelta = e.movementY * sensitivity * (this.invertMouseY ? -1 : 1);
+        this.directPitch = Math.max(PRESENTATION.directCamera.minPitch, Math.min(PRESENTATION.directCamera.maxPitch, this.directPitch + pitchDelta));
       }
       return;
     }
@@ -895,7 +899,7 @@ export class InputController {
         this.view.rig.zoomScale(action.scale);
         this.view.rig.rotateBy(action.rotate);
       } else if (action.type === "look") {
-        this.directYaw += action.dx * MOUSE_SENSITIVITY;
+        this.directYaw += action.dx * DIRECT_LOOK.radiansPerPixel;
       } else this.onTouchTap(action.x, action.y);
     }
   }

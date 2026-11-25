@@ -1,4 +1,4 @@
-import type { DifficultyId, MissionId } from '@vazante/shared';
+import { DIRECT_LOOK, type DifficultyId, type MissionId } from '@vazante/shared';
 import { browserLocale, isLocale, type Locale } from './i18n.ts';
 
 export interface Settings {
@@ -9,6 +9,9 @@ export interface Settings {
   /** Seconds of game time between autosaves; 0 turns autosave off. */
   autosaveS: number;
   edgePan: boolean;
+  /** Multiplier of the original mouse response in direct control. */
+  mouseSensitivity: number;
+  invertMouseY: boolean;
   /** Difficulty for the next new game. */
   difficulty: DifficultyId;
   /** The tutorial was finished or skipped once. */
@@ -27,13 +30,23 @@ export interface SurvivalRecord {
 }
 
 const KEY = 'vazante.settings';
-const DEFAULTS: Settings = { volume: 0.8, musicVolume: 0.7, locale: 'pt-BR', uiScale: 1, autosaveS: 120, edgePan: false, difficulty: 'veteran', tutorialSeen: false, completed: [], survivalBest: {} };
+const DEFAULTS: Settings = { volume: 0.8, musicVolume: 0.7, locale: 'pt-BR', uiScale: 1, autosaveS: 120, edgePan: false, mouseSensitivity: DIRECT_LOOK.defaultSensitivity, invertMouseY: DIRECT_LOOK.defaultInvertY, difficulty: 'veteran', tutorialSeen: false, completed: [], survivalBest: {} };
+
+/** Older or malformed preferences must never produce a frozen or non-finite camera. */
+export function normalizeLookSettings(s: { mouseSensitivity?: unknown; invertMouseY?: unknown }): Pick<Settings, 'mouseSensitivity' | 'invertMouseY'> {
+  return {
+    mouseSensitivity: typeof s.mouseSensitivity === 'number' && Number.isFinite(s.mouseSensitivity)
+      ? Math.max(DIRECT_LOOK.minSensitivity, Math.min(DIRECT_LOOK.maxSensitivity, s.mouseSensitivity))
+      : DIRECT_LOOK.defaultSensitivity,
+    invertMouseY: typeof s.invertMouseY === 'boolean' ? s.invertMouseY : DIRECT_LOOK.defaultInvertY,
+  };
+}
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
     const saved = raw ? (JSON.parse(raw) as Partial<Settings>) : {};
-    const s = { ...DEFAULTS, ...saved };
+    const s = { ...DEFAULTS, ...saved, ...normalizeLookSettings(saved) };
     // First run: the browser's language, until the player picks one.
     if (!isLocale(saved.locale)) s.locale = browserLocale();
     const lang = new URLSearchParams(location.search).get('lang');
