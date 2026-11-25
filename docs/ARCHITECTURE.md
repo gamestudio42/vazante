@@ -238,3 +238,15 @@ select a nearby civic building with a blue upper band and setback crown; station
 hall with an amber band. A base within 12 cells of water selects a harbour-style warehouse with a
 steel-blue band. These reuse existing occupied buildings as visual anchors; no port gameplay,
 interiors or new collision volumes are introduced. Site assignment uses map geometry only.
+
+### Constructed defense appearance (M8 polish)
+
+HESCO baskets now carry coarse cage ribs and recessed fill; concrete walls use coping,
+reinforcement strips and panel joints. Gates have ribbed steel leaves, hazard bands and
+posts retained in the open state. MG nests have individually separated sandbags, a dark
+receiver/barrel and an ammunition box. All parts use vertex colors merged into the existing
+single instanced batch per kind; placement ghosts reuse the geometry with uniform validity
+colors. Damage still tints each instance. Cosmetic meshes stay inside the occupied cell;
+weapon details extend above the nest's cover height, as before. No gameplay values or
+simulation systems change. Tests cover geometry bounds, colors, open passage, removal,
+and a WebGL capture with an unchanged worker hash.

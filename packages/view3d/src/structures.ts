@@ -11,33 +11,45 @@ function geometryFor(kind: StructureKind, cs: number): THREE.BufferGeometry {
   const w = cs - 0.2;
   switch (kind) {
     case 'hesco': {
-      // A 2 x 2 block of filled baskets with a slight gap between them.
       const parts: THREE.BufferGeometry[] = [];
-      const b = w / 2 - 0.1;
-      for (const ox of [-1, 1]) {
-        for (const oz of [-1, 1]) {
-          const g = new THREE.BoxGeometry(b, h, b);
-          g.translate((ox * w) / 4, h / 2, (oz * w) / 4);
-          parts.push(g);
+      const b = w / 2 - 0.08;
+      for (const ox of [-1, 1]) for (const oz of [-1, 1]) {
+        const x = ox * w / 4, z = oz * w / 4;
+        parts.push(box(b, h - 0.12, b, x, (h - 0.12) / 2, z, 0xb5a17b));
+        parts.push(box(b - 0.16, 0.12, b - 0.16, x, h - 0.06, z, 0xc8b88e));
+        // Coarse welded cage: deliberately readable at the pixel render resolution.
+        for (const side of [-1, 1]) {
+          for (let row = 0; row <= 4; row++) {
+            const y = 0.06 + row * (h - 0.12) / 4;
+            parts.push(box(b, 0.045, 0.045, x, y, z + side * b / 2, 0x686a59));
+            parts.push(box(0.045, 0.045, b, x + side * b / 2, y, z, 0x686a59));
+          }
+          for (let col = 0; col <= 3; col++) {
+            const offset = (col / 3 - 0.5) * b;
+            parts.push(box(0.045, h, 0.045, x + offset, h / 2, z + side * b / 2, 0x7b7c68));
+            parts.push(box(0.045, h, 0.045, x + side * b / 2, h / 2, z + offset, 0x7b7c68));
+          }
         }
       }
       return merge(parts);
     }
     case 'wall': {
-      const g = new THREE.BoxGeometry(w, h, w);
-      g.translate(0, h / 2, 0);
-      return g;
+      const parts = [box(w - 0.18, h - 0.18, w - 0.18, 0, (h - 0.18) / 2, 0, 0x92958f),
+        box(w, 0.18, w, 0, h - 0.09, 0, 0xb9b9aa),
+        box(w, 0.28, w, 0, 0.14, 0, 0x74796f)];
+      for (const side of [-1, 1]) {
+        for (const offset of [-w / 3, w / 3]) {
+          parts.push(box(0.16, h - 0.3, 0.12, offset, (h - 0.3) / 2, side * (w / 2 - 0.06), 0xa7aaa0));
+          parts.push(box(0.12, h - 0.3, 0.16, side * (w / 2 - 0.06), (h - 0.3) / 2, offset, 0xa7aaa0));
+        }
+        for (const y of [h / 3, h * 2 / 3]) {
+          parts.push(box(w - 0.3, 0.045, 0.02, 0, y, side * (w / 2 - 0.085), 0x656b66));
+          parts.push(box(0.02, 0.045, w - 0.3, side * (w / 2 - 0.085), y, 0, 0x656b66));
+        }
+      }
+      return merge(parts);
     }
-    case 'gate': {
-      const posts = [-1, 1].map((s) => {
-        const g = new THREE.BoxGeometry(0.6, h + 0.4, w);
-        g.translate((s * (w - 0.6)) / 2, (h + 0.4) / 2, 0);
-        return g;
-      });
-      const leaf = new THREE.BoxGeometry(w - 1.2, h, w * 0.5);
-      leaf.translate(0, h / 2, 0);
-      return merge([...posts, leaf]);
-    }
+    case 'gate': return gateGeometry(cs, false);
     case 'command_post': {
       // Watchtower: a sandbagged bunker at the foot, legs up to a parapet platform, a roof on
       // posts and a radio mast. Height h (8 m) is the roof.
@@ -56,50 +68,76 @@ function geometryFor(kind: StructureKind, cs: number): THREE.BufferGeometry {
       return merge(parts);
     }
     case 'mg_nest': {
-      const parts: THREE.BufferGeometry[] = [];
-      // Ring of sandbags around a pit, with the gun on top.
-      for (const [sx, sz, lx, lz] of [
-        [0, -1, w, 0.8],
-        [0, 1, w, 0.8],
-        [-1, 0, 0.8, w - 1.6],
-        [1, 0, 0.8, w - 1.6],
-      ]) {
-        const g = new THREE.BoxGeometry(lx, h, lz);
-        g.translate((sx * (w - 0.8)) / 2, h / 2, (sz * (w - 0.8)) / 2);
-        parts.push(g);
+      const parts = [box(w, 0.12, w, 0, 0.06, 0, 0x595c49)];
+      const bag = w / 4;
+      for (let row = 0; row < 3; row++) {
+        for (let i = 0; i < 4; i++) for (const side of [-1, 1]) {
+          const offset = -w / 2 + bag * (i + 0.5);
+          const color = (i + row) % 2 ? 0xa29465 : 0xb9aa79;
+          parts.push(box(bag - 0.055, (h - 0.12) / 3 - 0.035, 0.65,
+            offset, 0.12 + (row + 0.5) * (h - 0.12) / 3, side * (w - 0.65) / 2, color));
+          if (i === 1 || i === 2) parts.push(box(0.65, (h - 0.12) / 3 - 0.035, bag - 0.055,
+            side * (w - 0.65) / 2, 0.12 + (row + 0.5) * (h - 0.12) / 3, offset, color));
+        }
       }
-      const gun = new THREE.BoxGeometry(0.15, 0.15, 1.6);
-      gun.translate(0, h + 0.2, -0.6);
-      parts.push(gun);
+      parts.push(box(0.18, h, 0.18, 0, h / 2, 0, 0x454f4b));
+      parts.push(box(0.36, 0.28, 0.78, 0, h + 0.14, -0.22, 0x303c3e));
+      parts.push(box(0.13, 0.13, 1.1, 0, h + 0.16, -1.08, 0x232e32));
+      parts.push(box(0.22, 0.21, 0.14, 0, h + 0.16, -1.69, 0x424c4c));
+      parts.push(box(0.28, 0.18, 0.45, 0, h + 0.06, 0.38, 0x5d6552));
+      parts.push(box(0.5, 0.42, 0.6, -0.58, 0.33, -0.2, 0x677451));
+      parts.push(box(0.55, 0.08, 0.64, -0.58, 0.58, -0.2, 0x909572));
       return merge(parts);
     }
   }
 }
 
-/** Gate leaf lowered into the ground when open: just the posts. */
-function openGateGeometry(cs: number): THREE.BufferGeometry {
-  const h = STRUCTURES.gate.height;
-  const w = cs - 0.2;
-  return merge(
-    [-1, 1].map((s) => {
-      const g = new THREE.BoxGeometry(0.6, h + 0.4, w);
-      g.translate((s * (w - 0.6)) / 2, (h + 0.4) / 2, 0);
-      return g;
-    }),
-  );
+function box(sx: number, sy: number, sz: number, x: number, y: number, z: number, color: number): THREE.BufferGeometry {
+  const g = new THREE.BoxGeometry(sx, sy, sz).translate(x, y, z);
+  const c = new THREE.Color(color);
+  const colors = new Float32Array(g.attributes.position.count * 3);
+  for (let i = 0; i < colors.length; i += 3) c.toArray(colors, i);
+  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return g;
+}
+
+/** The open gate retains its posts and ground rail, with no leaf across the passage. */
+function gateGeometry(cs: number, open: boolean): THREE.BufferGeometry {
+  const h = STRUCTURES.gate.height, w = cs - 0.2;
+  const parts = [box(w, 0.08, 0.32, 0, 0.04, 0, 0x626b65)];
+  for (const side of [-1, 1]) {
+    parts.push(box(0.6, h, w, side * (w - 0.6) / 2, h / 2, 0, 0x747d74));
+    parts.push(box(0.64, 0.18, w, side * (w - 0.64) / 2, h - 0.09, 0, 0xb2b6a5));
+    if (open) continue;
+    const leafWidth = (w - 1.25) / 2;
+    const x = side * (leafWidth / 2 + 0.025);
+    parts.push(box(leafWidth, h - 0.2, 0.28, x, h / 2, 0, 0x4b6266));
+    for (let i = 0; i < 5; i++) parts.push(box(0.065, h - 0.3, 0.36,
+      x + (i / 4 - 0.5) * (leafWidth - 0.15), h / 2, 0, 0x849491));
+    for (const y of [0.25, h - 0.25]) parts.push(box(leafWidth, 0.15, 0.4, x, y, 0, 0x9ba69a));
+    for (let i = 0; i < 4; i++) parts.push(box(leafWidth / 4 - 0.015, 0.28, 0.42,
+      x + (i - 1.5) * leafWidth / 4, 0.65, 0, i % 2 ? 0x343e3e : 0xc5aa62));
+  }
+  return merge(parts);
 }
 
 function merge(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
   const pos: number[] = [];
   const nor: number[] = [];
+  const colors: number[] = [];
   for (const p of parts) {
     const g = p.index ? p.toNonIndexed() : p;
     pos.push(...(g.attributes.position.array as Float32Array));
     nor.push(...(g.attributes.normal.array as Float32Array));
+    if (g.attributes.color) colors.push(...(g.attributes.color.array as Float32Array));
+    else colors.push(...new Float32Array(g.attributes.position.count * 3).fill(1));
+    if (g !== p) g.dispose();
+    p.dispose();
   }
   const out = new THREE.BufferGeometry();
   out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  out.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   return out;
 }
 
@@ -132,9 +170,9 @@ export class StructureLayer {
     height: number,
   ) {
     this.heightAt = new Float32Array(width * height);
-    const mat = toon();
+    const mat = toon({ vertexColors: true });
     for (const k of Object.keys(STRUCTURES) as StructureKind[]) this.built.set(k, this.instanced(geometryFor(k, cs), mat));
-    this.built.set('gate_open', this.instanced(openGateGeometry(cs), mat));
+    this.built.set('gate_open', this.instanced(gateGeometry(cs, true), mat));
     const box = new THREE.BoxGeometry(cs - 0.2, 1, cs - 0.2);
     box.translate(0, 0.5, 0);
     this.blueprint = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({ color: PALETTE.blueprint, transparent: true, opacity: 0.35, depthWrite: false }), CAP);
@@ -185,7 +223,7 @@ export class StructureLayer {
       this.m.makeTranslation(x, 0, y);
       mesh.setMatrixAt(i, this.m);
       const wear = 1 - s.hp / s.maxHp;
-      this.col.set(KIND_COLOUR[s.kind]).lerp(this.dark, wear * 0.6);
+      this.col.set(s.kind === 'command_post' ? KIND_COLOUR[s.kind] : 0xffffff).lerp(this.dark, wear * 0.6);
       mesh.setColorAt(i, this.col);
       mesh.count = i + 1;
       if (key !== 'gate_open') this.heightAt[s.cy * this.width + s.cx] = STRUCTURES[s.kind].height;
