@@ -76,3 +76,14 @@ The four facade families, roof patterns, damp/runoff marks, shutters, asphalt ag
 pavement joints in `view3d/surface-shaders.ts` are original code-authored artwork. Cornices,
 sill bands, pilasters and lintels are instanced primitives from `view3d/architecture.ts`.
 No third-party textures or models were added for this pass.
+
+## FT Âncora field equipment (2026-11-25)
+
+`view3d/ancora-art.ts` contains original procedural tank, container and tent models, using
+petroleum-blue armor, pale canvas and ivory identification strips. The tank and container
+replace their kit counterparts at runtime; the original GLBs remain as licensed source assets.
+The parked tank remains solid scenery, not a playable vehicle. Trucks gain matching paint,
+grille and identification strips. Soldier body, weapon and animations still derive from the
+CC0 kit: original rigid vest, pouches and backpack attach to the torso before animation baking.
+This is a customization of the licensed soldier, not a claim of an entirely original character.
+Infected, wrecked cars, barriers and sandbag trenches retain their existing assets.

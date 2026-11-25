@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { equipAncoraSoldier } from './ancora-art.ts';
 import { toon } from './materials.ts';
 
 /**
@@ -37,6 +38,7 @@ export interface BakeOptions {
   tint?: Record<string, number>;
   /** Standing height in metres. */
   height: number;
+  ancoraEquipment?: boolean;
   /** Clips during which both arms reach forward (the infected). */
   reach?: string[];
 }
@@ -50,6 +52,7 @@ export function clipRow(c: BakedClip, t: number): number {
 
 export async function loadBakedModel(url: string, opts: BakeOptions): Promise<BakedModel> {
   const gltf = await new GLTFLoader().loadAsync(url);
+  if (opts.ancoraEquipment) equipAncoraSoldier(gltf.scene);
   return bakeModel(gltf.scene, gltf.animations, opts);
 }
 

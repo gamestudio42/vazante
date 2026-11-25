@@ -2,11 +2,10 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { COLLISION, type MapInfo } from '@vazante/shared';
 import { toon } from './materials.ts';
-import { PALETTE } from './palette.ts';
+import { ancoraProp } from './ancora-art.ts';
 
 /**
- * Set dressing from the CC0 kit: wrecked cars along the curbs, road barriers at crossings, and a
- * lived-in look for the base and the depot (sandbag positions, containers, an armoured vehicle).
+ * Original FT Âncora base equipment alongside CC0 wrecked cars, road barriers and sandbags.
  * The simulation supplies occupied footprints and placements; no objects are placed independently.
  */
 
@@ -94,26 +93,6 @@ export function placeProps(map: MapInfo): Record<PropName, Placement[]> {
   return out;
 }
 
-/** A ridge tent: triangular prism with a darker roof line, length along x. */
-function tentGeometry(): THREE.BufferGeometry {
-  const g = new THREE.CylinderGeometry(2.4, 2.4, 7, 3, 1).toNonIndexed();
-  g.rotateZ(Math.PI / 2);
-  g.rotateX(Math.PI / 6);
-  g.computeBoundingBox();
-  g.translate(0, -g.boundingBox!.min.y, 0);
-  g.scale(1, 0.75, 0.9);
-  g.computeVertexNormals();
-  const n = g.getAttribute('position').count;
-  const col = new Float32Array(n * 3);
-  const c = new THREE.Color(PALETTE.tent);
-  for (let i = 0; i < n; i++) {
-    const k = 0.85 + 0.15 * (g.getAttribute('position').getY(i) / 3);
-    col.set([c.r * k, c.g * k, c.b * k], i * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  return g;
-}
-
 /** Instanced props, one draw call per kind. */
 export async function buildProps(map: MapInfo, baseUrl: string): Promise<THREE.Group> {
   const group = new THREE.Group();
@@ -126,7 +105,7 @@ export async function buildProps(map: MapInfo, baseUrl: string): Promise<THREE.G
   const up = new THREE.Vector3(0, 1, 0);
   const tents = (map.props ?? []).filter(p => p.kind === 'Tent');
   if (tents.length) {
-    const mesh = new THREE.InstancedMesh(tentGeometry(), mat, tents.length);
+    const mesh = new THREE.InstancedMesh(ancoraProp('Tent'), mat, tents.length);
     tents.forEach((pl, i) => mesh.setMatrixAt(i, m.compose(p.set(pl.x, 0, pl.y), q.identity(), s)));
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.name = 'Tent';
@@ -136,7 +115,7 @@ export async function buildProps(map: MapInfo, baseUrl: string): Promise<THREE.G
     (Object.keys(SPECS) as PropName[]).map(async (name) => {
       const list = placements[name];
       if (!list.length) return;
-      const geo = await loadProp(`${baseUrl}props/${name}.glb`, SPECS[name]);
+      const geo = name === 'Tank' || name === 'Container_Long' ? ancoraProp(name) : await loadProp(`${baseUrl}props/${name}.glb`, SPECS[name]);
       geo.computeBoundingBox();
       const bounds = geo.boundingBox!;
       const footprint = COLLISION.props[name];
