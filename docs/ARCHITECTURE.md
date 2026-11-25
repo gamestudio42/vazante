@@ -250,3 +250,12 @@ colors. Damage still tints each instance. Cosmetic meshes stay inside the occupi
 weapon details extend above the nest's cover height, as before. No gameplay values or
 simulation systems change. Tests cover geometry bounds, colors, open passage, removal,
 and a WebGL capture with an unchanged worker hash.
+
+### FT Âncora asset identity
+
+Original tank, container and tent geometries are merged with vertex colors into one instanced
+batch per prop kind. Authoritative placements and footprint fitting remain unchanged. Soldier
+field gear attaches to the source torso bone before baking, so walking, firing and death use
+the same animation texture pipeline and single crowd draw. Infected options do not enable gear.
+No per-tick simulation system or balance value changes. Tests check prop bounds and deterministic
+geometry, rigid attachment following, and tactical/direct WebGL rendering with a stable worker hash.

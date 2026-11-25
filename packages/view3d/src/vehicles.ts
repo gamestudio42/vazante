@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { VehicleView } from '@vazante/shared';
 import { toon } from './materials.ts';
+import { ANCORA } from './ancora-art.ts';
 import { PALETTE } from './palette.ts';
 
 const CAP = 64;
@@ -29,9 +30,13 @@ function truckParts(): { geo: THREE.BufferGeometry; color: number }[] {
   wheel.rotateZ(Math.PI / 2);
   const wheels: THREE.BufferGeometry[] = [];
   for (const z of [-2.3, 0.9, 2.15]) for (const x of [-1.0, 1.0]) wheels.push(wheel.clone().translate(x, 0.55, z));
+  const markings = merge(box(0.05, 0.18, 0.7, -1.18, 1.6, -1.4), box(0.05, 0.18, 0.7, 1.18, 1.6, -1.4), box(0.3, 0.04, 1.1, 0, 1.72, -2.65));
+  const grille = merge(...[-0.6, -0.3, 0, 0.3, 0.6].map(x => box(0.08, 0.4, 0.06, x, 1.25, -3.32)));
   return [
-    { geo: merge(bonnet, cab), color: PALETTE.truckCab },
-    { geo: merge(chassis, bed), color: PALETTE.truck },
+    { geo: markings, color: ANCORA.ivory },
+    { geo: grille, color: ANCORA.steel },
+    { geo: merge(bonnet, cab), color: ANCORA.hull },
+    { geo: merge(chassis, bed), color: ANCORA.dark },
     { geo: merge(tiltWalls, roof), color: PALETTE.cargo },
     { geo: merge(glass, sideGlass), color: 0x1b2228 },
     { geo: merge(bumper, ...wheels), color: PALETTE.boots },

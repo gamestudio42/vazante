@@ -549,9 +549,10 @@ export class GameRenderer {
     const [soldier, infected, props] = await Promise.all([
       loadBakedModel(`${baseUrl}soldier.glb`, {
         height: 1.8,
+        ancoraEquipment: true,
         clips: ['Idle', 'Walk', 'Run_Gun', 'Idle_Shoot', 'Walk_Shoot', 'Run_Shoot', 'Death'],
         once: ['Death'],
-        colors: { Pants: PALETTE.fatigues, Skin: 0xc8916b, Grey: 0x4a4f44 },
+        colors: { Pants: 0x59696a, Character_Main: 0x49686b, Skin: 0xc8916b, Grey: 0x96957a, Grey2: 0x737e79, Wood: 0x52605a },
         tint: { Character_Main: 0.45 },
       }),
       loadBakedModel(`${baseUrl}infected.glb`, {
