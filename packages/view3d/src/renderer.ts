@@ -11,6 +11,7 @@ import {
   ZombieState,
   MOODS,
   OUTCOME_GRADE,
+  PRESENTATION,
   moodFor,
   type Mood,
   clockHours,
@@ -30,7 +31,7 @@ import { FlipbookLayer } from './flipbook.ts';
 import { buildProps } from './props.ts';
 import { DecalLayer, OrderMarkers, Particles, Pulses, SiteZones, ZoneMarker } from './fx.ts';
 import { cityUniforms, toon } from './materials.ts';
-import { PALETTE } from './palette.ts';
+import { PALETTE, squadMarkerColor } from './palette.ts';
 import { PixelPost } from './post.ts';
 import { StructureLayer } from './structures.ts';
 import { VehicleLayer } from './vehicles.ts';
@@ -281,6 +282,7 @@ export class GameRenderer {
     ring.rotateX(-Math.PI / 2);
     this.ringMesh = new THREE.InstancedMesh(ring, new THREE.MeshBasicMaterial({ color: PALETTE.selection, side: THREE.DoubleSide, fog: false, transparent: true, opacity: 0.75, depthWrite: false }), MAX_SOLDIERS);
     this.ringMesh.count = 0;
+    this.ringMesh.name = 'squad-selection-rings';
     this.ringMesh.frustumCulled = false;
     this.scene.add(this.ringMesh);
 
@@ -294,8 +296,9 @@ export class GameRenderer {
 
     const marker = new THREE.CircleGeometry(1, 16);
     marker.rotateX(-Math.PI / 2);
-    this.markerMesh = new THREE.InstancedMesh(marker, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85 }), 64);
+    this.markerMesh = new THREE.InstancedMesh(marker, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85 }), PRESENTATION.squadMarkers.maxMapSquads * 2);
     this.markerMesh.count = 0;
+    this.markerMesh.name = 'squad-map-markers';
     this.markerMesh.frustumCulled = false;
     this.scene.add(this.markerMesh);
 
@@ -1018,7 +1021,7 @@ export class GameRenderer {
         this.tmpP.set(x, 0.05, y);
         this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
         this.ringMesh.setMatrixAt(rings, this.tmpM);
-        this.ringMesh.setColorAt(rings, this.tmpC.set(isDirect ? PALETTE.directRing : PALETTE.selection));
+        this.ringMesh.setColorAt(rings, this.tmpC.set(isDirect ? PALETTE.directRing : squadMarkerColor(squad)));
         rings++;
       }
     }
@@ -1231,15 +1234,25 @@ export class GameRenderer {
     let k = 0;
     if (blend > 0.05) {
       const r = (this.rig.span / 60) * blend;
+      const style = PRESENTATION.squadMarkers;
+      let squads = 0;
       for (const q of f.squads) {
-        if (q.alive === 0 || k >= 64) continue;
-        this.tmpS.set(r, 1, r);
+        if (q.alive === 0 || squads >= style.maxMapSquads) continue;
+        squads++;
         this.tmpQ.identity();
-        this.tmpP.set(q.anchorX, 30, q.anchorY);
+        this.tmpP.set(q.anchorX, style.strategicHeightM, q.anchorY);
+        if (this.selectedSquads.has(q.id)) {
+          // A white backing disc keeps selection visible even when an overlapping label is hidden.
+          this.tmpS.set(r * style.selectedScale, 1, r * style.selectedScale);
+          this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
+          this.markerMesh.setMatrixAt(k, this.tmpM);
+          this.markerMesh.setColorAt(k++, WHITE);
+          this.tmpP.y += style.selectedLiftM;
+        }
+        this.tmpS.set(r, 1, r);
         this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
         this.markerMesh.setMatrixAt(k, this.tmpM);
-        const col = PALETTE.squads[(q.id - 1) % PALETTE.squads.length];
-        this.markerMesh.setColorAt(k, this.tmpC.set(this.selectedSquads.has(q.id) ? PALETTE.selection : col));
+        this.markerMesh.setColorAt(k, this.tmpC.set(squadMarkerColor(q.id)));
         k++;
       }
     }

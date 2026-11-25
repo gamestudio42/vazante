@@ -558,3 +558,14 @@ can multiply mouse response by 0.25–3 in increments of 0.05; default is 1. Ver
 to off. This makes direct control adjustable to different mice without changing the default feel,
 pitch limits, tactical camera, touch look, weapon rules or simulation balance. Missing or invalid
 preferences recover the defaults; finite values outside the supported interval are clamped.
+
+### 2026-11-25 — squad identification
+
+`PRESENTATION.squadMarkers` centralizes the existing HUD identity colours (blue `#5aa9ff`, amber
+`#ffc94f`, green `#8cdc6b`, pink `#ff8ce6`) for selection and map markers. World labels project
+3 m above squad anchors, blending to the existing 30 m strategic-marker height. At most 16 labels
+are shown with a 6 px separation, 8 px viewport margin and 54 px top clearance. A leader allows up
+to 64 px vertical lift to keep site/objective text clear. Selection wins
+overlap ties. These presentation limits reduce clutter; squad counts, uniforms, sight and combat
+rules are unchanged. Strategic markers keep the existing 64-squad cap; selected markers add a
+white backing at 1.25× radius, with the coloured disc 0.03 m above it to avoid coplanar flicker.

@@ -83,7 +83,7 @@ import {
   type StructureKind,
   type SquadView,
 } from "@vazante/shared";
-import type { GameRenderer } from "@vazante/view3d";
+import { squadMarkerCss, type GameRenderer } from "@vazante/view3d";
 import type { GameClient } from "../client.ts";
 import type { InputController } from "../input.ts";
 import { t, tInput } from "../i18n.ts";
@@ -92,6 +92,7 @@ import type { Shell } from "../shell.ts";
 import { OperationTrack, RequisitionChoice, ShellOverlay, TutorialCard } from "./Shell.tsx";
 import { Minimap } from "./Minimap.tsx";
 import { MapLabels } from "./MapLabels.tsx";
+import { SquadLabels } from "./SquadLabels.tsx";
 import { objectiveTarget } from "./objective.ts";
 import { soldierLabel } from "./soldier.ts";
 import { living, type ReportRow } from "../roster.ts";
@@ -219,6 +220,7 @@ export function App({ client, input, view, shell }: Props) {
     f.mission && (f.mission.phase === "won" || f.mission.phase === "lost");
   return (
     <>
+      <SquadLabels client={client} view={view} visible={shell.screen === 'playing' && !shell.inOpening && !ended && !input.inDirect} />
       <MapLabels client={client} view={view} />
       <div
         ref={hud}
@@ -864,7 +866,8 @@ function SquadList({
         return (
           <div
             key={q.id}
-            className={`squad c${(q.id - 1) % 4} ${selected.includes(q.id) ? "sel" : ""} ${q.alive === 0 ? "dead" : ""}`}
+            className={`squad ${selected.includes(q.id) ? "sel" : ""} ${q.alive === 0 ? "dead" : ""}`}
+            style={{ '--sq': squadMarkerCss(q.id) } as CSSProperties}
             onClick={() => onSelect(q.id)}
             onDoubleClick={() => onCenter(q)}
           >
@@ -1253,7 +1256,7 @@ function SelectionPanel({
   const q = squads[0];
   const s = squadStats(frame, q);
   return (
-    <div className={`selection panel c${(q.id - 1) % 4}`}>
+    <div className="selection panel" style={{ '--sq': squadMarkerCss(q.id) } as CSSProperties}>
       <div className="sel-head">
         <b>{squads.map((x) => x.name).join(", ")}</b>
         <span className="sel-stats">

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Map as MapIcon } from 'lucide-react';
 import { FOG, type Frame, Ground, siteZone, SOLDIER_STRIDE, SoldierField, ZOMBIE_STRIDE, ZombieField } from '@vazante/shared';
-import type { GameRenderer } from '@vazante/view3d';
+import { squadMarkerCss, type GameRenderer } from '@vazante/view3d';
 import type { GameClient } from '../client.ts';
 import { tInput } from '../i18n.ts';
 import { COARSE_POINTER, useMediaQuery } from './media.ts';
@@ -184,10 +184,10 @@ export function Minimap({
       }
       dotCtx.putImageData(dots, 0, 0);
       ctx.drawImage(dotLayer, 0, 0);
-      ctx.fillStyle = '#7fc8ff';
       const ss = f.soldiers;
       for (let i = 0; i < ss.length; i += SOLDIER_STRIDE) {
         if (ss[i + SoldierField.Condition] > 1) continue;
+        ctx.fillStyle = squadMarkerCss(ss[i + SoldierField.Squad]);
         ctx.fillRect(X(ss[i + SoldierField.X]) - 1, Y(ss[i + SoldierField.Y]) - 1, 2.5, 2.5);
       }
       for (const v of f.vehicles) {
@@ -213,6 +213,22 @@ export function Minimap({
         label(s.name, X(((s.x0 + s.x1 + 1) / 2) * cs), Y(s.y0 * cs) - 2, s.kind === 'base' ? '#9fd0ff' : '#f0d79a');
       }
       if (target) label(target.name, X(target.x), Y(target.y) - 8, '#ffc04d');
+      // Initials and a white selection border distinguish squads without relying on colour alone.
+      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.textBaseline = 'middle';
+      for (const q of [...f.squads].sort((a, b) => Number(client.state.selected.includes(a.id)) - Number(client.state.selected.includes(b.id)))) {
+        if (!q.alive) continue;
+        const x = X(q.anchorX), y = Y(q.anchorY);
+        if (x < 6 || y < 6 || x > SIZE - 6 || y > SIZE - 6) continue;
+        const selected = client.state.selected.includes(q.id);
+        ctx.fillStyle = '#10171e';
+        ctx.fillRect(x - 5, y - 5, 10, 10);
+        ctx.strokeStyle = selected ? '#ffffff' : squadMarkerCss(q.id);
+        ctx.lineWidth = selected ? 2 : 1;
+        ctx.strokeRect(x - 5, y - 5, 10, 10);
+        ctx.fillStyle = squadMarkerCss(q.id);
+        ctx.fillText(q.name[0], x, y);
+      }
       if (me) {
         // The soldier in the middle, pointing where he looks.
         ctx.save();
