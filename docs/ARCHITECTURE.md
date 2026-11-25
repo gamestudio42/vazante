@@ -295,3 +295,23 @@ while controlling a soldier, the card explains how to return instead of showing 
 No simulation rules, clocks, inventories or balance values change. Acceptance is covered by tutorial
 unit tests, all nine steps in Chromium at 1280×720 and 800×450, paused-world hash checks, and the
 existing responsive/touch layout checks.
+
+### Squad identification (M8 polish)
+
+`squadMarkerColor` and `squadMarkerCss` derive a stable marker colour from the authoritative squad
+ID and `PRESENTATION.squadMarkers`. HUD cards, selection rings, strategic discs and minimap markers
+share that mapping. Uniform materials retain the existing muted palette. Minimap initials and a
+white selection border provide cues beyond colour. Selected strategic discs also get a larger white
+backing in the same instanced batch, so label suppression never removes their selection cue.
+
+`SquadLabels` projects worker squad anchors each animation frame and reads living/total counts
+directly from squad views. The DOM overlay ignores pointer events and is excluded from the
+accessibility tree because the squad list already exposes this information. A pure bounded overlap
+filter prefers selection, rejects clipped/behind-camera labels, and displays at most 16. Labels can
+lift at most 64 px above site/objective text with a vertical leader to the projected anchor; they
+never move horizontally. Eliminated squads remove their nodes. Direct control and shell
+screens suppress the overlay. No renderer writes to the world or adds a simulation system.
+
+Acceptance: identity/overlap unit tests and Chromium checks for actual ring colours, day/night and
+strategic/tactical captures, small viewports, pointer pass-through, TAB suppression, casualty cleanup
+and unchanged paused worker hash/counts. These checks do not substitute for the dense-horde GPU gate.

@@ -251,6 +251,12 @@ full objective list on request. Construction and selection details share the bot
 opening construction hides selection details; closing it restores them. Selecting a unit cancels the
 placement tool. Alerts keep their own bounded scrolling area above the minimap.
 
+Friendly squads retain the HUD's identity colour in ground selection rings, strategic markers and
+the minimap. Tactical and strategic labels show the squad name and living/total members; a white
+outline marks selection. Overlapping labels prefer selected squads; labels lift above site/objective
+text with a short leader to retain their anchor. The minimap uses initials and a selection border in addition to colour. Labels ignore clicks,
+disappear for eliminated squads and stay hidden in direct control, menus and the opening shot.
+
 The guided tutorial has nine steps. An explicit posture choice counts even if that posture is already
 active, once it agrees with the worker frame. The direct-control lesson waits for both entry and exit
 before showing squad morale. Tutorial targets scroll into the visible part of the unit list, including

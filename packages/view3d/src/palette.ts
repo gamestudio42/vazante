@@ -1,4 +1,16 @@
-/** Theme palette for the procedural art. All game colours come from here. */
+import { PRESENTATION } from '@vazante/shared';
+
+/** Stable high-contrast identity for HUD, minimap and selection markers; uniforms stay muted. */
+export function squadMarkerColor(id: number): number {
+  const colors = PRESENTATION.squadMarkers.colors;
+  return colors[(id - 1) % colors.length];
+}
+
+export function squadMarkerCss(id: number): string {
+  return `#${squadMarkerColor(id).toString(16).padStart(6, '0')}`;
+}
+
+/** Theme palette for the procedural art. */
 export const PALETTE = {
   sky: 0x657e91,
   fog: 0xaaa99b,

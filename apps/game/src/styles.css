@@ -20,10 +20,6 @@
   --warn: #f08a3c;
   --danger: #e8513a;
   --night: #9fb4e0;
-  --sq0: #5aa9ff;
-  --sq1: #ffc94f;
-  --sq2: #8cdc6b;
-  --sq3: #ff8ce6;
   --chamfer: 9px;
   --display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   font-family: 'Barlow', system-ui, sans-serif;
@@ -519,18 +515,6 @@ b {
 .squad.vehicle .hotkey {
   background: rgba(255, 255, 255, 0.12);
   color: var(--text);
-}
-.c0 {
-  --sq: var(--sq0);
-}
-.c1 {
-  --sq: var(--sq1);
-}
-.c2 {
-  --sq: var(--sq2);
-}
-.c3 {
-  --sq: var(--sq3);
 }
 .squad-body {
   flex: 1;
@@ -1689,11 +1673,44 @@ input[type='checkbox'] {
 }
 
 /* ----- Map labels ----- */
-.map-labels {
+.map-labels,
+.squad-labels {
   position: fixed;
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+}
+.squad-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  background: rgba(10, 16, 21, 0.9);
+  border: 1px solid var(--sq);
+  border-left-width: 3px;
+  color: var(--sq);
+  font-family: var(--display);
+  font-size: 13px;
+  line-height: 16px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px #000;
+}
+.squad-label span { color: var(--text); }
+.squad-label::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: var(--leader, 0px);
+  background: var(--sq);
+}
+.squad-label.selected {
+  outline: 1px solid white;
+  outline-offset: 2px;
 }
 .map-label,
 .obj-arrow {

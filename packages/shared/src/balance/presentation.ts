@@ -1,5 +1,6 @@
 /** Cosmetic tuning only: none of these values may affect simulation or visibility. */
 export const PRESENTATION = {
+  squadMarkers: { colors: [0x5aa9ff, 0xffc94f, 0x8cdc6b, 0xff8ce6], labelHeightM: 3, strategicHeightM: 30, selectedScale: 1.25, selectedLiftM: 0.03, maxMapSquads: 64, labelGapPx: 6, maxLiftPx: 64, edgePx: 8, topPx: 54, maxLabels: 16 },
   directCamera: { clearance: 0.6, distance: 7, height: 4, minPitch: -0.15, maxPitch: 0.45, lookAhead: 10, shoulder: 0.65, hitFeedbackTicks: 3, targetHeight: 1.5, returnSeconds: 0.3, hideSoldierBelowM: 2.5, showSoldierAboveM: 3 },
   directPropHeights: { Tent: 2.7, Tank: 3.5, Container_Long: 2.8, Debris_BrokenCar: 2, Barrier_Large: 2, SackTrench: 1.5 },
   post: {
