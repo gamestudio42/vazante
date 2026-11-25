@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { tick, watchErrors } from './helpers.ts';
+import { isolateAnalytics, tick, watchErrors } from './helpers.ts';
+
+test.beforeEach(async ({ page }) => isolateAnalytics(page));
 
 type Box = { left: number; top: number; right: number; bottom: number };
 

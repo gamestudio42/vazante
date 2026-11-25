@@ -270,11 +270,11 @@ export function TutorialCard({ shell }: { shell: Shell }) {
       </div>
       <h3>
         {tut.completed && <Check size={16} />}
-        {t(`tut.${tut.id}.h`)}
+        {t(tut.returnToCommand ? 'tut.direct.return.h' : `tut.${tut.id}.h`)}
       </h3>
-      <p>{emphasise(tInput(`tut.${tut.id}`, coarse))}</p>
+      <p>{emphasise(tInput(tut.returnToCommand ? 'tut.direct.return' : `tut.${tut.id}`, coarse))}</p>
       <div className="row end">
-        {tut.manual ? (
+        {tut.returnToCommand ? null : tut.manual ? (
           <button className="primary" onClick={() => tut.next()}>
             {last ? t('tut.finish') : t('tut.ok')}
             <ChevronRight size={14} />

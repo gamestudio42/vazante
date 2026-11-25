@@ -181,6 +181,18 @@ export function App({ client, input, view, shell }: Props) {
     }
     const v = `${Math.ceil(under / scale)}px`;
     if (el.style.getPropertyValue("--under-left") !== v) el.style.setProperty("--under-left", v);
+    if (tut.active && !input.inDirect) {
+      for (const selector of tut.focus(1, 1).ui) {
+        const target = el.querySelector<HTMLElement>(selector);
+        const scroller = target?.closest<HTMLElement>(".fold-body, .unit-list");
+        const list = scroller && scroller.scrollHeight > scroller.clientHeight ? scroller : target?.closest<HTMLElement>(".unit-list");
+        if (!target || !list || list.scrollHeight <= list.clientHeight) continue;
+        const r = target.getBoundingClientRect();
+        const b = list.getBoundingClientRect();
+        const shift = r.top < b.top ? r.top - b.top : r.bottom > b.bottom ? r.bottom - b.bottom : 0;
+        if (shift) list.scrollTop += shift / scale;
+      }
+    }
   });
 
   const f = state.frame;
@@ -191,6 +203,7 @@ export function App({ client, input, view, shell }: Props) {
     return c && tr ? soldierLabel(c.rank, tr.name) : null;
   };
 
+  const buildExpanded = input.buildMenuOpen || (tut.active && tut.id === "build");
   const selected = f.squads.filter((q) => state.selected.includes(q.id));
   const seed = state.map?.seed ?? 1;
   const foldPanels = coarse && portrait && !input.inDirect;
@@ -231,6 +244,7 @@ export function App({ client, input, view, shell }: Props) {
                 }}
               />
             )}
+            <div className="unit-list">
             <SquadList
               frame={f}
               fold={foldPanels}
@@ -257,6 +271,7 @@ export function App({ client, input, view, shell }: Props) {
                 onToggle={() => toggleFold("districts")}
               />
             )}
+            </div>
           </div>
         )}
         {shell.titleCard && f.mission && shell.screen === "playing" && !ended && <TitleCard frame={f} />}
@@ -270,14 +285,14 @@ export function App({ client, input, view, shell }: Props) {
         )}
         {!input.inDirect && (
           <div className="bottomcol">
-            <BuildPanel frame={f} input={input} />
-            {state.structure !== null ? (
+            <BuildPanel frame={f} input={input} expanded={buildExpanded} pinned={tut.active && tut.id === "build"} />
+            {!buildExpanded && (state.structure !== null ? (
               <StructurePanel frame={f} id={state.structure} input={input} />
             ) : state.vehicle !== null ? (
               <VehiclePanel frame={f} id={state.vehicle} input={input} />
             ) : (
               <SelectionPanel squads={selected} frame={f} input={input} />
-            )}
+            ))}
           </div>
         )}
         {input.inDirect && <DirectHud frame={f} view={view} />}
@@ -582,12 +597,18 @@ function MissionPanel({
   open?: boolean;
   onToggle?: () => void;
 }) {
+  const [allObjectives, setAllObjectives] = useState(false);
   const m = frame.mission!;
+  const current = Math.max(0, m.objectives.findIndex(o => o.state === "active"));
   const hp = m.commandPostMaxHp > 0 ? m.commandPostHp / m.commandPostMaxHp : 0;
   return (
     <FoldFrame className="mission panel" fold={fold} open={open} label={t("mission.title")} icon={Flag} onToggle={onToggle}>
-      <PanelHead icon={Flag}>{t("mission.title")}</PanelHead>
-      {m.objectives.map((o, i) => (
+      <PanelHead icon={Flag} extra={<button className="objective-toggle" aria-expanded={allObjectives}
+        aria-label={t("mission.details")} onClick={() => setAllObjectives(value => !value)}>
+        {current + 1}/{m.objectives.length}
+      </button>}>{t("mission.title")}</PanelHead>
+      <div className="objective-list">
+      {m.objectives.map((o, i) => (allObjectives || i === current) && (
         <Objective
           key={i}
           done={o.state === "done"}
@@ -609,6 +630,7 @@ function MissionPanel({
             )}
         </Objective>
       ))}
+      </div>
       {m.evacuated > 0 && (
         <div className="mrow">
           <Stat icon={Users} title={t("mission.evacuated")}>
@@ -1361,15 +1383,25 @@ function FormationGlyph({ formation }: { formation: SquadView["formation"] }) {
 function BuildPanel({
   frame,
   input,
+  expanded,
+  pinned,
 }: {
   frame: Frame;
   input: InputController;
+  expanded: boolean;
+  pinned: boolean;
 }) {
   const base = frame.bases[0];
   const tool = input.build;
   const coarse = useMediaQuery(COARSE_POINTER);
   return (
-    <div className="build panel">
+    <div className={`build panel ${expanded ? "expanded" : "collapsed"}`}>
+      <button className="build-toggle" aria-expanded={expanded} aria-controls="build-options"
+        disabled={pinned} onClick={() => input.toggleBuildMenu()}>
+        <Hammer size={16} /><span>{t("build.title")}</span><Key k="B" />
+        {frame.economy && <UserPlus size={14} aria-label={t("recruit.title")} />}
+      </button>
+      {expanded && <div id="build-options">
       <PanelHead
         icon={Hammer}
         extra={
@@ -1423,6 +1455,7 @@ function BuildPanel({
           : t("build.edit")}
       </div>
       {frame.economy && <Recruit frame={frame} input={input} />}
+      </div>}
     </div>
   );
 }

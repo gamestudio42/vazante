@@ -1,6 +1,10 @@
 import type { Key } from "../i18n.ts";
 
 export const es: Record<Key, string> = {
+  "mission.details": "Ver todos los objetivos",
+  "tut.direct.return.h": "Vuelve al mando",
+  "tut.direct.return": "Pulsa [TAB] de nuevo para volver a la vista táctica. Después veremos la moral de los escuadrones.",
+  "tut.direct.return.touch": "Toca **Salir** para volver a la vista táctica. Después veremos la moral de los escuadrones.",
   "app.title": "Vazante",
   "boot.loading": "Generando la ciudad…",
   "rank.0": "Recluta",
