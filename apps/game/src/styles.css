@@ -337,14 +337,35 @@ b {
   gap: 6px;
   /* Top offset, the gap and bottom margin, and what the bottom row puts under this column (set by App). */
   max-height: calc(100% - 54px - 14px - var(--under-left, 162px));
-  overflow-y: auto;
   pointer-events: auto;
+}
+.leftcol > .mission {
+  flex: 0 0 auto;
+}
+.unit-list {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;
 }
 .leftcol .panel {
   position: static;
   width: auto;
+  flex-shrink: 0;
+}
+.objective-list {
+  max-height: 150px;
+  overflow-y: auto;
+}
+.objective-toggle {
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 2px 6px;
+  color: var(--accent);
 }
 .obj {
   display: flex;
@@ -717,7 +738,9 @@ b {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  pointer-events: none;
+  pointer-events: auto;
+  max-height: calc(100% - 292px);
+  overflow-y: auto;
 }
 .alert {
   position: relative;
@@ -783,6 +806,34 @@ b {
   position: static;
   max-width: none;
 }
+.build.collapsed {
+  padding: 0;
+  flex-shrink: 0;
+}
+.build.expanded {
+  width: min(460px, 100%);
+  max-height: 45vh;
+  overflow-y: auto;
+}
+.build-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 12px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+}
+.build-toggle span {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.build-toggle kbd { margin-left: auto; }
+.build.expanded .build-toggle { border-bottom: 1px solid var(--line); margin-bottom: 8px; }
 .selection {
   border-left: 3px solid var(--sq, var(--line-strong));
 }
@@ -2244,6 +2295,8 @@ button.primary:disabled svg {
     top: calc(20px + 46px / var(--ui, 1));
   }
   .hud .speed button,
+  .hud .build-toggle,
+  .hud .objective-toggle,
   .hud .tutorial button,
   .hud button.big,
   .cam-dock button,
@@ -2352,6 +2405,10 @@ button.primary:disabled svg {
     width: calc(52px / var(--ui, 1));
     overflow: visible;
     max-height: none;
+  }
+  .unit-list {
+    overflow: visible;
+    flex-shrink: 0;
   }
   .leftcol .panel.fold-open,
   .leftcol .panel.fold-shut {

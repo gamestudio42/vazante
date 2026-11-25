@@ -270,3 +270,19 @@ structure bounds rebuild on placement/state changes. Pointer capture failures st
 neutral input is sent on focus/pointer loss. Tests cover frame/hash invariance, preview/shot agreement,
 obstructions, pitch limits, capture-only clicks, blur and TAB exit. The benchmark reports direct-frame
 cost separately from simulation tick cost.
+
+### Guided tutorial and contextual HUD (M8 polish)
+
+The mission panel stays outside the scrolling unit list; it shows the active objective by default
+and exposes the full list through its progress button. The construction launcher and selected-unit
+panel share a contextual command area. `InputController.buildMenuOpen` is local UI state; closing
+construction clears its ghost, while the selected unit stays selected. Tutorial focus reveals its
+target within the list without scrolling the page or moving the mission panel.
+
+A local posture-choice receipt records the player's explicit action, including reselecting the
+current posture. The tutorial checks that receipt against living squads in the worker frame.
+Direct-control completion requires a worker-confirmed entry followed by both local and worker exit;
+while controlling a soldier, the card explains how to return instead of showing hidden squad bars.
+No simulation rules, clocks, inventories or balance values change. Acceptance is covered by tutorial
+unit tests, all nine steps in Chromium at 1280×720 and 800×450, paused-world hash checks, and the
+existing responsive/touch layout checks.

@@ -230,8 +230,8 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | Alert feed (right) | Choir warnings with countdown, convoy ambushed, out of ammo, district fell; soldiers by name; click jumps |
 | Radio (top centre) | short lines from the squads and command: contact, arrival, reloads, bites and losses by name, Gritador sighted, horde inbound; fades after 8 s of game time; click jumps |
 | Selection panel (bottom) | icon, health, ammo, fuel, current order, stance and formation buttons; grid for multi-select |
-| Fire support menu (B) | assets with magazine, cooldown, delay, range; out-of-range disabled with reason |
-| Build menu (G) | structures with cost and time; green/red ghost; base only |
+| Fire support menu (planned) | assets with magazine, cooldown, delay, range; out-of-range disabled with reason |
+| Build menu (B) | compact launcher; expands costs, placement controls and available reinforcements on request or during the build lesson; green/red ghost |
 | Base panel | stocks, refugees, build queue, New convoy |
 | Convoy planner | origin, destination, vehicles, cargo, priority, escort, risk policy, suggested route with risky sectors highlighted |
 | Quarantine triage | arrivals, suspects, isolate / release / execute (if enabled); pauses the game |
@@ -240,8 +240,18 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | Direct-control HUD | crosshair, ammo, health, "TAB to exit"; hides the rest |
 | Mission mood | each mission has its own light and grade (see `balancing.md`); defeat drains the colour, victory warms it and the camera circles the field |
 | Summary | result, civilians saved, casualties, zombies killed, what embarked |
-| Small windows | the HUD is laid out for 1280×720; a smaller window shrinks the whole HUD to fit, down to 70 %, and the left column scrolls above whatever the bottom row puts under it, so panels never overlap. On a coarse pointer in portrait, objectives, squads, vehicles and the minimap collapse to 44 px buttons so the map stays visible; the tutorial step that names a panel opens it |
+| Small windows | the HUD is laid out for 1280×720; a smaller window shrinks the whole HUD to fit, down to 70 %, and the unit list scrolls beneath the pinned objective and above the bottom row, so panels never overlap. On a coarse pointer in portrait, objectives, squads, vehicles and the minimap collapse to 44 px buttons so the map stays visible; the tutorial step that names a panel opens it |
 | Settings | volume, language, internal resolution scale, agent cap, key bindings |
+
+The active objective stays above a separately scrolling unit list. Its progress button reveals the
+full objective list on request. Construction and selection details share the bottom command area:
+opening construction hides selection details; closing it restores them. Selecting a unit cancels the
+placement tool. Alerts keep their own bounded scrolling area above the minimap.
+
+The guided tutorial has nine steps. An explicit posture choice counts even if that posture is already
+active, once it agrees with the worker frame. The direct-control lesson waits for both entry and exit
+before showing squad morale. Tutorial targets scroll into the visible part of the unit list, including
+when the HUD is scaled down; touch portrait panels still open automatically for their lesson.
 
 ### Default controls (remappable through an `InputAction` layer)
 
@@ -257,8 +267,8 @@ React over the canvas. One floating panel at a time; Esc closes the panel before
 | Speed | F1, F2, F3 for 1x, 2x, 4x |
 | Stance | Z hold, X aggressive, C defensive, V withdraw |
 | Formation | F cycles |
-| Fire support | B |
-| Build | G |
+| Fire support | Planned; no current binding |
+| Build menu | B (1–4 select a structure; G toggles a gate under the cursor) |
 | Direct control | TAB |
 | Map toggle | M |
 | Latest alert | Home |

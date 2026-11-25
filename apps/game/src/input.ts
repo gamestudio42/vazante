@@ -59,6 +59,9 @@ export class InputController {
   routeMode = false;
   /** The briefing teaches the controls; H brings the full list back. */
   helpVisible = false;
+  buildMenuOpen = false;
+  /** Local interaction receipt; the tutorial also checks the worker's resulting stance. */
+  stanceChoice: { revision: number; squads: number[]; stance: Stance } | null = null;
   readonly build: BuildTool;
   /** Immediate audio feedback for player actions (wired to the audio director in main). */
   feedback: (kind: "select" | "order" | "stance" | "deny" | "toggle") => void =
@@ -330,6 +333,7 @@ export class InputController {
   };
 
   select(ids: number[]): void {
+    if (ids.length && this.buildMenuOpen) this.setBuild(null);
     this.client.select(ids);
     this.view.selectedSquads = new Set(ids);
     if (ids.length) {
@@ -339,6 +343,7 @@ export class InputController {
   }
 
   selectStructure(id: number | null): void {
+    if (id !== null && this.buildMenuOpen) this.setBuild(null);
     this.client.selectStructure(id);
     if (id !== null) {
       this.view.selectedSquads = new Set();
@@ -397,6 +402,7 @@ export class InputController {
   }
 
   selectVehicle(id: number | null): void {
+    if (id !== null && this.buildMenuOpen) this.setBuild(null);
     this.client.selectVehicle(id);
     this.view.vehicles.selected = id;
     if (id !== null) {
@@ -510,6 +516,7 @@ export class InputController {
     const sel = this.client.state.selected;
     if (!sel.length) return;
     this.client.send({ type: "stance", squads: sel, stance });
+    this.stanceChoice = { revision: (this.stanceChoice?.revision ?? 0) + 1, squads: [...sel], stance };
     this.feedback("stance");
   }
 
@@ -595,7 +602,7 @@ export class InputController {
         this.cycleFormation();
         break;
       case "KeyB":
-        this.setBuild(this.build.active ? null : (this.build.kind ?? "wall"));
+        this.toggleBuildMenu();
         break;
       case "Digit1":
       case "Digit2":
@@ -604,7 +611,7 @@ export class InputController {
         this.setBuild(STRUCTURE_KINDS[Number(e.code.slice(5)) - 1]);
         break;
       case "Escape":
-        if (this.build.active) this.setBuild(null);
+        if (this.buildMenuOpen) this.setBuild(null);
         else if (this.client.state.vehicle !== null) this.selectVehicle(null);
         else if (this.client.state.structure !== null) this.selectStructure(null);
         else if (this.client.state.selected.length > 0) this.select([]);
@@ -654,7 +661,17 @@ export class InputController {
 
   // ----- Construction -----
 
+  toggleBuildMenu(): void {
+    if (this.buildMenuOpen) this.setBuild(null);
+    else {
+      this.buildMenuOpen = true;
+      this.feedback("toggle");
+      this.changed();
+    }
+  }
+
   setBuild(kind: StructureKind | null): void {
+    this.buildMenuOpen = kind !== null;
     if (kind === null) this.build.cancel();
     else this.build.begin(kind);
     this.feedback("toggle");
@@ -705,6 +722,7 @@ export class InputController {
     }
     const q = f.squads.find((s) => s.id === sel[0]);
     if (!q) return;
+    if (this.buildMenuOpen) this.setBuild(null);
     for (let i = 0; i < f.soldiers.length / SOLDIER_STRIDE; i++) {
       const o = i * SOLDIER_STRIDE;
       const id = f.soldiers[o + SoldierField.Id];

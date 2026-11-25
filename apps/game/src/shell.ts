@@ -69,7 +69,7 @@ export class Shell {
   ) {
     this.screen = initial;
     this.withTutorial = !settings.tutorialSeen;
-    this.tutorial = new Tutorial(client, view, () => this.applySettings({ ...this.settings, tutorialSeen: true }));
+    this.tutorial = new Tutorial(client, view, input, () => this.applySettings({ ...this.settings, tutorialSeen: true }));
     input.onEscape = () => this.escape();
     input.onQuickSave = () => void this.save('quick');
     input.onQuickLoad = () => void this.loadSlot('quick');
