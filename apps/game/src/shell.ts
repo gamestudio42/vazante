@@ -5,7 +5,7 @@ import type { GameClient } from './client.ts';
 import { setLocale, t } from './i18n.ts';
 import type { InputController } from './input.ts';
 import type { PlaytestRecorder } from './playtest-recorder.ts';
-import { newGameSeed, saveSettings, type Settings, type SurvivalRecord } from './settings.ts';
+import { newGameSeed, normalizeLookSettings, saveSettings, type Settings, type SurvivalRecord } from './settings.ts';
 import { Tutorial } from './tutorial.ts';
 import { crewResults, emptyRoster, loadRoster, namesByRid, saveRoster, settle, type ReportRow, type Roster, type Trooper } from './roster.ts';
 import { canDeploy, choose, dailyKey, dailyRun, finishMission, loadOperation, newRun, recordRun, saveOperation, type OperationStore } from './operation.ts';
@@ -485,6 +485,7 @@ export class Shell {
   }
 
   applySettings(s: Settings): void {
+    s = { ...s, ...normalizeLookSettings(s) };
     this.settings = s;
     saveSettings(s);
     setLocale(s.locale);
@@ -493,6 +494,8 @@ export class Shell {
     this.audio.setVolume(s.volume);
     this.audio.setMusicVolume(s.musicVolume);
     this.input.edgePan = s.edgePan;
+    this.input.mouseSensitivity = s.mouseSensitivity;
+    this.input.invertMouseY = s.invertMouseY;
     this.changed();
   }
 }

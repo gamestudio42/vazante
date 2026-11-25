@@ -103,6 +103,9 @@ Pipeline per shot: target acquisition → line of sight → range and ammo check
 ### 4.6 Direct control [FACT: TAB]
 
 - Soldier: WASD move, horizontal mouse aim, bounded vertical camera look; a fixed facing cross and a projected assisted-target marker. Left button fires with the 4.2 rules plus +0.2 accuracy. R reloads from the soldier's own inventory.
+- Settings exposes direct-control mouse sensitivity (25–300%, default 100%) and vertical inversion
+  (off by default). Preferences apply on the next mouse movement, persist locally, and can be reset
+  together without clearing other settings. Touch look and tactical camera controls are independent.
 - Vehicle: WASD drives, mouse aims the turret. Helicopter: WASD horizontal, Q/E altitude.
 - Entering and leaving direct control must not change the simulation hash beyond the commands issued.
 

@@ -550,3 +550,11 @@ remains 1.5 m and look-ahead 10 m. Hit confirmation lasts three simulation ticks
 in `PRESENTATION.directCamera`. Camera obstacle bounds now include props, completed structures
 (including open gate posts), and trucks. Weapon ranges, the 1 m aim corridor, accuracy, ammo,
 movement and simulation visibility are unchanged.
+
+### 2026-11-25 — direct mouse preferences
+
+`DIRECT_LOOK` in `balance/controls.ts` retains the original 0.0025 radians per CSS pixel. The player
+can multiply mouse response by 0.25–3 in increments of 0.05; default is 1. Vertical inversion defaults
+to off. This makes direct control adjustable to different mice without changing the default feel,
+pitch limits, tactical camera, touch look, weapon rules or simulation balance. Missing or invalid
+preferences recover the defaults; finite values outside the supported interval are clamped.
